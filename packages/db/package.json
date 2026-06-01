@@ -1,0 +1,29 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./server": "./src/server.ts",
+    "./types": "./src/types.ts",
+    "./queries/profiles": "./src/queries/profiles.ts",
+    "./queries/connections": "./src/queries/connections.ts",
+    "./queries/messages": "./src/queries/messages.ts",
+    "./queries/payments": "./src/queries/payments.ts",
+    "./lib/compatibility": "./src/lib/compatibility.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "generate-types": "supabase gen types typescript --local > src/types.ts"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.15.3",
+    "typescript": "5.9.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/ssr": "^0.6.1"
+  }
+}
