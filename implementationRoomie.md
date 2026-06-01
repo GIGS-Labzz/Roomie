@@ -84,36 +84,54 @@ Roomie solves each of these:
 ```
 1. Visit Roomie → Click "Get started"
 2. Sign in with Google (one tap — no forms)
-3. Onboarding wizard (progressive, 6 steps — skippable after step 3)
-   Step 1: What are you here for? (Roommate — only option for now)
-   Step 2: Your basics (display name, age, gender, city)
-   Step 3: University (school name, year, course)
-   Step 4: Your vibe (lifestyle preferences — sleep, cleanliness, noise, smoking, pets)
-   Step 5: Budget & move-in (range + preferred date)
-   Step 6: Profile photo + student ID upload (optional at this stage, unlocks badge)
-4. Land on the Discovery Feed — a card-based feed of roommate profiles
-5. Browse profiles. Filter by city, university, budget, lifestyle tags
-6. Find a good match → tap their profile → see full details
-7. Tap "Connect" → connection request is created (FREE, no payment yet)
-8. Chat is unlocked with that person immediately
-9. Chat, get to know each other, decide on housing
-10. Both agree to find a place → "Browse housing providers" CTA appears
-11. Pay ₦2,000 connection fee via Paystack (Transfer, Card, OPay, USSD, Bank) to unlock housing providers
-12. Payment confirmed → curated list of housing providers near the matched city/campus is shown
-13. User picks a provider → tapped → redirected to that platform/agent
-14. On return, platform shows "Back from [Provider Name]? How did it go?"
+3. Onboarding wizard (5 steps, each saves immediately — drop-off safe):
+     Step 0: Welcome screen → "Let's go"
+     Step 1: Basics — display name, age, gender, city
+     Step 2: University — school, year of study, course/faculty
+     Step 3: Vibe — sleep schedule, cleanliness, noise, smoking/pets/guests toggles, lifestyle tags
+     Step 4: Budget & timeline — monthly range (₦20k–₦500k), move-in date, roommate gender pref
+     Step 5: Identity — profile photo + student ID upload (optional, unlocks Verified badge)
+4. Land on the Social Feed (/feed) — a Twitter/X-style board of student posts
+     Students post: "Looking for a roommate near UNILAG, ₦80k/mo budget, female, non-smoker"
+     Others like and comment. Every post shows "View Profile" → links to Discover.
+5. Browse the Discover feed (/discover) — card grid of student profiles
+     Filter by city, university, gender, budget range, lifestyle tags, verified only
+     Each card shows: avatar, name, university, compatibility score %, top 3 lifestyle tags, budget
+6. Tap a profile card → full profile detail page
+     See all lifestyle details, budget, move-in date, bio
+     Tap "Connect" → FREE — sends an instant connection request
+7. Connection accepted → chat unlocked between both users (FREE)
+8. Chat, get to know each other, agree on roommate situation
+9. Ready to find a place → tap "Find Housing" in the app
+     PAYWALL: Pay ₦2,000 once via Paystack (card, transfer, OPay, USSD, bank)
+     Payment confirmed → curated housing provider list shown for their city/campus
+10. Browse housing providers → tap one → redirected to that platform/agent in new tab
+11. On return: "Back from [Provider]? How did it go?" prompt
+12. Use Bill Splits tracker to manage shared expenses after moving in
 ```
 
 ### Housing Provider Journey
 
 ```
-1. Land on Roomie marketing page → "List your platform" CTA
-2. Fill a simple form: platform name, URL, city/campus coverage, contact
-3. Roomie admin reviews and approves
-4. Provider receives dashboard access
-5. Dashboard shows: referral count, clicks, active connections in their area
-6. Provider can update their listing details, add multiple cities
+1. Land on Roomie admin registration page → fill public form
+   (platform name, URL, city/campus coverage, contact name/email/phone)
+2. Roomie super admin reviews and approves → status = ACTIVE
+3. Provider appears in the curated list shown to students who paid ₦2,000
+4. Provider receives a dashboard login → views referral clicks + analytics
+5. Provider can update listing details, add/remove cities, update logo
 ```
+
+### What Roomie Is Now (Revised Product Description)
+
+Roomie is a **three-surface student roommate platform**:
+
+| Surface | What it is | Who uses it daily |
+|---|---|---|
+| **Feed** (`/feed`) | Social post board — students broadcast what they need | Everyone; high-frequency engagement |
+| **Discover** (`/discover`) | Profile card grid — browse, filter, connect | Active searchers |
+| **Chat** (`/chat`) | Direct messaging between connected users | Connected pairs |
+
+The revenue gate sits at the intersection of Chat → Housing: pay ₦2,000 to unlock housing referrals once you have a roommate confirmed.
 
 ---
 
@@ -1888,87 +1906,36 @@ npx supabase gen types typescript --project-id <id> > src/types.ts
 
 ## 25. Implementation Phases
 
-> **How to read these phases:** Each phase lists its prerequisites, tasks in order, and what it unlocks next. Status markers: `[x]` = done · `[ ]` = pending · `[~]` = partially done / in progress.
+> Status markers: `[x]` = done · `[ ]` = pending · `[~]` = in progress / partially done
 >
-> **Brand colours in use:** Primary `#8AAF6E` (Sage Green) · Accent/CTA `#FAE8CC` (Soft Peach) · Surface `#EDE8C8` (Pale Yellow-Green) · Secondary `#B8CE9E` (Light Sage)
+> **Payment rule (applies to every phase):** Connecting with a roommate is **FREE**. The ₦2,000 Paystack charge fires **only** when a connected pair taps "Find Housing" on the `/housing` page. No other action costs money.
 >
-> ---
-> ### ⚠️ Business Model Correction — Applies to All Phases
->
-> The original plan placed the ₦2,000 fee at the **roommate connection step** (pay → chat unlocked).
-> This has been corrected. The actual model is:
->
-> | Action | Cost |
-> |---|---|
-> | Browse discover feed | Free |
-> | Tap "Connect" on a profile | Free — sends connection request |
-> | Chat with matched roommate | Free — unlocked when connection is accepted |
-> | Access housing platform referrals (`/housing`) | **₦2,000 one-time** — unlocks the curated provider list |
->
-> The Paystack payment wall has moved from Phase 4 (connection) to Phase 6 (housing referral access).
-> Every reference to "pay to connect" in earlier sections of this document is superseded by this correction.
->
-> ---
-> ### Layout Architecture Decision — X-Style (Twitter/X Layout)
->
-> The main PWA (`apps/app`) uses a **3-column desktop layout** inspired by Twitter/X:
->
-> ```
-> ┌───────────────┬──────────────────────────┬──────────────────┐
-> │  Left Sidebar │    Main Feed (center)    │  Right Sidebar   │
-> │  (fixed 256px)│    (flex-1, scrollable)  │  (fixed 288px)   │
-> │               │                          │                  │
-> │  Roomie logo  │  Discover / Chat / etc.  │  Filter controls │
-> │  ProfileCard  │  (page content)          │  (discover only) │
-> │  Nav items    │                          │                  │
-> │  Footer       │                          │                  │
-> └───────────────┴──────────────────────────┴──────────────────┘
-> ```
->
-> On **mobile**: left sidebar is hidden → replaced by `BottomTabNav`. Right sidebar is hidden → replaced by a slide-up `FilterDrawer`.
->
-> **Components implementing this:**
-> - `apps/app/src/components/layout/AppSidebar.tsx` — left sidebar (logo, profile preview, nav, footer)
-> - `apps/app/src/components/layout/ProfilePreviewCard.tsx` — mini card showing logged-in user's avatar/name/university
-> - Each page composes `<AppSidebar>` + `<main>` + optional right panel
->
-> **Brand colours in use:** Primary `#8AAF6E` (Sage Green) · Accent/CTA `#FAE8CC` (Soft Peach) · Surface `#EDE8C8` (Pale Yellow-Green) · Secondary `#B8CE9E` (Light Sage)
+> **Layout rule:** The main PWA uses an X/Twitter-style 3-column layout on desktop (sidebar left · feed centre · filters/content right) and a full-width single-column with BottomTabNav on mobile.
+
+
+> **Brand colours:** Primary `#8AAF6E` (Sage Green) · CTA `#FAE8CC` (Soft Peach) · Surface `#EDE8C8` (Pale Yellow-Green) · Secondary `#B8CE9E` (Light Sage)
 
 ---
 
-### Phase 1 — Infrastructure & Monorepo Scaffold ✅ COMPLETE
-
-**Prerequisites:** Node 20+, Docker Desktop running, Supabase CLI installed, Vercel CLI installed, GoFinder codebase accessible at `C:\Users\admin\Desktop\GoFinder`.
-
-**What this unlocks:** Every subsequent phase depends on this foundation. Nothing can be built until the monorepo is wired, local Supabase is running, and the shared packages are importable.
+### Phase 1 — Infrastructure & Monorepo Scaffold ✅ DONE
 
 ```
-[x] 1.  Turborepo monorepo initialized — package.json workspace config + turbo.json
-[x] 2.  apps/web, apps/app, apps/admin scaffolded with Next.js 16 (App Router)
-[x] 3.  packages/config created — Tailwind palette, tsconfig.base.json, eslint.config.mjs
-          brand-500: #8AAF6E (Sage Green) · peach-200: #FAE8CC · sage.surface: #EDE8C8 · sage.light: #B8CE9E
-[x] 4.  packages/ui created — BottomTabNav, AuthInput, AuthLayout, useAutoHideOnScroll ported from GoFinder
-          button.tsx, card.tsx, modal.tsx, avatar.tsx, badge.tsx, lottie-icon.tsx added as full implementations
-          NOTE: BottomTabNav extended to accept icon?: React.ReactNode alongside iconClassName for SVG icons
-[x] 5.  packages/animations created — 10 placeholder JSON files (real Lottie JSON in Phase 9)
-[x] 6.  packages/db created — client.ts (singleton createBrowserClient), server.ts, types.ts, queries/
-[x] 7.  supabase/ directory set up — supabase init, migrations/, config.toml, seed.sql
-[x] 8.  supabase start confirmed working — local API at http://127.0.0.1:54321
-[x] 9.  .env.local created in each app with local Supabase values
-[ ] 10. .dockerignore at repo root (deferred — needed only before Docker containerisation, §27)
-[x] 11. Root package.json scripts: dev, build, lint, check-types
-[x] 12. turbo run dev starts all three apps without errors
+[x] Turborepo monorepo — package.json workspace + turbo.json
+[x] apps/web, apps/app, apps/admin scaffolded with Next.js (App Router)
+[x] packages/config — Tailwind palette, tsconfig.base.json, eslint rules
+[x] packages/ui — BottomTabNav (extended for React node icons), Button, Card, Avatar, Badge,
+      Modal, AuthInput, AuthLayout, LottieIcon stubs, useAutoHideOnScroll
+[x] packages/animations — 10 placeholder JSON files (Lottie assets sourced in Phase 11)
+[x] packages/db — singleton createBrowserClient, createServerClient, createServiceClient,
+      types.ts (generated), queries/ directory
+[x] supabase/ — config.toml, migrations/, seed.sql, local stack running at 127.0.0.1:54321
+[x] .env.local in each app
+[x] Root scripts: dev, build, lint, check-types
 ```
-
-**Connects to → Phase 2:** Monorepo is live, Supabase is running locally, all packages are importable. Ready to deploy the database schema and wire authentication.
 
 ---
 
-### Phase 2 — Database, Authentication & Onboarding ✅ COMPLETE
-
-**Prerequisites:** Phase 1 complete. Supabase project created on cloud. Google Cloud project with OAuth credentials.
-
-**What this unlocks:** Working user accounts with complete profiles — the data that Phase 3's discovery feed will query.
+### Phase 2 — Database, Auth & Onboarding ✅ DONE
 
 #### Database
 
@@ -2207,12 +2174,11 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 ---
 
-### Phase 4 — Connection Flow (Free) ✅ IMPLEMENTED
+### Phase 4 — Connection Flow (Free) [ ] NEXT UP
 
-**Prerequisites:** Phase 3 complete. Discovery feed live. `connections` table exists with RLS. Auth confirmed working (user must be signed in to connect).
+**Prerequisites:** Phase 3 complete. Discovery feed live. `connections` table exists with RLS. Auth confirmed working end-to-end.
 
-> **✅ Business model applied:** Connecting with a roommate is **free and instant**. Chat is unlocked immediately. The ₦2,000 housing access fee is paid separately in Phase 6, triggered only when users want to browse curated housing providers.
-> The `connection_status` enum is now simplified to: `ACTIVE`, `DECLINED`, `INACTIVE`.
+> **₦0 — Connecting is free.** Connecting creates an ACTIVE connection and unlocks chat immediately. The ₦2,000 fee comes in Phase 6 (housing access), not here.
 
 **What this unlocks:** ACTIVE connections — the prerequisite for Phase 5's real-time chat. The DB RLS policy `messages_connection_members` checks connection exists and is between the two users.
 
@@ -2605,7 +2571,8 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 [ ] 5.  Verify payments table has no client-writable INSERT/UPDATE RLS policy
           Payments written only by service role (webhook handler)
 [ ] 6.  Verify SUPABASE_SERVICE_ROLE_KEY is absent from all NEXT_PUBLIC_ variables
-[ ] 7.  Write and apply supabase/migrations/0002_blocks.sql — blocks table (§28.9)
+[ ] 7.  Write and apply supabase/migrations/0003_blocks.sql — blocks table (§28.9)
+          NOTE: 0001 = core schema, 0002 = feed tables (already applied). Next is 0003.
           Update getDiscoveryFeed() to exclude users blocked by or blocking the current user
 ```
 
@@ -2614,9 +2581,10 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 ```
 [ ] 8.  Run Lighthouse audit on apps/app — target: PWA 100, Performance 90+, Accessibility 90+
 [ ] 9.  End-to-end test path 1 (student core loop):
-          Google Sign In → complete onboarding (all 5 steps) → browse discovery feed
-          → tap Connect → pay via Paystack test card → chat unlocked → send message
-          → create bill split → see housing providers
+          Google Sign In → complete onboarding (5 steps) → browse Feed → write a post
+          → browse Discover → tap Connect (FREE) → chat unlocked → send message
+          → tap Find Housing → pay ₦2,000 via Paystack test card → see housing providers
+          → create bill split with connected roommate
 [ ] 10. End-to-end test path 2 (provider loop):
           Fill registration form → super admin approves in admin panel
           → provider appears in student housing list → click tracked
