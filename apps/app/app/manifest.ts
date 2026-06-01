@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Roomie",
     short_name: "Roomie",
     description: "Find your perfect student roommate. Connect and Cooonnectttt.",
-    start_url: "/discover",
+    start_url: "/feed",
     display: "standalone",
     background_color: "#EDE8C8",
     theme_color: "#8AAF6E",

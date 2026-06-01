@@ -36,14 +36,13 @@ export async function createConnection(
   requesterId: string,
   receiverId: string
 ) {
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
   return supabase
     .from("connections")
     .insert({
       requester_id: requesterId,
       receiver_id: receiverId,
-      status: "PENDING_PAYMENT",
-      expires_at: expiresAt,
+      status: "ACTIVE",
+      connected_at: new Date().toISOString(),
     })
     .select()
     .single();

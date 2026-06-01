@@ -54,7 +54,7 @@ const AUTHOR_SELECT = `
 type AnyClient = any;
 
 export async function getFeed(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   page = 0
 ): Promise<Post[]> {
   const PAGE_SIZE = 20;
@@ -70,7 +70,7 @@ export async function getFeed(
 }
 
 export async function getPostById(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string
 ): Promise<Post | null> {
   const db = supabase as AnyClient;
@@ -85,7 +85,7 @@ export async function getPostById(
 }
 
 export async function createPost(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   userId: string,
   payload: {
     content: string;
@@ -107,7 +107,7 @@ export async function createPost(
 }
 
 export async function deletePost(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string
 ): Promise<boolean> {
   const db = supabase as AnyClient;
@@ -116,7 +116,7 @@ export async function deletePost(
 }
 
 export async function likePost(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string,
   userId: string
 ): Promise<boolean> {
@@ -128,7 +128,7 @@ export async function likePost(
 }
 
 export async function unlikePost(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string,
   userId: string
 ): Promise<boolean> {
@@ -142,7 +142,7 @@ export async function unlikePost(
 }
 
 export async function getLikedPostIds(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   userId: string,
   postIds: string[]
 ): Promise<string[]> {
@@ -158,7 +158,7 @@ export async function getLikedPostIds(
 }
 
 export async function getComments(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string
 ): Promise<PostComment[]> {
   const db = supabase as AnyClient;
@@ -178,7 +178,7 @@ export async function getComments(
 }
 
 export async function addComment(
-  supabase: SupabaseClient<Database>,
+  supabase: AnyClient,
   postId: string,
   userId: string,
   content: string

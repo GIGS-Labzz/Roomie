@@ -234,7 +234,7 @@ export default function FeedPage() {
       </div>
 
       {/* Mobile bottom nav */}
-      <BottomTabNav items={navItems} />
+      <BottomTabNav items={navItems} hidden={false} />
     </div>
   );
 }

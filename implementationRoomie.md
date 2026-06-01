@@ -1979,7 +1979,7 @@ npx supabase gen types typescript --project-id <id> > src/types.ts
           - This is what "remembers" the user without re-authentication
           - getUser() call removed (onAuthStateChange covers it)
           - useMemo on context value prevents unnecessary re-renders
-[x] 14. apps/app/app/page.tsx — root redirect: authenticated → /discover, else → /auth/signin
+[x] 14. apps/app/app/page.tsx — root redirect: authenticated → /feed, else → /auth/signin
 [x]     apps/app/middleware.ts — CORRECTED:
           PUBLIC_ROUTES: /auth/signin, /auth/callback, /offline, /discover (browsable without login)
           PROTECTED_ROUTES: /onboarding, /connect, /chat, /splits, /housing, /profile, /notifications
