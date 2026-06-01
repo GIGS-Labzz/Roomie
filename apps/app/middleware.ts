@@ -20,6 +20,7 @@ const PROTECTED_ROUTES = [
   "/housing",
   "/profile",
   "/notifications",
+  "/feed",
 ];
 
 export async function middleware(request: NextRequest) {

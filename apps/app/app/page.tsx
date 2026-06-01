@@ -42,5 +42,5 @@ export default async function RootPage() {
     redirect(stepRoutes[profile?.onboarding_step ?? 0] ?? "/onboarding/welcome");
   }
 
-  redirect("/discover");
+  redirect("/feed");
 }

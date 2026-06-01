@@ -103,11 +103,11 @@ export default function PrivacyPage() {
           </Link>
 
           <Link
-            href="/auth/signin"
+            href="/"
             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to sign in
+            Back
           </Link>
         </div>
 

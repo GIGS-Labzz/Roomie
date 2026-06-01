@@ -22,6 +22,7 @@
 11. [App 3 — Platform Provider Dashboard (`apps/admin`)](#11-app-3--platform-provider-dashboard-appsadmin)
 12. [Onboarding Flow — Detailed](#12-onboarding-flow--detailed)
 13. [Roommate Discovery Feed](#13-roommate-discovery-feed)
+13B. [Social Feed (Twitter-style Posts)](#13b-social-feed-twitter-style-posts)
 14. [Connection & Payment Flow (Paystack)](#14-connection--payment-flow-paystack)
 15. [In-App Chat Architecture](#15-in-app-chat-architecture)
 16. [Bill Splitting Feature](#16-bill-splitting-feature)
@@ -70,9 +71,9 @@ The consequences:
 
 Roomie solves each of these:
 - Structured profiles surface compatibility before connection
-- A real-time chat is unlocked after payment, so conversations are intentional
+- A real-time chat is unlocked immediately after connecting, enabling deeper conversations
 - A built-in bill splitter keeps finances transparent
-- After connecting, students get a curated shortlist of nearby housing providers
+- After connecting and paying ₦2,000, students get a curated shortlist of nearby housing providers
 
 ---
 
@@ -93,13 +94,14 @@ Roomie solves each of these:
 4. Land on the Discovery Feed — a card-based feed of roommate profiles
 5. Browse profiles. Filter by city, university, budget, lifestyle tags
 6. Find a good match → tap their profile → see full details
-7. Tap "Connect" → connection request is created
-8. Pay ₦2,000 connection fee via Paystack (Transfer, Card, OPay, USSD, Bank)
-9. Payment confirmed → chat is unlocked between both users
-10. Chat, get to know each other, decide on housing
-11. Platform shows curated list of housing providers near the matched city/campus
-12. User picks a provider → tapped → redirected to that platform/agent
-13. On return, platform shows "Back from [Provider Name]? How did it go?"
+7. Tap "Connect" → connection request is created (FREE, no payment yet)
+8. Chat is unlocked with that person immediately
+9. Chat, get to know each other, decide on housing
+10. Both agree to find a place → "Browse housing providers" CTA appears
+11. Pay ₦2,000 connection fee via Paystack (Transfer, Card, OPay, USSD, Bank) to unlock housing providers
+12. Payment confirmed → curated list of housing providers near the matched city/campus is shown
+13. User picks a provider → tapped → redirected to that platform/agent
+14. On return, platform shows "Back from [Provider Name]? How did it go?"
 ```
 
 ### Housing Provider Journey
@@ -125,7 +127,7 @@ Roomie solves each of these:
 - Has ₦80,000 budget per month
 - Wants a female roommate
 
-**Roomie solves:** She finds Fatimah (same budget, female, UNILAG, non-smoker) in 3 days. Pays ₦2,000. Chats. They agree on a place. Roomie shows them UniHousing Lagos as a nearby provider.
+**Roomie solves:** She finds Fatimah (same budget, female, UNILAG, non-smoker) in 3 days. They agree on a place. Roomie shows them UniHousing Lagos as a nearby provider.
 
 ### Persona 2 — Emeka, 21, 300-level Computer Science, UniAbuja
 - Current accommodation expires. Looking for someone to share a self-con near campus
@@ -146,10 +148,11 @@ Roomie solves each of these:
 
 ## 5. Business Model
 
-### Revenue Stream 1 — Connection Fee (Primary)
-- ₦2,000 per successful connection (paid by the initiating user)
+### Revenue Stream 1 — Housing Access Fee (Primary)
+- ₦2,000 per connected pair accessing housing provider list
+- Paid by either or both members of a connected pair (independent transactions)
 - Paystack handles all payment methods
-- Chat and housing referrals are locked behind this payment
+- Unlocks curated housing providers + referral tracking
 - Future: Split the fee between both parties (₦1,000 each) to reduce friction
 
 ### Revenue Stream 2 — Featured Provider Slots (Future)
@@ -165,10 +168,10 @@ Roomie solves each of these:
 - Vercel hosting (free tier for web + app; Pro at $20/month for scale)
 - Paystack: 1.5% + ₦100 per transaction, capped at ₦2,000
 
-**Unit economics at 100 connections/day:**
-- Revenue: 100 × ₦2,000 = ₦200,000/day
-- Paystack fee: ~₦30/transaction × 100 = ₦3,000/day
-- Net: ~₦197,000/day = ~₦5.9M/month
+**Unit economics at 50 connected pairs/day paying for housing access:**
+- Revenue: 50 pairs × ₦2,000 = ₦100,000/day (conservative estimate: not all pairs pay)
+- Paystack fee: ~₦30/transaction × 50 = ₦1,500/day
+- Net: ~₦98,500/day = ~₦2.95M/month
 
 ---
 
@@ -234,7 +237,7 @@ CREATE TYPE gender_type AS ENUM ('male', 'female', 'non_binary', 'prefer_not_to_
 CREATE TYPE sleep_schedule AS ENUM ('early_bird', 'night_owl', 'flexible');
 CREATE TYPE cleanliness_level AS ENUM ('very_tidy', 'tidy', 'relaxed', 'messy');
 CREATE TYPE noise_preference AS ENUM ('very_quiet', 'quiet', 'moderate', 'lively');
-CREATE TYPE connection_status AS ENUM ('PENDING_PAYMENT', 'PAID', 'ACTIVE', 'DECLINED', 'EXPIRED', 'CANCELLED');
+CREATE TYPE connection_status AS ENUM ('ACTIVE', 'DECLINED', 'INACTIVE');
 CREATE TYPE payment_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'ABANDONED');
 CREATE TYPE verification_status AS ENUM ('UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED');
 CREATE TYPE message_type AS ENUM ('text', 'image', 'system');
@@ -308,16 +311,15 @@ CREATE TABLE public.connections (
   id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   requester_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   receiver_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status              connection_status NOT NULL DEFAULT 'PENDING_PAYMENT',
+  status              connection_status NOT NULL DEFAULT 'ACTIVE',
   
-  -- Payment
-  payment_reference   TEXT,                     -- Paystack reference
-  amount_paid         INTEGER,                  -- in kobo
-  paid_at             TIMESTAMPTZ,
+  -- Housing payment (optional — user pays to access housing provider list)
+  housing_payment_reference   TEXT,               -- Paystack reference for housing provider access
+  housing_payment_status      TEXT DEFAULT 'UNPAID',  -- 'UNPAID' | 'PAID'
+  housing_payment_paid_at     TIMESTAMPTZ,
   
   -- Timestamps
-  connected_at        TIMESTAMPTZ,              -- when status became ACTIVE
-  expires_at          TIMESTAMPTZ,              -- PENDING_PAYMENT expires after 1 hour
+  connected_at        TIMESTAMPTZ DEFAULT NOW(),  -- when connection was created
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW(),
   
@@ -478,9 +480,15 @@ CREATE POLICY "profiles_read_all" ON public.profiles
 CREATE POLICY "profiles_write_own" ON public.profiles
   FOR ALL USING (auth.uid() = id);
 
--- Connections: only involved users can see/modify
+-- Connections: only involved users can see
 CREATE POLICY "connections_own" ON public.connections
-  FOR ALL USING (
+  FOR SELECT USING (
+    auth.uid() = requester_id OR auth.uid() = receiver_id
+  );
+
+-- Connections: only involved users can update
+CREATE POLICY "connections_update_own" ON public.connections
+  FOR UPDATE USING (
     auth.uid() = requester_id OR auth.uid() = receiver_id
   );
 
@@ -914,7 +922,7 @@ Check profile.onboarding_step:
   3 → /onboarding/vibe
   4 → /onboarding/budget
   5 → /onboarding/verify
-  ≥6 → /discover (fully onboarded)
+  ≥6 → /feed (fully onboarded)
 ```
 
 ### Step 0 — Welcome (`/onboarding/welcome`)
@@ -1136,28 +1144,42 @@ export async function getDiscoveryFeed(
 
 ---
 
-## 14. Connection & Payment Flow (Paystack)
+## 14. Connection & Housing Payment Flow (Paystack)
 
-### Full Flow Diagram
+### Two-Step Flow
+
+The connection is free and instant. Payment only happens when users want to access the curated housing provider list.
+
+### Step 1: Create Connection (FREE)
 
 ```
 User taps "Connect" on a profile
          │
          ▼
 POST /api/connections
-  → Creates connection record: status = 'PENDING_PAYMENT'
-  → Returns: { connectionId, amount: 200000 }   (200000 kobo = ₦2,000)
+  → Creates connection record: status = 'ACTIVE', housing_payment_status = 'UNPAID'
+  → Returns: { connectionId }
          │
          ▼
-POST /api/payments/initialize
+Both users' chat is instantly unlocked
+CTA shows: "Browse housing providers (₦2,000)"
+```
+
+### Step 2: Pay for Housing Access (PAID)
+
+```
+User taps "Browse housing providers"
+         │
+         ▼
+POST /api/payments/initialize-housing
   → Calls Paystack API: transactions/initialize
   → Payload: {
       amount: 200000,
       email: user.email,
       currency: "NGN",
-      metadata: { connection_id: connectionId, user_id: currentUserId },
+      metadata: { connection_id: connectionId, user_id: currentUserId, type: 'housing_access' },
       channels: ["card", "bank", "ussd", "bank_transfer", "mobile_money"],
-      callback_url: "https://app.roomie.ng/connect/success"
+      callback_url: "https://app.roomie.ng/housing/success"
     }
   → Returns: { authorization_url, reference, access_code }
          │
@@ -1172,16 +1194,16 @@ Webhook       Popup closes (callback_url)
   ▼             ▼
 POST /api/payments/webhook
   → Verify Paystack signature (x-paystack-signature header)
-  → Check event = 'charge.success'
+  → Check event = 'charge.success' and metadata.type = 'housing_access'
   → Verify reference against payments table
   → Update payment: status = 'SUCCESS', paid_at = now()
-  → Update connection: status = 'ACTIVE', connected_at = now()
-  → Send notification to receiver: "Someone wants to connect with you!"
+  → Update connection: housing_payment_status = 'PAID', housing_payment_paid_at = now()
+  → Send notification to both users: "Housing providers unlocked!"
   → Trigger real-time Supabase notification
          │
          ▼
-Both users' chat is now unlocked
 Housing providers list is shown to both users
+User is redirected to /housing page with curated providers
 ```
 
 ### Webhook Verification
@@ -1215,33 +1237,36 @@ export async function POST(req: NextRequest) {
   
   const { reference, metadata } = event.data;
   const connectionId = metadata?.connection_id as string;
+  const paymentType = metadata?.type as string;  // 'housing_access'
   
   const supabase = createServerClient();
   
-  // Update payment record
-  await supabase
-    .from("payments")
-    .update({ status: "SUCCESS", paid_at: new Date().toISOString(), payment_channel: event.data.channel })
-    .eq("reference", reference);
-  
-  // Activate the connection
-  const { data: connection } = await supabase
-    .from("connections")
-    .update({ status: "ACTIVE", connected_at: new Date().toISOString() })
-    .eq("id", connectionId)
-    .eq("status", "PENDING_PAYMENT")
-    .select("requester_id, receiver_id")
-    .single();
-  
-  if (connection) {
-    // Notify the receiver
-    await supabase.from("notifications").insert({
-      user_id: connection.receiver_id,
-      type: "CONNECTION_REQUEST",
-      title: "Someone wants to connect!",
-      body: "You have a new roommate connection request. Open Roomie to see who.",
-      data: { connection_id: connectionId },
-    });
+  if (paymentType === 'housing_access') {
+    // Update payment record
+    await supabase
+      .from("payments")
+      .update({ status: "SUCCESS", paid_at: new Date().toISOString(), payment_channel: event.data.channel })
+      .eq("reference", reference);
+    
+    // Unlock housing access for this connection
+    const { data: connection } = await supabase
+      .from("connections")
+      .update({ housing_payment_status: "PAID", housing_payment_paid_at: new Date().toISOString() })
+      .eq("id", connectionId)
+      .select("requester_id, receiver_id")
+      .single();
+    
+    if (connection) {
+      const userId = metadata?.user_id as string;
+      // Notify the paying user
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "HOUSING_UNLOCKED",
+        title: "Housing providers unlocked!",
+        body: "You now have access to curated housing providers. Let's find your place!",
+        data: { connection_id: connectionId },
+      });
+    }
   }
   
   return NextResponse.json({ received: true });
@@ -1422,7 +1447,7 @@ This uses `message_type = 'system'` and is styled differently from regular messa
 
 ## 17. Housing Platform Redirect System
 
-After a connection becomes ACTIVE, a "Find your place" section appears in the chat screen and on a dedicated `/housing` page.
+After a connection is ACTIVE and the ₦2,000 housing access fee is paid, a "Find your place" section appears in the chat screen and on a dedicated `/housing` page. This payment gate ensures engaged users browse curated housing providers.
 
 ### How Platforms Are Shown
 
@@ -1609,11 +1634,11 @@ Source for free Lottie JSON files: LottieFiles.com (filter by license: free/Lott
 |---|---|---|---|
 | `POST` | `/api/auth/callback` | — | Supabase OAuth callback |
 | `GET` | `/api/connections` | Required | Get user's connections |
-| `POST` | `/api/connections` | Required | Initiate a connection |
+| `POST` | `/api/connections` | Required | Initiate a connection (FREE, creates connection record) |
 | `PATCH` | `/api/connections/[id]` | Required | Update connection (decline/cancel) |
-| `POST` | `/api/payments/initialize` | Required | Initialize Paystack transaction |
-| `POST` | `/api/payments/webhook` | Paystack sig | Handle Paystack webhook |
-| `GET` | `/api/platforms` | Required | Get housing platforms for user's city |
+| `POST` | `/api/payments/initialize-housing` | Required | Initialize Paystack transaction for housing access |
+| `POST` | `/api/payments/webhook` | Paystack sig | Handle Paystack webhook for housing payments |
+| `GET` | `/api/platforms` | Required | Get housing platforms (only if housing_payment_status = PAID) |
 | `POST` | `/api/platforms/click` | Required | Record a platform click |
 | `POST` | `/api/push/subscribe` | Required | Save push subscription |
 | `DELETE` | `/api/push/subscribe` | Required | Remove push subscription |
@@ -1653,7 +1678,7 @@ VAPID_SUBJECT=mailto:admin@roomie.ng
 # App
 NEXT_PUBLIC_APP_URL=https://app.roomie.ng
 NEXT_PUBLIC_ADMIN_URL=https://admin.roomie.ng
-NEXT_PUBLIC_CONNECTION_FEE=200000           # 200000 kobo = ₦2,000
+NEXT_PUBLIC_HOUSING_ACCESS_FEE=200000       # 200000 kobo = ₦2,000
 ```
 
 ### `apps/admin/.env.local`
@@ -2119,19 +2144,77 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 [ ] 3B-4. Verify discover feed loads 20 profiles per page, infinite scroll loads next page
 ```
 
+**Connects to → Phase 3C (Feed):** Discovery profiles link to user profiles referenced in Feed posts.
 **Connects to → Phase 4:** The "Connect" button on `/discover/[id]` calls the free connection creation API built in Phase 4. No payment at this step.
 
 ---
 
-### Phase 4 — Connection Flow (Free) ⚠️ REVISED — NO PAYMENT HERE
+### Phase 3C — Social Feed (Twitter-style) ✅ COMPLETE
+
+**Prerequisites:** Phase 3 complete (auth, profiles, discover feed live). Layout components already built.
+
+**What this unlocks:** Students post "Looking for a roommate" updates publicly. Others like, comment, and tap through to connect. Feed is the default landing page (`/` → `/feed`).
+
+#### Database
+
+```
+[x] 1.  supabase/migrations/0002_feed_tables.sql
+          posts: id, user_id, content (≤500), city, budget_min, budget_max,
+                 move_in_date, likes_count, comments_count, created_at, updated_at
+          post_likes: UNIQUE(post_id, user_id)
+          post_comments: content ≤300 chars
+          RLS: SELECT all, INSERT/DELETE own only on all three tables
+          SECURITY DEFINER triggers maintain likes_count and comments_count
+```
+
+#### Query Layer
+
+```
+[x] 2.  packages/db/src/queries/posts.ts
+          getFeed, getPostById, createPost, deletePost
+          likePost, unlikePost, getLikedPostIds
+          getComments, addComment
+          Author profile joined via foreign key select on each query
+```
+
+#### Components
+
+```
+[x] 3.  apps/app/src/components/feed/PostComposer.tsx
+          Auto-resize textarea, 500-char limit with colour counter
+          Ctrl/Cmd+Enter to submit · peach "Post" button
+[x] 4.  apps/app/src/components/feed/PostCard.tsx
+          Avatar → /discover/[id] · verified badge · university/city
+          Budget + move-in chips · like (optimistic) · comment · "View profile"
+[x] 5.  apps/app/src/components/feed/CommentSheet.tsx
+          Mobile: slide-up drawer · Desktop: centered modal
+          Loads on open, scrolls to bottom, Enter to send
+```
+
+#### Feed Page & Navigation
+
+```
+[x] 6.  apps/app/app/feed/page.tsx
+          X-style layout · PostComposer (auth-gated) · infinite scroll (PAGE_SIZE=20)
+          getLikedPostIds hydrates liked_by_me on each load
+          Skeleton + empty state
+[x] 7.  AppSidebar: Feed added as first nav item, logo links to /feed
+[x] 8.  discover/page.tsx BottomTabNav: Feed tab added first
+[x] 9.  feed/page.tsx: own BottomTabNav (Feed, Discover, Chat, Profile)
+[x] 10. middleware.ts: /feed added to PROTECTED_ROUTES
+[x] 11. apps/app/app/page.tsx: root redirect changed from /discover → /feed
+```
+
+---
+
+### Phase 4 — Connection Flow (Free) ✅ IMPLEMENTED
 
 **Prerequisites:** Phase 3 complete. Discovery feed live. `connections` table exists with RLS. Auth confirmed working (user must be signed in to connect).
 
-> **⚠️ Business model correction applied:** The original plan charged ₦2,000 at this step to "unlock chat".
-> This is WRONG. Connecting with a roommate is **free**. The ₦2,000 fee moves to Phase 6 (housing referral access).
-> The `connection_status` enum still uses `PENDING_PAYMENT` as a legacy name — rename it to `PENDING` in a future migration.
+> **✅ Business model applied:** Connecting with a roommate is **free and instant**. Chat is unlocked immediately. The ₦2,000 housing access fee is paid separately in Phase 6, triggered only when users want to browse curated housing providers.
+> The `connection_status` enum is now simplified to: `ACTIVE`, `DECLINED`, `INACTIVE`.
 
-**What this unlocks:** ACTIVE connections — the prerequisite for Phase 5's real-time chat. The DB RLS policy `messages_connection_members` checks `c.status = 'ACTIVE'`.
+**What this unlocks:** ACTIVE connections — the prerequisite for Phase 5's real-time chat. The DB RLS policy `messages_connection_members` checks connection exists and is between the two users.
 
 #### Connection API (Free)
 
@@ -2256,31 +2339,30 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 #### Housing Platform Redirect + Paystack Paywall ← ₦2,000 LIVES HERE
 
 ```
-[ ] 1.  Build apps/app/app/api/payments/initialize/route.ts ← MOVED FROM PHASE 4
+[ ] 1.  Build apps/app/app/api/payments/initialize-housing/route.ts
           withAuth guard
-          Amount always from process.env.NEXT_PUBLIC_CONNECTION_FEE (200000 kobo = ₦2,000)
+          Amount always from process.env.NEXT_PUBLIC_HOUSING_ACCESS_FEE (200000 kobo = ₦2,000)
           — never trust amount from request body (security rule §28.4)
-          Check if user already has an active housing_payment for this connection — prevent double charge
+          Check if connection.housing_payment_status = 'PAID' — prevent double charge
           Call Paystack transactions/initialize:
             { amount: 200000, email: user.email, currency: "NGN",
-              metadata: { connection_id, user_id, purpose: "housing_access" },
+              metadata: { connection_id, user_id, type: "housing_access" },
               channels: ["card","bank","ussd","bank_transfer","mobile_money"],
-              callback_url: "https://app.roomie.ng/housing?unlocked=true" }
-          Create pending payment record in payments table (purpose: "housing_access")
-          Return { access_code } to client
-[ ] 2.  Build apps/app/app/api/payments/webhook/route.ts ← MOVED FROM PHASE 4
+              callback_url: "https://app.roomie.ng/housing/success" }
+          Create pending payment record in payments table
+          Return { access_code, reference } to client
+[ ] 2.  Build apps/app/app/api/payments/webhook/route.ts
           HMAC-SHA512 signature verification (x-paystack-signature) — runs BEFORE any state mutation
-          Only process event = 'charge.success'
+          Only process event = 'charge.success' with metadata.type = 'housing_access'
           Idempotent: check payments table for reference before writing
           Update payment: status = 'SUCCESS', paid_at, payment_channel
-          Update connection: set housing_unlocked = TRUE (add this column in migration 0002)
-          Insert notification for user: "Housing platforms are now unlocked for you!"
-[ ] 3.  Build apps/app/src/components/connect/PaystackButton.tsx
-          Load Paystack Inline JS via script tag
-          Open popup with access_code from /api/payments/initialize
-          onSuccess: redirect to /housing?unlocked=true
-          onClose: show "Payment cancelled" toast
-          Button colour: peach-200 (#FAE8CC)
+          Update connection: housing_payment_status = 'PAID', housing_payment_paid_at = now()
+          Insert notification for user: "Housing providers unlocked! Time to find your place."
+[ ] 3.  Build apps/app/src/components/housing/HousingPaywall.tsx
+          ₦2,000 payment gate component
+          Locked state: "Unlock housing providers" text + PaystackButton (peach-200 #FAE8CC)
+          Loading: show spinner while Paystack initializes
+          Error states: show toast if Paystack fails
 [ ] 4.  Implement packages/db/src/queries/housing.ts — getRelevantPlatforms() from §17
           Filter status = 'ACTIVE', match by city or university via .or()
           Sort featured first, then by total_clicks
@@ -2290,16 +2372,17 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
           Logo, name, cities/campus tags, "Visit platform" (opens new tab)
           Click counted via API before redirect (click tracked even if tab is closed)
           "Featured" badge if is_featured = true
-[ ] 7.  Build apps/app/app/housing/page.tsx — THE PAYWALL PAGE
+[ ] 7.  Build apps/app/app/housing/page.tsx and /housing/success page — THE PAYWALL PAGE
           Gate: user must have at least one ACTIVE connection
-          Gate 2: connection must have housing_unlocked = TRUE (paid ₦2,000)
+          Gate 2: if housing_payment_status != 'PAID', show HousingPaywall component
           LOCKED STATE (has connection, not paid):
             Show blurred platform cards underneath
-            Overlay: "Unlock housing referrals" · ₦2,000 one-time · PaystackButton
-            List what they get: curated providers near their city/campus
-          UNLOCKED STATE (paid):
-            Full list of relevant housing platforms
-            "Back from [Provider]? How did it go?" prompt if returning from external link
+            HousingPaywall overlay: "Unlock housing referrals" · ₦2,000 one-time · PaystackButton
+            List benefits: curated providers near their city/campus, verified agents only, exclusive referral links
+          UNLOCKED STATE (paid — housing_payment_status = 'PAID'):
+            Full list of relevant housing platforms from getRelevantPlatforms()
+            Click tracking on each platform card
+            "Back from [Provider]? How did it go?" prompt if returning (set via query param or session)
           NO CONNECTION STATE:
             "Connect with a roommate first" → link to /discover
 ```
@@ -2568,7 +2651,8 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 Phase 1 ✅ (Infrastructure & Scaffold)
     └─► Phase 2 ✅ (Database + Auth + Onboarding)
             └─► Phase 3 ✅ (Discovery Feed — X-Style Layout, Mock Data)
-                    └─► Phase 3B [ ] (Wire Live Supabase Query — after auth confirmed E2E)
+                    ├─► Phase 3B [ ] (Wire Live Supabase Query — after auth confirmed E2E)
+                    ├─► Phase 3C ✅ (Social Feed — posts, likes, comments, /feed as root)
                     └─► Phase 4 [ ] (Free Connection Flow — no payment)
                             └─► Phase 5 [ ] (Real-Time Chat + PWA)
                                     ├─► Phase 6 [ ] (Bills + Housing Paywall ₦2,000 + Verification)
@@ -2691,7 +2775,7 @@ GoFinder already has a fully designed PWA plan (`apps/dashboard/PWA_PLAN.md`). R
 - `src/hooks/useInstallPrompt.ts` → copy verbatim
 - `src/components/pwa/InstallPrompt.tsx` → copy, update branding (app name, icon)
 
-The only PWA difference: Roomie's manifest `start_url` is `/discover` instead of `/`.
+The only PWA difference: Roomie's manifest `start_url` is `/feed` (the social feed is the default landing route).
 
 ---
 
