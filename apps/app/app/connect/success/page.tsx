@@ -101,9 +101,9 @@ export default function ConnectSuccessPage() {
           </Button>
         </Link>
 
-        <Link href="/discover" className="block">
+        <Link href="/" className="block">
           <button className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors py-2">
-            Back to Discover
+            Back to feed
           </button>
         </Link>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +11,9 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Avatar } from "@repo/ui/avatar";
 import { useConnections } from "@/hooks/useConnections";
+import { createClient } from "@repo/db/client";
+
+const supabase = createClient();
 
 export default function ChatThreadPage() {
   const params  = useParams<{ connectionId: string }>();
@@ -22,6 +25,9 @@ export default function ChatThreadPage() {
 
   const { messages, isLoading, isSending, sendMessage } = useMessages(connectionId);
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
+  const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
+  const [isProposingAgreement, setIsProposingAgreement] = useState(false);
+  const [agreementError, setAgreementError] = useState("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +35,44 @@ export default function ChatThreadPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOtherTyping]);
+
+  useEffect(() => {
+    if (!connectionId || !user) return;
+
+    const loadAgreement = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from("roommate_agreements")
+        .select("status")
+        .eq("connection_id", connectionId)
+        .maybeSingle();
+
+      setAgreementStatus(data?.status ?? "NONE");
+    };
+
+    void loadAgreement();
+  }, [connectionId, user]);
+
+  const proposeAgreement = async () => {
+    if (isProposingAgreement || agreementStatus === "PENDING" || agreementStatus === "CONFIRMED") return;
+
+    setIsProposingAgreement(true);
+    setAgreementError("");
+    try {
+      const response = await fetch("/api/agreements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? "Could not propose agreement");
+      setAgreementStatus("PENDING");
+    } catch (err) {
+      setAgreementError(err instanceof Error ? err.message : "Could not propose agreement");
+    } finally {
+      setIsProposingAgreement(false);
+    }
+  };
 
   // Resolve the other party
   const connection = connections.find((c) => c.id === connectionId);
@@ -172,6 +216,7 @@ export default function ChatThreadPage() {
                   key={msg.id}
                   message={msg}
                   isOwn={msg.sender_id === user.id}
+                  currentUserId={user.id}
                 />
               ))
             )}
@@ -189,6 +234,27 @@ export default function ChatThreadPage() {
            * The ChatInput itself has px-[5%] so it matches the message padding
            */}
           <div className="flex-shrink-0 pb-safe">
+            {agreementStatus !== "PENDING" && agreementStatus !== "CONFIRMED" && (
+              <div className="border-t border-slate-100 bg-white px-[5%] py-2">
+                <button
+                  type="button"
+                  onClick={proposeAgreement}
+                  disabled={isProposingAgreement || !connection}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {isProposingAgreement ? "Proposing agreement..." : "Propose agreement"}
+                </button>
+                {agreementError && <p className="mt-1.5 text-center text-xs font-medium text-red-500">{agreementError}</p>}
+              </div>
+            )}
+            {agreementStatus === "CONFIRMED" && (
+              <div className="border-t border-brand-100 bg-brand-50 px-[5%] py-2 text-center text-xs font-semibold text-brand-700">
+                Agreement confirmed. Housing providers are unlocked.
+              </div>
+            )}
             <ChatInput
               onSend={async (content) => {
                 await setTyping(false);

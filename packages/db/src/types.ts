@@ -686,7 +686,7 @@ export type Database = {
         | "EXPIRED"
         | "CANCELLED"
       gender_type: "male" | "female" | "non_binary" | "prefer_not_to_say"
-      message_type: "text" | "image" | "system"
+      message_type: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined"
       noise_preference: "very_quiet" | "quiet" | "moderate" | "lively"
       payment_status: "PENDING" | "SUCCESS" | "FAILED" | "ABANDONED"
       platform_status: "PENDING_REVIEW" | "ACTIVE" | "SUSPENDED" | "REJECTED"
@@ -1282,7 +1282,7 @@ export const Constants = {
         "CANCELLED",
       ],
       gender_type: ["male", "female", "non_binary", "prefer_not_to_say"],
-      message_type: ["text", "image", "system"],
+      message_type: ["text", "image", "system", "agreement_request", "agreement_confirmed", "agreement_declined"],
       noise_preference: ["very_quiet", "quiet", "moderate", "lively"],
       payment_status: ["PENDING", "SUCCESS", "FAILED", "ABANDONED"],
       platform_status: ["PENDING_REVIEW", "ACTIVE", "SUSPENDED", "REJECTED"],

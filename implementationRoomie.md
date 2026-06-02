@@ -100,12 +100,19 @@ Roomie solves each of these:
 6. Tap a profile card → full profile detail page
      See all lifestyle details, budget, move-in date, bio
      Tap "Connect" → FREE — sends an instant connection request
-7. Connection accepted → chat unlocked between both users (FREE)
-8. Chat, get to know each other, agree on roommate situation
-9. Ready to find a place → tap "Find Housing" in the app
-     PAYWALL: Pay ₦2,000 once via Paystack (card, transfer, OPay, USSD, bank)
-     Payment confirmed → curated housing provider list shown for their city/campus
-10. Browse housing providers → tap one → redirected to that platform/agent in new tab
+7. Connection accepted → chat unlocked between both users (FREE, no payment)
+8. Chat, get to know each other. Discuss lifestyle, budget, move-in timeline.
+9. When both are ready to commit → either party initiates the Roommate Agreement:
+     ─ Tap the "Propose Agreement" button in the chat thread (or type /agree)
+     ─ A Roommate Agreement consent card appears in the OTHER party's chat
+     ─ The card shows: who is proposing, what agreeing means, cost (₦2,000 one-time)
+     ─ The other party taps "Accept & Pay ₦2,000"
+     ─ Paystack payment popup opens (card, transfer, OPay, USSD, bank)
+     ─ On payment success → BOTH users receive the "Roomie Partners ✓" badge
+     ─ /housing route is now unlocked for both users in this connection
+10. Browse housing providers → curated list filtered by city/campus
+      Tap a provider → redirected to their platform in a new tab
+      Click is tracked for provider analytics before the redirect
 11. On return: "Back from [Provider]? How did it go?" prompt
 12. Use Bill Splits tracker to manage shared expenses after moving in
 ```
@@ -131,7 +138,7 @@ Roomie is a **three-surface student roommate platform**:
 | **Discover** (`/discover`) | Profile card grid — browse, filter, connect | Active searchers |
 | **Chat** (`/chat`) | Direct messaging between connected users | Connected pairs |
 
-The revenue gate sits at the intersection of Chat → Housing: pay ₦2,000 to unlock housing referrals once you have a roommate confirmed.
+The revenue gate sits at the **Roommate Agreement** step — inside the chat. When both parties commit to living together via the in-chat consent flow, the acceptor pays ₦2,000. This unlocks housing referrals for both.
 
 ---
 
@@ -166,10 +173,12 @@ The revenue gate sits at the intersection of Chat → Housing: pay ₦2,000 to u
 
 ## 5. Business Model
 
-### Revenue Stream 1 — Housing Access Fee (Primary)
-- ₦2,000 per connected pair accessing housing provider list
-- Paid by either or both members of a connected pair (independent transactions)
-- Paystack handles all payment methods
+### Revenue Stream 1 — Roommate Agreement Fee (Primary)
+- ₦2,000 per roommate agreement — paid by the **acceptor** at the moment they confirm the agreement
+- Triggered inside the chat: initiator proposes → acceptor pays to accept
+- One payment unlocks housing access for **both** users in the connection
+- Paystack handles all payment methods (card, bank transfer, USSD, OPay, PalmPay)
+- The payment is meaningful: it is attached to a deliberate commitment moment ("we're serious about living together"), not a toll at a navigation gate
 - Unlocks curated housing providers + referral tracking
 - Future: Split the fee between both parties (₦1,000 each) to reduce friction
 
@@ -2294,106 +2303,258 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 ---
 
-### Phase 6 — Value-Add Features: Bills, Housing Paywall & Verification ⚠️ REVISED
+### Phase 6 — Roommate Agreement, Housing Access & Bills
 
-**Prerequisites:** Phase 5 complete. Chat live. ACTIVE connections exist. Supabase Storage working. PWA running.
+**Prerequisites:** Phase 5 complete. Chat live with real-time messaging. ACTIVE connections exist in the database.
 
-**What this unlocks:** The ₦2,000 revenue moment (housing referral access). Bill splitting for daily retention. Verified badge for trust. Student ID uploads for Phase 8's admin queue.
+**What this unlocks:** The ₦2,000 revenue moment — triggered by mutual consent inside the chat, not at a navigation gate. Housing referrals, bill splitting, and student verification.
 
-> **⚠️ Payment wall moved here from Phase 4.** The ₦2,000 Paystack payment is triggered when a connected pair taps "Find Housing" — not when they first connect. This is where all payment infrastructure (Paystack init, webhook, payments table writes) is implemented.
+---
 
-#### Housing Platform Redirect + Paystack Paywall ← ₦2,000 LIVES HERE
+> ### ⚠️ Payment Architecture — Final Decision
+>
+> **Where the money flows:**
+> - Payment is triggered inside the chat when the **acceptor** taps "Accept & Pay ₦2,000"
+> - It is NOT triggered by visiting `/housing` — the housing page just shows the list
+> - The `/housing` page checks: does this connection have a CONFIRMED agreement? If yes → show providers. If no → prompt to propose an agreement first.
+>
+> **Who pays:**
+> - The **acceptor** of the agreement pays ₦2,000 (one payment per connection, paid by whoever accepts)
+> - On payment success → both users in the connection get housing access (agreement status = CONFIRMED)
+>
+> **Why this is better than a navigation-gate paywall:**
+> - The payment is attached to a meaningful commitment moment ("we've decided to live together"), not a UI bottleneck
+> - Users feel the value before paying — they've already talked, decided, and are now sealing the deal
+> - Churn is lower because the user is emotionally invested before the payment prompt appears
+
+---
+
+#### Database — migration 0003 (new objects for this phase)
+
+```sql
+-- supabase/migrations/0003_roommate_agreements.sql
+
+-- New message types for the agreement flow
+ALTER TYPE message_type ADD VALUE 'agreement_request';   -- the proposal card
+ALTER TYPE message_type ADD VALUE 'agreement_confirmed'; -- post-payment confirmation
+ALTER TYPE message_type ADD VALUE 'agreement_declined';  -- if the other party declines
+
+-- Roommate agreement record (one per connection, enforced by UNIQUE)
+CREATE TABLE public.roommate_agreements (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  connection_id   UUID NOT NULL UNIQUE REFERENCES public.connections(id) ON DELETE CASCADE,
+  initiator_id    UUID NOT NULL REFERENCES public.profiles(id),
+  acceptor_id     UUID REFERENCES public.profiles(id),    -- set when accepted
+  status          TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'DECLINED', 'CONFIRMED')),
+  -- Payment
+  payment_reference TEXT,
+  payment_channel   TEXT,
+  amount            INTEGER DEFAULT 200000,               -- 200000 kobo = ₦2,000
+  paid_at           TIMESTAMPTZ,
+  -- Timestamps
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at     TIMESTAMPTZ,
+  CONSTRAINT initiator_not_acceptor CHECK (initiator_id <> acceptor_id)
+);
+
+ALTER TABLE public.roommate_agreements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "agreements_connection_members" ON public.roommate_agreements
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.connections c
+      WHERE c.id = roommate_agreements.connection_id
+        AND (c.requester_id = auth.uid() OR c.receiver_id = auth.uid())
+    )
+  );
+```
+
+Apply with: `supabase db push`
+
+---
+
+#### Agreement Initiation — inside the chat thread
 
 ```
-[ ] 1.  Build apps/app/app/api/payments/initialize-housing/route.ts
-          withAuth guard
-          Amount always from process.env.NEXT_PUBLIC_HOUSING_ACCESS_FEE (200000 kobo = ₦2,000)
-          — never trust amount from request body (security rule §28.4)
-          Check if connection.housing_payment_status = 'PAID' — prevent double charge
+[ ] 1.  Add "Propose Agreement" button to apps/app/app/chat/[connectionId]/page.tsx
+          Position: a soft banner just above the input bar, shown only when:
+            - No agreement exists yet for this connection, OR
+            - The last agreement was DECLINED (can re-propose)
+          Text: "Ready to be roommates? Propose an agreement"
+          Tapping it calls POST /api/agreements — does NOT send a chat message directly
+
+[ ] 2.  Build apps/app/app/api/agreements/route.ts (POST)
+          withAuth + service role for writes
+          Body: { connectionId: string }
+          Guard: user must be a party to this connection (requester_id or receiver_id)
+          Guard: no existing PENDING or CONFIRMED agreement for this connection
+          Insert into roommate_agreements: { connection_id, initiator_id, status: 'PENDING' }
+          Inject system message of type 'agreement_request' into the chat:
+            content: "[Name] wants to be your official roommate partner."
+            The message_id is stored in the agreement record so the card can be rendered in chat
+          Notify receiver via notifications table: "Agreement proposal from [Name]"
+          Return: { agreementId }
+
+[ ] 3.  Build apps/app/app/api/agreements/[id]/route.ts (PATCH)
+          Actions: decline | cancel
+          'decline' — receiver only — sets status = 'DECLINED', injects 'agreement_declined' message
+          'cancel'  — initiator only — sets status = 'DECLINED' (removes the pending proposal)
+```
+
+---
+
+#### Agreement Card — rendered in the chat as a special message bubble
+
+```
+[ ] 4.  Update MessageBubble.tsx to handle message_type = 'agreement_request'
+          Render a special card (not a plain text bubble) with:
+            ┌──────────────────────────────────────────┐
+            │  🤝 Roommate Agreement Proposal          │
+            │  [Initiator name] wants to be your      │
+            │  official roommate partner.             │
+            │                                          │
+            │  ✓ Chat together (already unlocked)      │
+            │  ✓ Access housing providers              │
+            │  ✓ "Roomie Partners" badge on your       │
+            │    profiles                              │
+            │                                          │
+            │  Cost: ₦2,000 (one-time, paid by you)   │
+            │                                          │
+            │  [Decline]    [Accept & Pay ₦2,000]      │
+            └──────────────────────────────────────────┘
+          States:
+            - If current user = acceptor + status = PENDING: show Decline + Accept buttons
+            - If current user = initiator + status = PENDING: show "Waiting for response..." + Cancel
+            - If status = CONFIRMED: show "✓ Agreement confirmed — housing unlocked"
+            - If status = DECLINED: show "Agreement was declined" (muted)
+
+[ ] 5.  Handle message_type = 'agreement_confirmed' in MessageBubble
+          A celebration system message: "🎉 You're official roommate partners! Housing providers unlocked."
+          Brand-500 background, full-width centered card
+
+[ ] 6.  Handle message_type = 'agreement_declined' in MessageBubble
+          Muted centered pill: "[Name] declined the agreement."
+```
+
+---
+
+#### Paystack Payment — triggered by "Accept & Pay"
+
+```
+[ ] 7.  Build apps/app/app/api/agreements/[id]/accept/route.ts (POST) ← THE PAYMENT TRIGGER
+          withAuth + service role for writes
+          Only callable by the connection's non-initiator (the acceptor)
+          Guard: agreement status = 'PENDING' (idempotent — returns existing if CONFIRMED)
+          Amount always from process.env.AGREEMENT_FEE_KOBO (200000) — never from request body
           Call Paystack transactions/initialize:
-            { amount: 200000, email: user.email, currency: "NGN",
-              metadata: { connection_id, user_id, type: "housing_access" },
+            { amount: 200000,
+              email: user.email,
+              currency: "NGN",
+              metadata: {
+                agreement_id: id,
+                connection_id: agreement.connection_id,
+                user_id: user.id,
+                type: "roommate_agreement"
+              },
               channels: ["card","bank","ussd","bank_transfer","mobile_money"],
-              callback_url: "https://app.roomie.ng/housing/success" }
+              callback_url: "https://app.roomie.ng/chat/{connectionId}?agreed=true"
+            }
           Create pending payment record in payments table
+          Set agreement.acceptor_id = user.id
           Return { access_code, reference } to client
-[ ] 2.  Build apps/app/app/api/payments/webhook/route.ts
-          HMAC-SHA512 signature verification (x-paystack-signature) — runs BEFORE any state mutation
-          Only process event = 'charge.success' with metadata.type = 'housing_access'
-          Idempotent: check payments table for reference before writing
+
+[ ] 8.  Build apps/app/src/components/connect/PaystackButton.tsx (reuse for agreement)
+          Load Paystack Inline JS via script tag (lazy, only when mounted)
+          Open popup with access_code from /api/agreements/[id]/accept
+          onSuccess(reference): call POST /api/agreements/[id]/confirm with reference
+          onClose: show "Payment cancelled — you can try again" toast
+          Button: full-width, peach-200 (#FAE8CC)
+
+[ ] 9.  Build apps/app/app/api/payments/webhook/route.ts ← THE MONEY ACTUALLY ARRIVES HERE
+          HMAC-SHA512 signature verification (x-paystack-signature) — runs BEFORE any DB write
+          Only process event = 'charge.success' AND metadata.type = 'roommate_agreement'
+          Idempotent check: if payment reference already SUCCESS in payments table → return 200
           Update payment: status = 'SUCCESS', paid_at, payment_channel
-          Update connection: housing_payment_status = 'PAID', housing_payment_paid_at = now()
-          Insert notification for user: "Housing providers unlocked! Time to find your place."
-[ ] 3.  Build apps/app/src/components/housing/HousingPaywall.tsx
-          ₦2,000 payment gate component
-          Locked state: "Unlock housing providers" text + PaystackButton (peach-200 #FAE8CC)
-          Loading: show spinner while Paystack initializes
-          Error states: show toast if Paystack fails
-[ ] 4.  Implement packages/db/src/queries/housing.ts — getRelevantPlatforms() from §17
-          Filter status = 'ACTIVE', match by city or university via .or()
-          Sort featured first, then by total_clicks
-[ ] 5.  Build apps/app/app/api/platforms/click/route.ts (POST)
-          Auth guard · insert platform_clicks record · increment housing_platforms.total_clicks
-[ ] 6.  Build apps/app/src/components/housing/PlatformCard.tsx
-          Logo, name, cities/campus tags, "Visit platform" (opens new tab)
-          Click counted via API before redirect (click tracked even if tab is closed)
-          "Featured" badge if is_featured = true
-[ ] 7.  Build apps/app/app/housing/page.tsx and /housing/success page — THE PAYWALL PAGE
-          Gate: user must have at least one ACTIVE connection
-          Gate 2: if housing_payment_status != 'PAID', show HousingPaywall component
-          LOCKED STATE (has connection, not paid):
-            Show blurred platform cards underneath
-            HousingPaywall overlay: "Unlock housing referrals" · ₦2,000 one-time · PaystackButton
-            List benefits: curated providers near their city/campus, verified agents only, exclusive referral links
-          UNLOCKED STATE (paid — housing_payment_status = 'PAID'):
-            Full list of relevant housing platforms from getRelevantPlatforms()
-            Click tracking on each platform card
-            "Back from [Provider]? How did it go?" prompt if returning (set via query param or session)
-          NO CONNECTION STATE:
-            "Connect with a roommate first" → link to /discover
+          Update agreement: status = 'CONFIRMED', accepted_at = now(), paid_at, payment_reference
+          Inject message of type 'agreement_confirmed' into the chat for both users
+          Notify both parties:
+            Acceptor: "Your roommate agreement is confirmed! Housing providers are now unlocked."
+            Initiator: "[Name] accepted your agreement and paid. Housing is unlocked for both of you!"
+          Return: { received: true }
 ```
+
+---
+
+#### Housing Page — shows providers after agreement is confirmed
+
+```
+[ ] 10. Implement packages/db/src/queries/housing.ts — getRelevantPlatforms()
+          Filter status = 'ACTIVE', match by city or university via .or()
+          Sort: is_featured DESC, total_clicks DESC
+          Limit 12
+
+[ ] 11. Build apps/app/app/api/platforms/click/route.ts (POST)
+          Auth guard · insert platform_clicks record
+          Increment housing_platforms.total_clicks via RPC or direct update
+
+[ ] 12. Build apps/app/src/components/housing/PlatformCard.tsx
+          Logo, name, cities/campus tags
+          "Visit platform" button opens in new tab (click API called first)
+          "Featured" badge if is_featured = true
+
+[ ] 13. Build apps/app/app/housing/page.tsx
+          Gate 1: user must have at least one ACTIVE connection → else show "Connect first"
+          Gate 2: connection must have a CONFIRMED agreement → else show "Propose an agreement
+                  from your chat to unlock housing providers"
+          UNLOCKED (agreement = CONFIRMED):
+            List from getRelevantPlatforms(userCity, userUniversity)
+            Each card: PlatformCard with click tracking
+            "Back from [Provider]? How did it go?" prompt on return (sessionStorage flag)
+          NO CONNECTION:
+            Empty state → link to /discover
+          HAS CONNECTION but NO CONFIRMED AGREEMENT:
+            "You need a roommate agreement to access housing providers"
+            Link back to /chat with that connection
+            Short explanation of the agreement flow
+```
+
+---
 
 #### Bill Splitting
 
 ```
-[ ] 8.  Build apps/app/app/api/bill-splits/route.ts (POST)
+[ ] 14. Build apps/app/app/api/bill-splits/route.ts (POST)
           Auth guard + Zod validation
-          createEqualSplit() logic from §16 (50/50, first user absorbs rounding kobo)
+          createEqualSplit() — 50/50 default, first user absorbs rounding kobo
           Insert into bill_splits + bill_split_items
-          Inject system message into chat: "[Name] created a new bill: [Title]"
-[ ] 9.  Build apps/app/app/api/bill-splits/[splitId]/items/[itemId]/pay/route.ts (PATCH)
-          Mark item is_paid = true, paid_at = now()
+          Inject system message: "[Name] created a new bill: [Title]"
+[ ] 15. Build apps/app/app/api/bill-splits/[splitId]/items/[itemId]/pay/route.ts (PATCH)
+          Mark is_paid = true, paid_at = now()
           If all items paid → set bill_splits.is_settled = true
           Inject system message: "[Name] marked ₦X as paid for [Title]"
-[ ] 10. Build apps/app/src/components/splits/AddSplitModal.tsx
-          Title input, total amount, auto-calculated 50/50 preview (editable individual amounts)
-[ ] 11. Build apps/app/src/components/splits/SplitCard.tsx
-          Title, total, each user's share + is_paid status + "Mark as paid" button (peach-200)
-[ ] 12. Build apps/app/app/splits/page.tsx — all splits across all ACTIVE connections
-[ ] 13. Build apps/app/app/splits/[connectionId]/page.tsx
-          Active splits at top + "Add new split" CTA · Settled splits archived below
+[ ] 16. Build apps/app/src/components/splits/AddSplitModal.tsx
+[ ] 17. Build apps/app/src/components/splits/SplitCard.tsx
+[ ] 18. Build apps/app/app/splits/page.tsx — all splits across all ACTIVE connections
+[ ] 19. Build apps/app/app/splits/[connectionId]/page.tsx
 ```
+
+---
 
 #### Student Verification
 
 ```
-[ ] 11. Implement file upload in apps/app/app/onboarding/verify/page.tsx
-          Validate type (JPG/PNG/WebP/PDF) + size (max 5 MB) on client (§28.6)
-          Upload to private student-ids Supabase Storage bucket
-          Path: {userId}/{crypto.randomUUID()}.{ext} — randomised to prevent enumeration
-          Store URL in profiles.student_id_front_url / student_id_back_url
+[ ] 20. Complete file upload in apps/app/app/onboarding/verify/page.tsx
+          JPG/PNG/WebP/PDF, max 5 MB, upload to private student-ids bucket
+          Path: {userId}/{crypto.randomUUID()}.{ext}
           Set verification_status = 'PENDING'
-[ ] 12. Build "Get verified" CTA on apps/app/app/profile/page.tsx
-          Shows current verification_status badge
-          Nudges unverified users with benefit copy ("Show up higher in the feed")
-[ ] 13. Wire verified badge into ProfileCard.tsx (Phase 3)
-          verified-badge.json Lottie shown when student_verified = true
-          Tooltip: "Student ID verified by Roomie"
+[ ] 21. "Get verified" CTA on profile page — shows badge + status nudge
+[ ] 22. Wire verified-badge.json Lottie into ProfileCard (Phase 9)
 ```
 
-**Connects to → Phase 7:** `notifications` table now has bill, payment, and verification events — Phase 7 sends these as push notifications. PWA service worker is running.
+**Connects to → Phase 7:** Payment webhook, agreement events, and verification events all produce `notifications` rows — Phase 7 sends these as push notifications.
 
-**Connects to → Phase 8:** `verification_status = 'PENDING'` records are in the database and student ID files are in private Storage — Phase 8's super admin panel reviews and approves them.
+**Connects to → Phase 8:** `verification_status = 'PENDING'` feeds the admin review queue. `roommate_agreements` table feeds the connections analytics view.
 
 ---
 
@@ -2413,7 +2574,8 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
           Accepts { userId, title, body, data }
           Fetches subscriptions from DB, sends via web-push.sendNotification()
 [ ] 4.  Wire push send into existing event handlers:
-          Paystack webhook (Phase 6) → notify user: "Housing platforms unlocked!"
+          Agreement proposed (Phase 6) → notify receiver: "[Name] wants to be your roommate partner"
+          Paystack webhook — agreement confirmed (Phase 6) → notify both: "Housing unlocked! 🎉"
           Connection created (Phase 4) → notify receiver: "You have a new roommate connection!"
           Bill split mark-paid (Phase 6) → notify other user in the connection
           Verification approve/reject (Phase 8) → notify student
@@ -2621,23 +2783,29 @@ Phase 1 ✅ (Infrastructure & Scaffold)
             └─► Phase 3 ✅ (Discovery Feed — X-Style Layout, Mock Data)
                     ├─► Phase 3B [ ] (Wire Live Supabase Query — after auth confirmed E2E)
                     ├─► Phase 3C ✅ (Social Feed — posts, likes, comments, /feed as root)
-                    └─► Phase 4 [ ] (Free Connection Flow — no payment)
-                            └─► Phase 5 [ ] (Real-Time Chat + PWA)
-                                    ├─► Phase 6 [ ] (Bills + Housing Paywall ₦2,000 + Verification)
-                                    │       └─► Phase 8 [ ] (Admin Dashboard — provider approval, ID review)
-                                    │                   │
-                                    └─► Phase 7 [ ] (Push Notifications + Notification Center)
-                                            └──────────┘
-                                                        └─► Phase 9 [ ] (Marketing SPA + Lottie Animations)
-                                                                    └─► Phase 10 [ ] (Security + QA + Launch)
+                    └─► Phase 4 ✅ (Free Connection Flow — API, connect page, NotificationContext)
+                            └─► Phase 5 ✅ (Real-Time Chat + Mobile Layout)
+                                    └─► Phase 6 [ ] (Roommate Agreement + Housing Access + Bills + Verification)
+                                            │   migration 0003: roommate_agreements table
+                                            │   ₦2,000 paid inside chat at agreement acceptance
+                                            │   /housing unlocked post-agreement for both users
+                                            │       └─► Phase 8 [ ] (Admin Dashboard)
+                                            │
+                                            └─► Phase 7 [ ] (Push Notifications)
+                                                    └──────────────────────────────────────►
+                                                                        Phase 9 [ ] (Marketing SPA + Lottie)
+                                                                                └─► Phase 10 [ ] (Security + Launch)
 ```
 
 **Revenue moment in the chain:**
-> The ₦2,000 Paystack charge occurs inside **Phase 6**, on the `/housing` page.
-> A user must have: signed up (Phase 2) → connected with a roommate (Phase 4) → chatted (Phase 5)
-> → tapped "Find Housing" (Phase 6) → paid → sees curated housing providers.
+> The ₦2,000 charge happens inside **Phase 6**, inside the **chat thread**.
+>
+> Full path to revenue:
+> Sign up (P2) → discover profiles (P3) → connect free (P4) → chat (P5) → propose agreement via "Propose Agreement" button in chat → **acceptor pays ₦2,000 via Paystack** → agreement CONFIRMED → "Roomie Partners ✓" badge → `/housing` unlocked for both.
+>
+> The payment is never a UI gate — it's a commitment ceremony. Users pay because they've already decided, not because they hit a wall.
 
-> Each phase is independently shippable. After Phase 5, users can sign up, browse, connect for free, and chat. Phase 6 is where the product generates revenue. Phases 7–8 add engagement and admin tools. Phases 9–10 polish and ship.
+> Each phase is independently shippable. Phases 1–5 are **complete**. Phase 6 delivers the revenue model and value-add features. Phases 7–10 add engagement, admin tooling, and ship it.
 
 ---
 

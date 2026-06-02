@@ -12,7 +12,7 @@ export interface Message {
   connection_id: string;
   sender_id: string;
   content: string;
-  message_type: "text" | "image" | "system";
+  message_type: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined";
   image_url: string | null;
   read_at: string | null;
   created_at: string;
@@ -47,7 +47,7 @@ export async function sendMessage(
   connectionId: string,
   senderId: string,
   content: string,
-  messageType: "text" | "image" | "system" = "text",
+  messageType: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined" = "text",
   imageUrl?: string
 ): Promise<Message | null> {
   const { data, error } = await supabase
