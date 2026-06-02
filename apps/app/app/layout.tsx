@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: "Roomie",
   description: "Find your perfect student roommate. Connect and Cooonnectttt.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

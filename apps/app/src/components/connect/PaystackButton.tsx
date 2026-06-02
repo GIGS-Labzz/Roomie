@@ -7,6 +7,9 @@ declare global {
     Paystack?: new () => {
       resumeTransaction: (accessCode: string) => void;
     };
+    PaystackPop?: new () => {
+      resumeTransaction: (accessCode: string) => void;
+    };
   }
 }
 
@@ -20,10 +23,14 @@ interface PaystackButtonProps {
 function loadPaystackScript() {
   return new Promise<void>((resolve, reject) => {
     if (typeof window === "undefined") return reject(new Error("Browser unavailable"));
-    if (window.Paystack) return resolve();
+    if (window.Paystack || window.PaystackPop) return resolve();
 
     const existing = document.querySelector<HTMLScriptElement>("script[data-paystack-inline]");
     if (existing) {
+      if (existing.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("Paystack failed to load")), { once: true });
       return;
@@ -33,7 +40,10 @@ function loadPaystackScript() {
     script.src = "https://js.paystack.co/v2/inline.js";
     script.async = true;
     script.dataset.paystackInline = "true";
-    script.onload = () => resolve();
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
     script.onerror = () => reject(new Error("Paystack failed to load"));
     document.body.appendChild(script);
   });
@@ -58,9 +68,16 @@ export function PaystackButton({ agreementId, className = "", disabled = false, 
       }
 
       await loadPaystackScript();
-      if (!window.Paystack) throw new Error("Paystack checkout is unavailable");
+      const PaystackCheckout = window.Paystack ?? window.PaystackPop;
+      if (!PaystackCheckout) {
+        if (data.authorizationUrl) {
+          window.location.href = data.authorizationUrl;
+          return;
+        }
+        throw new Error("Paystack checkout is unavailable");
+      }
 
-      const popup = new window.Paystack();
+      const popup = new PaystackCheckout();
       popup.resumeTransaction(data.accessCode);
       onStarted?.();
     } catch (err) {

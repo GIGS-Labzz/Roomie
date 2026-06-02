@@ -3,69 +3,6 @@ import { withAuth, isAuthError } from "@/lib/auth-guard";
 import { createServiceClient } from "@repo/db/server";
 import { createConnection, getExistingConnection } from "@repo/db/queries/connections";
 
-// Creates an auth.users row with a specific UUID via the Admin HTTP API,
-// which then fires the on_auth_user_created trigger to create the profile row.
-// Used when mock profile UUIDs don't exist in the real database yet.
-async function ensureReceiverExists(receiverId: string): Promise<{ ok: boolean; error?: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const headers = {
-    "apikey": serviceKey,
-    "Authorization": `Bearer ${serviceKey}`,
-    "Content-Type": "application/json",
-  };
-
-  // 1. Check if the auth user already exists
-  const checkRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${receiverId}`, { headers });
-  if (checkRes.ok) {
-    // Auth user exists — ensure profile row exists too (trigger may have missed it)
-    const db = await createServiceClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db as any).from("profiles").upsert(
-      {
-        id: receiverId,
-        display_name: "Roommate",
-        onboarding_complete: true,
-        is_active: true,
-      },
-      { onConflict: "id", ignoreDuplicates: true }
-    );
-    return { ok: true };
-  }
-
-  // 2. Create the auth user with the exact UUID we need
-  const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      id: receiverId,
-      email: `ghost-${receiverId.slice(0, 8)}@roomie.dev`,
-      email_confirm: true,
-      user_metadata: {
-        full_name: "Roommate",
-        avatar_url: `https://i.pravatar.cc/150?u=${receiverId}`,
-      },
-    }),
-  });
-
-  if (!createRes.ok) {
-    const body = await createRes.text();
-    return { ok: false, error: `Admin API error (${createRes.status}): ${body}` };
-  }
-
-  // The on_auth_user_created trigger auto-creates the profile row.
-  // Give it a brief moment, then patch to mark onboarding_complete so
-  // this ghost profile doesn't interfere with the discover feed filters.
-  const db = await createServiceClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (db as any)
-    .from("profiles")
-    .update({ onboarding_complete: true, is_active: true })
-    .eq("id", receiverId);
-
-  return { ok: true };
-}
-
 export async function POST(req: NextRequest) {
   // 1. Confirm caller is authenticated
   const auth = await withAuth();
@@ -97,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cannot connect with yourself" }, { status: 400 });
   }
 
-  // 3. Ensure receiver exists in auth.users + profiles (creates ghost if needed)
+  // 3. Verify receiver exists
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: receiverProfile } = await (db as any)
     .from("profiles")
@@ -106,14 +43,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!receiverProfile) {
-    const result = await ensureReceiverExists(receiverId);
-    if (!result.ok) {
-      console.error("[connections] ensureReceiverExists failed:", result.error);
-      return NextResponse.json(
-        { error: "Receiver profile not found", detail: result.error },
-        { status: 404 }
-      );
-    }
+    return NextResponse.json({ error: "Receiver profile not found" }, { status: 404 });
   }
 
   // 4. Prevent duplicate connections

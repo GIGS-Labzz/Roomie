@@ -25,15 +25,18 @@ export default async function HousingPage() {
     .eq("status", "ACTIVE")
     .order("connected_at", { ascending: false });
 
-  const activeConnection = connections?.[0];
+  const connectionIds = (connections ?? []).map((c: { id: string }) => c.id);
 
+  // Check ALL active connections for any confirmed agreement — not just the first one.
+  // Both the initiator and acceptor share the same connection, so both should see it.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: confirmedAgreement } = activeConnection
+  const { data: confirmedAgreement } = connectionIds.length > 0
     ? await (supabase as any)
         .from("roommate_agreements")
         .select("id, connection_id, status")
-        .eq("connection_id", activeConnection.id)
+        .in("connection_id", connectionIds)
         .eq("status", "CONFIRMED")
+        .limit(1)
         .maybeSingle()
     : { data: null };
 
@@ -51,6 +54,8 @@ export default async function HousingPage() {
         university: profile?.university,
       })
     : [];
+
+  const activeConnection = connections?.[0];
 
   return (
     <div className="min-h-screen bg-sage-surface md:flex">

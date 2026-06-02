@@ -1,12 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MOCK_PROFILES } from "@/lib/mockProfiles";
+import { createClient } from "@repo/db/client";
+import { getProfileById } from "@repo/db/queries/profiles";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CompatibilityScore } from "@/components/discover/CompatibilityScore";
+import type { Database } from "@repo/db/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+const supabase = createClient();
 
 const YEAR_LABELS: Record<number, string> = {
   1: "100 Level", 2: "200 Level", 3: "300 Level", 4: "400 Level",
@@ -48,17 +55,30 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-// Dummy score for mock profiles — always show a plausible number
-function mockScore(id: string): number {
-  const hash = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  return 45 + (hash % 50);
-}
-
 export default function ProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const profile = MOCK_PROFILES.find((p) => p.id === params.id);
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await getProfileById(supabase as any, params.id);
+      setProfile(data as Profile ?? null);
+      setIsLoading(false);
+    };
+    void load();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-sage-surface flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
@@ -71,7 +91,8 @@ export default function ProfileDetailPage() {
     );
   }
 
-  const compatScore = mockScore(profile.id);
+  // Compatibility score: use hash-based heuristic since we'd need both full profiles for real scoring
+  const compatScore = 45 + (profile.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 50);
   const tags = profile.lifestyle_tags ?? [];
 
   return (

@@ -3,12 +3,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MOCK_PROFILES } from "@/lib/mockProfiles";
+import { createClient } from "@repo/db/client";
+import { getProfileById } from "@repo/db/queries/profiles";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useConnections } from "@/hooks/useConnections";
+import type { Database } from "@repo/db/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+const supabase = createClient();
 
 const YEAR_LABELS: Record<number, string> = {
   1: "100L", 2: "200L", 3: "300L", 4: "400L", 5: "500L", 6: "600L", 7: "Final Year",
@@ -30,13 +36,27 @@ export default function ConnectPage() {
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const profile = MOCK_PROFILES.find((p) => p.id === params.id);
-
-  // Redirect unauthenticated users
   useEffect(() => {
-    if (user === null) return; // still loading
-  }, [user]);
+    const load = async () => {
+      setIsLoading(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await getProfileById(supabase as any, params.id);
+      setProfile(data as Profile ?? null);
+      setIsLoading(false);
+    };
+    void load();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-sage-surface flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!profile) {
     return (

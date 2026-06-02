@@ -10,62 +10,97 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Avatar } from "@repo/ui/avatar";
-import { useConnections } from "@/hooks/useConnections";
 import { createClient } from "@repo/db/client";
+import { getConnectionById } from "@repo/db/queries/connections";
 
 const supabase = createClient();
 
+// ── Date separator helpers ─────────────────────────────────────────────────
+
+function getDateLabel(isoString: string): string {
+  const date = new Date(isoString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString("en-NG", { weekday: "long", day: "numeric", month: "short" });
+}
+
+function isSameDay(a: string, b: string): boolean {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type OtherUser = { id: string; display_name: string; avatar_url: string | null; university: string | null; city: string | null; student_verified: boolean | null };
+
 export default function ChatThreadPage() {
-  const params  = useParams<{ connectionId: string }>();
-  const router  = useRouter();
+  const params = useParams<{ connectionId: string }>();
+  const router = useRouter();
   const { user } = useAuth();
-  const { connections } = useConnections();
 
   const connectionId = params.connectionId;
 
   const { messages, isLoading, isSending, sendMessage } = useMessages(connectionId);
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
+
+  const [other, setOther] = useState<OtherUser | null>(null);
   const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
   const [isProposingAgreement, setIsProposingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to latest message whenever the list changes
+  // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOtherTyping]);
 
+  // Load connection (with profile join) to get other user's info
   useEffect(() => {
     if (!connectionId || !user) return;
+    const load = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: conn } = await getConnectionById(supabase as any, connectionId);
+      if (!conn) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const connAny = conn as any;
+      const otherUser = conn.requester_id === user.id ? connAny.receiver : connAny.requester;
+      setOther(otherUser ?? null);
+    };
+    void load();
+  }, [connectionId, user]);
 
-    const loadAgreement = async () => {
+  // Load agreement status
+  useEffect(() => {
+    if (!connectionId || !user) return;
+    const load = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from("roommate_agreements")
         .select("status")
         .eq("connection_id", connectionId)
         .maybeSingle();
-
       setAgreementStatus(data?.status ?? "NONE");
     };
-
-    void loadAgreement();
+    void load();
   }, [connectionId, user]);
 
   const proposeAgreement = async () => {
     if (isProposingAgreement || agreementStatus === "PENDING" || agreementStatus === "CONFIRMED") return;
-
     setIsProposingAgreement(true);
     setAgreementError("");
     try {
-      const response = await fetch("/api/agreements", {
+      const res = await fetch("/api/agreements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ connectionId }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error ?? "Could not propose agreement");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Could not propose agreement");
       setAgreementStatus("PENDING");
     } catch (err) {
       setAgreementError(err instanceof Error ? err.message : "Could not propose agreement");
@@ -74,187 +109,152 @@ export default function ChatThreadPage() {
     }
   };
 
-  // Resolve the other party
-  const connection = connections.find((c) => c.id === connectionId);
-  const other = connection
-    ? connection.requester_id === user?.id
-      ? (connection as unknown as {
-          receiver: { id: string; display_name: string; avatar_url: string | null; university: string | null };
-        }).receiver
-      : (connection as unknown as {
-          requester: { id: string; display_name: string; avatar_url: string | null; university: string | null };
-        }).requester
-    : null;
-
   if (!user) return null;
 
   return (
-    /*
-     * Outer shell:
-     *   Desktop — sidebar left, chat card centred in the remaining space
-     *   Mobile  — no sidebar; the chat card fills the full screen
-     *
-     * h-[100dvh]: dynamic viewport height — shrinks with the keyboard on
-     * mobile so the input stays above it (unlike h-screen / 100vh which
-     * is fixed and causes the input to slide under the keyboard on iOS/Android).
-     */
     <div className="flex h-[100dvh] overflow-hidden bg-sage-surface">
-
-      {/* ── Left sidebar — desktop only ───────────────────────────── */}
+      {/* Desktop sidebar */}
       <AppSidebar />
 
-      {/* ── Main column ───────────────────────────────────────────── */}
       <div className="flex-1 flex justify-center min-w-0">
+        <div className="flex flex-col w-full max-w-3xl h-full min-h-0">
 
-        {/*
-         * Chat card:
-         *   flex-col — header / messages / input stacked vertically
-         *   h-full   — fills the dynamic viewport height from the parent
-         *   min-h-0  — CRITICAL: tells the flexbox to let this div shrink
-         *              below its content size so the message list can scroll
-         */}
-        <div className="flex flex-col w-full max-w-3xl h-full min-h-0 bg-white md:shadow-xl md:border-x md:border-slate-100">
+          {/* ── Header (WhatsApp-style: brand green background) ── */}
+          <header className="flex-shrink-0 bg-brand-500 px-3 py-2.5 flex items-center gap-2 shadow-md">
 
-          {/* ── Header ──────────────────────────────────────────────── */}
-          <header className="flex-shrink-0 bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3">
-
-            {/* Mobile: Roomie logo + back in one row */}
-            <div className="flex items-center gap-2 md:hidden">
-              <button
-                onClick={() => router.back()}
-                className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
-                aria-label="Back"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Desktop: back arrow only */}
+            {/* Back */}
             <button
               onClick={() => router.back()}
-              className="hidden md:flex p-2 -ml-1 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex-shrink-0"
+              className="p-2 rounded-full text-white/80 hover:bg-white/10 transition-colors flex-shrink-0"
               aria-label="Back"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            {/* Other user */}
+            {/* Profile section — tapping goes to profile */}
             {other ? (
               <Link
                 href={`/discover/${other.id}`}
-                className="flex items-center gap-3 flex-1 min-w-0 group"
+                className="flex items-center gap-2.5 flex-1 min-w-0 group"
               >
-                <Avatar src={other.avatar_url} name={other.display_name} size="sm" />
+                <div className="relative flex-shrink-0">
+                  <Avatar src={other.avatar_url} name={other.display_name} size="sm" className="ring-2 ring-white/30" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-300 rounded-full border-2 border-brand-500" />
+                </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-slate-900 text-sm truncate group-hover:text-brand-600 transition-colors">
+                  <p className="font-semibold text-white text-[15px] truncate leading-tight group-hover:underline">
                     {other.display_name}
+                    {other.student_verified && (
+                      <svg className="inline w-3.5 h-3.5 ml-1 text-white/80" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    )}
                   </p>
-                  {other.university && (
-                    <p className="text-xs text-slate-400 truncate">{other.university}</p>
-                  )}
+                  <p className="text-white/70 text-xs truncate leading-tight">
+                    {other.university ?? other.city ?? "Tap to view profile"}
+                  </p>
                 </div>
               </Link>
             ) : (
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3.5 bg-slate-100 rounded-full w-28 animate-pulse" />
-                <div className="h-2.5 bg-slate-100 rounded-full w-20 animate-pulse" />
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-white/20 animate-pulse flex-shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-3 bg-white/20 rounded-full w-28 animate-pulse" />
+                  <div className="h-2.5 bg-white/15 rounded-full w-20 animate-pulse" />
+                </div>
               </div>
             )}
 
-            {/* Housing shortcut — icon-only on mobile to save space */}
+            {/* Housing shortcut */}
             <Link
               href="/housing"
-              className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-xl hover:bg-brand-100 transition-colors"
+              className="flex-shrink-0 p-2 rounded-full text-white/80 hover:bg-white/10 transition-colors"
               title="Find housing"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              <span className="hidden sm:inline">Find housing</span>
             </Link>
           </header>
 
-          {/* ── Messages ────────────────────────────────────────────── */}
-          {/*
-           * flex-1 min-h-0 overflow-y-auto — the three-part scroll fix:
-           *   flex-1      → takes all remaining vertical space
-           *   min-h-0     → allows shrinking below content height (critical)
-           *   overflow-y-auto → enables scrolling within that constrained space
-           */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-[5%] py-4 space-y-3">
+          {/* ── Messages (warm wallpaper background) ── */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto py-3 px-3 md:px-4 space-y-1"
+            style={{ background: "#EDE8C8" }}
+          >
             {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? "" : "flex-row-reverse"}`}>
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0" />
-                    <div className={`h-10 bg-slate-200 rounded-3xl animate-pulse ${i % 2 === 0 ? "w-48 rounded-bl-lg" : "w-40 rounded-br-lg"}`} />
-                  </div>
-                ))}
-              </div>
+              <MessageSkeletons />
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-12">
-                <div className="w-16 h-16 rounded-full bg-sage-surface border-2 border-dashed border-sage-light flex items-center justify-center">
-                  <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-700">Say hello!</p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Start the conversation with{" "}
-                    {other?.display_name ?? "your new roommate"}.
-                  </p>
-                </div>
-              </div>
+              <EmptyThread name={other?.display_name} />
             ) : (
-              messages.map((msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  isOwn={msg.sender_id === user.id}
-                  currentUserId={user.id}
-                />
-              ))
+              <>
+                {messages.map((msg, idx) => {
+                  const showDateSep =
+                    idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
+
+                  return (
+                    <div key={msg.id}>
+                      {showDateSep && (
+                        <div className="flex justify-center py-2">
+                          <span className="bg-white/80 text-slate-500 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm">
+                            {getDateLabel(msg.created_at)}
+                          </span>
+                        </div>
+                      )}
+                      <MessageBubble
+                        message={msg}
+                        isOwn={msg.sender_id === user.id}
+                        currentUserId={user.id}
+                      />
+                    </div>
+                  );
+                })}
+              </>
             )}
 
-            {isOtherTyping && <TypingIndicator />}
+            {isOtherTyping && (
+              <div className="flex items-end gap-2">
+                <div className="w-7 h-7 rounded-full bg-white/50 flex-shrink-0" />
+                <TypingIndicator />
+              </div>
+            )}
 
-            {/* Scroll anchor */}
             <div ref={bottomRef} />
           </div>
 
-          {/* ── Input bar ────────────────────────────────────────────── */}
-          {/*
-           * flex-shrink-0 — never squish the input bar
-           * pb-safe       — adds env(safe-area-inset-bottom) for iOS home bar
-           * The ChatInput itself has px-[5%] so it matches the message padding
-           */}
-          <div className="flex-shrink-0 pb-safe">
+          {/* ── Footer: agreement banner + input ── */}
+          <div className="flex-shrink-0 bg-[#F0F0F0]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+            {/* Agreement propose banner */}
             {agreementStatus !== "PENDING" && agreementStatus !== "CONFIRMED" && (
-              <div className="border-t border-slate-100 bg-white px-[5%] py-2">
+              <div className="bg-white border-t border-slate-200 px-4 py-2">
                 <button
                   type="button"
                   onClick={proposeAgreement}
-                  disabled={isProposingAgreement || !connection}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isProposingAgreement || !other}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {isProposingAgreement ? "Proposing agreement..." : "Propose agreement"}
+                  {isProposingAgreement ? "Proposing…" : "Propose roommate agreement"}
                 </button>
-                {agreementError && <p className="mt-1.5 text-center text-xs font-medium text-red-500">{agreementError}</p>}
+                {agreementError && (
+                  <p className="mt-1 text-center text-xs text-red-500">{agreementError}</p>
+                )}
               </div>
             )}
+
             {agreementStatus === "CONFIRMED" && (
-              <div className="border-t border-brand-100 bg-brand-50 px-[5%] py-2 text-center text-xs font-semibold text-brand-700">
-                Agreement confirmed. Housing providers are unlocked.
+              <div className="bg-brand-50 border-t border-brand-100 px-4 py-2 text-center text-xs font-semibold text-brand-700 flex items-center justify-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Agreement confirmed — housing providers unlocked
               </div>
             )}
+
             <ChatInput
               onSend={async (content) => {
                 await setTyping(false);
@@ -262,13 +262,44 @@ export default function ChatThreadPage() {
               }}
               onTyping={() => void setTyping(true)}
               isSending={isSending}
-              disabled={!connection}
+              disabled={!other}
               placeholder={other ? `Message ${other.display_name}…` : "Message…"}
             />
           </div>
 
         </div>
       </div>
+    </div>
+  );
+}
+
+function EmptyThread({ name }: { name?: string | null }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60%] text-center gap-3 py-12">
+      <div className="w-16 h-16 rounded-full bg-white/70 flex items-center justify-center shadow-sm">
+        <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </div>
+      <div>
+        <p className="font-semibold text-slate-700 text-sm">Say hello!</p>
+        <p className="text-xs text-slate-500 mt-1">
+          Start the conversation with {name ?? "your new roommate"}.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MessageSkeletons() {
+  return (
+    <div className="space-y-3 px-1">
+      {[false, true, false, false, true].map((own, i) => (
+        <div key={i} className={`flex items-end gap-2 ${own ? "flex-row-reverse" : "flex-row"}`}>
+          {!own && <div className="w-7 h-7 rounded-full bg-white/60 animate-pulse flex-shrink-0" />}
+          <div className={`h-10 rounded-3xl animate-pulse ${own ? "w-40 bg-brand-200/60 rounded-br-sm" : "w-48 bg-white/60 rounded-bl-sm"}`} />
+        </div>
+      ))}
     </div>
   );
 }

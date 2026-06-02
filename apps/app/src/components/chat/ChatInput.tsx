@@ -15,7 +15,7 @@ export function ChatInput({
   onTyping,
   isSending = false,
   disabled = false,
-  placeholder = "Message...",
+  placeholder = "Message…",
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,7 +25,6 @@ export function ChatInput({
     if (!trimmed || isSending || disabled) return;
     onSend(trimmed);
     setValue("");
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -41,7 +40,6 @@ export function ChatInput({
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value);
     onTyping?.();
-    // Auto-grow textarea
     const el = textareaRef.current;
     if (el) {
       el.style.height = "auto";
@@ -49,42 +47,43 @@ export function ChatInput({
     }
   };
 
-  const canSend = value.trim().length > 0 && !isSending && !disabled;
+  const hasText = value.trim().length > 0;
 
   return (
-    <div className="flex items-end gap-2 bg-white border-t border-slate-100 px-[5%] py-3">
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        rows={1}
-        disabled={disabled}
-        className="flex-1 resize-none bg-sage-surface rounded-2xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:opacity-50 max-h-[120px] leading-relaxed"
-      />
+    <div className="flex items-end gap-2 px-2 py-2">
+      {/* Text input pill */}
+      <div className="flex-1 flex items-end bg-white rounded-3xl shadow-sm overflow-hidden min-h-[44px]">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={disabled ? "Connecting…" : placeholder}
+          rows={1}
+          disabled={disabled}
+          className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50 max-h-[120px] leading-relaxed"
+          style={{ minHeight: "44px" }}
+        />
+      </div>
 
+      {/* Send / Mic button */}
       <button
-        onClick={handleSend}
-        disabled={!canSend}
-        aria-label="Send message"
-        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
-          canSend
-            ? "bg-peach-200 hover:bg-peach-300 active:scale-95 shadow-sm"
-            : "bg-slate-100 cursor-not-allowed"
-        }`}
+        onClick={hasText ? handleSend : undefined}
+        disabled={!hasText && !isSending ? false : !hasText || isSending || disabled}
+        aria-label={hasText ? "Send message" : "Voice message"}
+        className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 bg-brand-500 hover:bg-brand-600 active:scale-95 shadow-sm disabled:opacity-50"
       >
         {isSending ? (
-          <span className="w-4 h-4 border-2 border-slate-300 border-t-brand-500 rounded-full animate-spin" />
+          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+        ) : hasText ? (
+          // Send icon
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+          </svg>
         ) : (
-          <svg
-            className={`w-4 h-4 ${canSend ? "text-slate-800" : "text-slate-400"}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+          // Mic icon (when no text)
+          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M12 3a4 4 0 014 4v4a4 4 0 01-8 0V7a4 4 0 014-4z" />
           </svg>
         )}
       </button>

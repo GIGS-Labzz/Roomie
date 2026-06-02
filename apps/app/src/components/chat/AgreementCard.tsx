@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PaystackButton } from "@/components/connect/PaystackButton";
 
 interface AgreementCardProps {
@@ -11,9 +12,30 @@ interface AgreementCardProps {
 }
 
 export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }: AgreementCardProps) {
-  const [status, setStatus] = useState<"PENDING" | "DECLINED" | "PAYMENT_STARTED">("PENDING");
+  const [status, setStatus] = useState<"PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED">("PENDING");
   const [isDeclining, setIsDeclining] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!agreementId) return;
+
+    const loadAgreement = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/agreements/${agreementId}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error ?? "Could not load agreement status");
+        setStatus(data.agreement?.status ?? "PENDING");
+      } catch (err) {
+        console.error("Failed to load agreement status", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadAgreement();
+  }, [agreementId]);
 
   const decline = async () => {
     setIsDeclining(true);
@@ -61,7 +83,23 @@ export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }
         ))}
       </div>
 
-      {status === "DECLINED" ? (
+      {isLoading ? (
+        <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2 text-center text-xs font-semibold text-slate-500">
+          Loading agreement status...
+        </p>
+      ) : status === "CONFIRMED" ? (
+        <div className="mt-4 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-3 text-center text-sm font-semibold text-emerald-800">
+          Roomie partners confirmed — housing providers are unlocked for both of you.
+          <div className="mt-2">
+            <Link
+              href="/housing"
+              className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              Browse housing
+            </Link>
+          </div>
+        </div>
+      ) : status === "DECLINED" ? (
         <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2 text-center text-xs font-semibold text-slate-500">
           Agreement declined
         </p>

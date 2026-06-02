@@ -82,3 +82,52 @@ export async function markMessagesRead(
     .neq("sender_id", readerId)
     .is("read_at", null);
 }
+
+export interface LastMessagePreview {
+  connection_id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+  message_type: string;
+}
+
+export async function getLastMessagesForConnections(
+  supabase: AnyClient,
+  connectionIds: string[]
+): Promise<Record<string, LastMessagePreview>> {
+  if (!connectionIds.length) return {};
+
+  const { data } = await supabase
+    .from("messages")
+    .select("connection_id, content, sender_id, created_at, message_type")
+    .in("connection_id", connectionIds)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  const result: Record<string, LastMessagePreview> = {};
+  for (const msg of (data ?? []) as LastMessagePreview[]) {
+    if (!result[msg.connection_id]) result[msg.connection_id] = msg;
+  }
+  return result;
+}
+
+export async function getUnreadCountPerConnection(
+  supabase: AnyClient,
+  connectionIds: string[],
+  userId: string
+): Promise<Record<string, number>> {
+  if (!connectionIds.length) return {};
+
+  const { data } = await supabase
+    .from("messages")
+    .select("connection_id")
+    .in("connection_id", connectionIds)
+    .neq("sender_id", userId)
+    .is("read_at", null);
+
+  const result: Record<string, number> = {};
+  for (const msg of (data ?? []) as { connection_id: string }[]) {
+    result[msg.connection_id] = (result[msg.connection_id] ?? 0) + 1;
+  }
+  return result;
+}

@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth, isAuthError } from "@/lib/auth-guard";
 import { createServiceClient } from "@repo/db/server";
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await withAuth();
+  if (isAuthError(auth)) return auth.error;
+  const { user } = auth;
+  const { id } = await params;
+
+  const db = await createServiceClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: agreement } = await (db as any)
+    .from("roommate_agreements")
+    .select(`
+      id, status, connection_id, initiator_id, acceptor_id, payment_reference,
+      connection:connections!connection_id(id, requester_id, receiver_id)
+    `)
+    .eq("id", id)
+    .single();
+
+  if (!agreement) return NextResponse.json({ error: "Agreement not found" }, { status: 404 });
+
+  const connection = agreement.connection;
+  if (!connection || (connection.requester_id !== user.id && connection.receiver_id !== user.id)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return NextResponse.json({
+    agreement: {
+      id: agreement.id,
+      status: agreement.status,
+      connection_id: agreement.connection_id,
+      initiator_id: agreement.initiator_id,
+      acceptor_id: agreement.acceptor_id,
+      payment_reference: agreement.payment_reference,
+    },
+  });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -25,6 +25,21 @@ export interface PaystackEvent {
   };
 }
 
+export interface PaystackVerifyResponse {
+  amount: number;
+  channel?: string;
+  paid_at?: string;
+  reference: string;
+  status: string;
+  gateway_response?: string;
+  metadata?: {
+    agreement_id?: string;
+    connection_id?: string;
+    user_id?: string;
+    type?: string;
+  };
+}
+
 export function getAgreementFeeKobo() {
   return Number(process.env.CONNECTION_FEE_KOBO ?? "200000");
 }
@@ -60,6 +75,26 @@ export async function initializePaystackTransaction(input: {
   }
 
   return payload.data as PaystackInitializeResponse;
+}
+
+export async function verifyPaystackTransaction(reference: string): Promise<PaystackVerifyResponse> {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("PAYSTACK_SECRET_KEY is not configured");
+  }
+
+  const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`, {
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+    },
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.status || !payload?.data) {
+    throw new Error(payload?.message ?? "Paystack verification failed");
+  }
+
+  return payload.data as PaystackVerifyResponse;
 }
 
 export function verifyPaystackSignature(rawBody: string, signature: string | null) {

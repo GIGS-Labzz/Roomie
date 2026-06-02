@@ -1,22 +1,44 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MOCK_PROFILES } from "@/lib/mockProfiles";
+import { createClient } from "@repo/db/client";
+import { getDiscoveryFeed } from "@repo/db/queries/profiles";
 import { ProfileCard } from "@/components/discover/ProfileCard";
+import { ProfileCardSkeleton } from "@/components/discover/ProfileCardSkeleton";
 import { FilterDrawer } from "@/components/discover/FilterDrawer";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
+import { useAuth } from "@/context/AuthContext";
 import type { DiscoveryFilters } from "@repo/db/queries/profiles";
+import type { Database } from "@repo/db/types";
+
+type FeedProfile = Database["public"]["Tables"]["profiles"]["Row"];
+
+const supabase = createClient();
 
 export default function DiscoverPage() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [filters, setFilters] = useState<DiscoveryFilters>({});
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [profiles, setProfiles] = useState<FeedProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await getDiscoveryFeed(supabase as any, user?.id ?? "00000000-0000-0000-0000-000000000000", {}, 0);
+      setProfiles((data as FeedProfile[]) ?? []);
+      setIsLoading(false);
+    };
+    void load();
+  }, [user?.id]);
 
   const filtered = useMemo(() => {
-    return MOCK_PROFILES.filter((p) => {
+    return profiles.filter((p) => {
       if (filters.city?.length && !filters.city.includes(p.city ?? "")) return false;
       if (filters.university?.length && !filters.university.includes(p.university ?? "")) return false;
       if (filters.gender && p.gender !== filters.gender) return false;
@@ -29,7 +51,7 @@ export default function DiscoverPage() {
       }
       return true;
     });
-  }, [filters]);
+  }, [profiles, filters]);
 
   const activeFilterCount = [
     (filters.city?.length ?? 0) > 0,
@@ -88,7 +110,7 @@ export default function DiscoverPage() {
           <div>
             <h1 className="font-display font-bold text-slate-900 text-2xl leading-tight">Discover</h1>
             <p className="text-sm text-slate-400 mt-0.5">
-              {filtered.length} roommate{filtered.length !== 1 ? "s" : ""} near you
+              {isLoading ? "Loading profiles…" : `${filtered.length} roommate${filtered.length !== 1 ? "s" : ""} near you`}
             </p>
           </div>
         </div>
@@ -102,10 +124,14 @@ export default function DiscoverPage() {
               Discover
             </h1>
             <p className="text-sm text-slate-400 mt-1">
-              {filtered.length} roommate{filtered.length !== 1 ? "s" : ""} near you
+              {isLoading ? "Loading profiles…" : `${filtered.length} roommate${filtered.length !== 1 ? "s" : ""} near you`}
             </p>
           </div>
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
+              {[...Array(6)].map((_, i) => <ProfileCardSkeleton key={i} />)}
+            </div>
+          ) : filtered.length === 0 ? (
             <EmptyFeed hasFilters={activeFilterCount > 0} onClearFilters={() => setFilters({})} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
