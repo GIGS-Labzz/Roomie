@@ -12,7 +12,7 @@ interface AgreementCardProps {
 }
 
 export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }: AgreementCardProps) {
-  const [status, setStatus] = useState<"PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED">("PENDING");
+  const [status, setStatus] = useState<"PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED" | "CONFIRMING">("PENDING");
   const [isDeclining, setIsDeclining] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -105,11 +105,19 @@ export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }
         </p>
       ) : status === "PAYMENT_STARTED" ? (
         <p className="mt-4 rounded-2xl bg-brand-50 px-3 py-2 text-center text-xs font-semibold text-brand-700">
-          Complete payment in Paystack. Housing unlocks when payment is confirmed.
+          Complete payment in the Paystack popup…
+        </p>
+      ) : status === "CONFIRMING" ? (
+        <p className="mt-4 rounded-2xl bg-brand-50 px-3 py-2 text-center text-xs font-semibold text-brand-700">
+          Payment received — confirming your agreement…
         </p>
       ) : canRespond ? (
         <div className="mt-4 flex flex-col gap-2">
-          <PaystackButton agreementId={agreementId} onStarted={() => setStatus("PAYMENT_STARTED")} />
+          <PaystackButton
+            agreementId={agreementId}
+            onStarted={() => setStatus("PAYMENT_STARTED")}
+            onConfirmed={() => setStatus("CONFIRMING")}
+          />
           <button
             type="button"
             onClick={decline}

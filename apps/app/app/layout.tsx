@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,8 +39,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-sage-surface">
         <AuthProvider>
-          <NotificationProvider>{children}</NotificationProvider>
+          <NotificationProvider>
+            {children}
+            <InstallPrompt />
+          </NotificationProvider>
         </AuthProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

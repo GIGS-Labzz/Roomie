@@ -4,13 +4,22 @@ import { useState } from "react";
 
 declare global {
   interface Window {
-    Paystack?: new () => {
-      resumeTransaction: (accessCode: string) => void;
-    };
     PaystackPop?: new () => {
       resumeTransaction: (accessCode: string) => void;
+      newTransaction: (config: PaystackTransactionConfig) => void;
+    };
+    Paystack?: new () => {
+      resumeTransaction: (accessCode: string) => void;
+      newTransaction: (config: PaystackTransactionConfig) => void;
     };
   }
+}
+
+interface PaystackTransactionConfig {
+  key?: string;
+  accessCode: string;
+  onSuccess: (transaction: { reference: string }) => void;
+  onCancel: () => void;
 }
 
 interface PaystackButtonProps {
@@ -18,19 +27,17 @@ interface PaystackButtonProps {
   className?: string;
   disabled?: boolean;
   onStarted?: () => void;
+  onConfirmed?: () => void;
 }
 
 function loadPaystackScript() {
   return new Promise<void>((resolve, reject) => {
     if (typeof window === "undefined") return reject(new Error("Browser unavailable"));
-    if (window.Paystack || window.PaystackPop) return resolve();
+    if (window.PaystackPop || window.Paystack) return resolve();
 
     const existing = document.querySelector<HTMLScriptElement>("script[data-paystack-inline]");
     if (existing) {
-      if (existing.dataset.loaded === "true") {
-        resolve();
-        return;
-      }
+      if (existing.dataset.loaded === "true") { resolve(); return; }
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("Paystack failed to load")), { once: true });
       return;
@@ -40,16 +47,19 @@ function loadPaystackScript() {
     script.src = "https://js.paystack.co/v2/inline.js";
     script.async = true;
     script.dataset.paystackInline = "true";
-    script.onload = () => {
-      script.dataset.loaded = "true";
-      resolve();
-    };
+    script.onload = () => { script.dataset.loaded = "true"; resolve(); };
     script.onerror = () => reject(new Error("Paystack failed to load"));
     document.body.appendChild(script);
   });
 }
 
-export function PaystackButton({ agreementId, className = "", disabled = false, onStarted }: PaystackButtonProps) {
+export function PaystackButton({
+  agreementId,
+  className = "",
+  disabled = false,
+  onStarted,
+  onConfirmed,
+}: PaystackButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -60,16 +70,30 @@ export function PaystackButton({ agreementId, className = "", disabled = false, 
 
     try {
       const response = await fetch(`/api/agreements/${agreementId}/accept`, { method: "POST" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error ?? "Could not start payment");
+      const data = await response.json() as {
+        confirmed?: boolean;
+        accessCode?: string;
+        reference?: string;
+        authorizationUrl?: string;
+        error?: string;
+      };
+
+      if (!response.ok) throw new Error(data.error ?? "Could not start payment");
+
+      // Already paid — skip straight to housing
       if (data.confirmed) {
+        onConfirmed?.();
         window.location.href = "/housing";
         return;
       }
 
+      if (!data.accessCode) throw new Error("No access code returned from server");
+
       await loadPaystackScript();
-      const PaystackCheckout = window.Paystack ?? window.PaystackPop;
+
+      const PaystackCheckout = window.PaystackPop ?? window.Paystack;
       if (!PaystackCheckout) {
+        // Fallback: full-page redirect (no callbacks possible, webhook must confirm)
         if (data.authorizationUrl) {
           window.location.href = data.authorizationUrl;
           return;
@@ -77,12 +101,37 @@ export function PaystackButton({ agreementId, className = "", disabled = false, 
         throw new Error("Paystack checkout is unavailable");
       }
 
-      const popup = new PaystackCheckout();
-      popup.resumeTransaction(data.accessCode);
+      const paymentReference = data.reference ?? "";
       onStarted?.();
+
+      const popup = new PaystackCheckout();
+      popup.newTransaction({
+        accessCode: data.accessCode,
+        onSuccess: async (transaction) => {
+          const ref = transaction.reference || paymentReference;
+          try {
+            const confirmRes = await fetch(`/api/agreements/${agreementId}/confirm`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: ref }),
+            });
+            // Whether confirm succeeded or failed, the webhook will also fire.
+            // Navigate to housing — it will show providers if either path confirmed the agreement.
+            if (confirmRes.ok) {
+              onConfirmed?.();
+            }
+          } finally {
+            window.location.href = "/housing";
+          }
+        },
+        onCancel: () => {
+          // User closed the popup before paying — keep the card in PENDING state
+          setError("Payment cancelled. You can try again.");
+          setIsLoading(false);
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start payment");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -93,9 +142,9 @@ export function PaystackButton({ agreementId, className = "", disabled = false, 
         type="button"
         onClick={handleClick}
         disabled={disabled || isLoading}
-        className={`inline-flex items-center justify-center rounded-2xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        className={`inline-flex w-full items-center justify-center rounded-2xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
-        {isLoading ? "Starting payment..." : "Accept and pay NGN 2,000"}
+        {isLoading ? "Opening payment…" : "Accept & pay ₦2,000"}
       </button>
       {error && <p className="text-xs font-medium text-red-500">{error}</p>}
     </div>

@@ -9,6 +9,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { BillSplitPinnedBanner } from "@/components/splits/BillSplitPinnedBanner";
 import { Avatar } from "@repo/ui/avatar";
 import { createClient } from "@repo/db/client";
 import { getConnectionById } from "@repo/db/queries/connections";
@@ -167,6 +168,17 @@ export default function ChatThreadPage() {
               </div>
             )}
 
+            {/* Bill splits shortcut */}
+            <Link
+              href={`/splits/${connectionId}`}
+              className="flex-shrink-0 p-2 rounded-full text-white/80 hover:bg-white/10 transition-colors"
+              title="Bill splits"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </Link>
+
             {/* Housing shortcut */}
             <Link
               href="/housing"
@@ -178,6 +190,11 @@ export default function ChatThreadPage() {
               </svg>
             </Link>
           </header>
+
+          {/* ── Pinned bill split reminder ── */}
+          {user && (
+            <BillSplitPinnedBanner connectionId={connectionId} currentUserId={user.id} />
+          )}
 
           {/* ── Messages (warm wallpaper background) ── */}
           <div

@@ -11,16 +11,19 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "@repo/animations": "*",
     "@repo/db": "*",
     "@repo/ui": "*",
-    "@repo/animations": "*",
-    "@supabase/supabase-js": "^2.50.0",
+    "@serwist/next": "^9.5.11",
     "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.50.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.468.0",
     "next": "^16.2.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "serwist": "^9.5.11"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

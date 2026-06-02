@@ -13,6 +13,7 @@
     "./queries/payments": "./src/queries/payments.ts",
     "./queries/housing": "./src/queries/housing.ts",
     "./queries/posts": "./src/queries/posts.ts",
+    "./queries/billSplits": "./src/queries/billSplits.ts",
     "./lib/compatibility": "./src/lib/compatibility.ts"
   },
   "scripts": {

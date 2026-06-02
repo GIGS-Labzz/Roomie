@@ -1,6 +1,7 @@
 import { Avatar } from "@repo/ui/avatar";
 import type { Message } from "@repo/db/queries/messages";
 import { AgreementCard } from "./AgreementCard";
+import { BillSplitChatMessage } from "./BillSplitChatMessage";
 
 interface MessageBubbleProps {
   message: Message;
@@ -34,6 +35,16 @@ function Ticks({ read }: { read: boolean }) {
 }
 
 export function MessageBubble({ message, isOwn, currentUserId }: MessageBubbleProps) {
+  // ── Bill split events (created, item paid/unpaid, settled) ─────────────
+  if (message.message_type === "bill_split") {
+    return (
+      <BillSplitChatMessage
+        content={message.content}
+        connectionId={message.connection_id}
+      />
+    );
+  }
+
   // ── Agreement card ──────────────────────────────────────────────────────
   if (message.message_type === "agreement_request") {
     const payload = parsePayload(message.content);

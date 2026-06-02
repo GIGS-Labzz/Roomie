@@ -3,7 +3,8 @@
 > **Tagline:** Connect and Cooonnectttt  
 > **Type:** SaaS PWA — Student Roommate Matching Platform  
 > **Author:** GoFinder Team  
-> **Date:** 2026-05-31
+> **Date:** 2026-05-31  
+> **Last updated:** 2026-06-02 — Phases 1–6 largely complete: agreement flow, housing, bill splitting, PWA service worker + install prompt all shipped. Remaining: student verification, push notifications (Phase 7), admin dashboard (Phase 8), marketing SPA (Phase 9), Phase 3B live query
 
 ---
 
@@ -1657,19 +1658,27 @@ Source for free Lottie JSON files: LottieFiles.com (filter by license: free/Lott
 
 ### `apps/app/app/api/`
 
-| Method | Route | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/callback` | — | Supabase OAuth callback |
-| `GET` | `/api/connections` | Required | Get user's connections |
-| `POST` | `/api/connections` | Required | Initiate a connection (FREE, creates connection record) |
-| `PATCH` | `/api/connections/[id]` | Required | Update connection (decline/cancel) |
-| `POST` | `/api/payments/initialize-housing` | Required | Initialize Paystack transaction for housing access |
-| `POST` | `/api/payments/webhook` | Paystack sig | Handle Paystack webhook for housing payments |
-| `GET` | `/api/platforms` | Required | Get housing platforms (only if housing_payment_status = PAID) |
-| `POST` | `/api/platforms/click` | Required | Record a platform click |
-| `POST` | `/api/push/subscribe` | Required | Save push subscription |
-| `DELETE` | `/api/push/subscribe` | Required | Remove push subscription |
-| `POST` | `/api/push/send` | Internal | Send a push notification (internal use only, VAPID-signed) |
+| Method | Route | Auth | Status | Description |
+|---|---|---|---|---|
+| `POST` | `/api/auth/callback` | — | ✅ | Supabase OAuth callback |
+| `GET` | `/api/connections` | Required | ✅ | Get user's connections list |
+| `POST` | `/api/connections` | Required | ✅ | Initiate a connection (FREE, creates ACTIVE connection) |
+| `GET` | `/api/connections/[id]` | Required | ✅ | Get connection details |
+| `PATCH` | `/api/connections/[id]` | Required | ✅ | Update connection (decline/cancel) |
+| `POST` | `/api/agreements` | Required | ✅ | Initiate a roommate agreement (injects agreement_request message) |
+| `PATCH` | `/api/agreements/[id]` | Required | ✅ | Update agreement (decline/cancel) |
+| `POST` | `/api/agreements/[id]/accept` | Required | ✅ | Accept agreement — initializes Paystack payment, returns access_code |
+| `POST` | `/api/agreements/[id]/confirm` | Required | ✅ | Client-side confirm after Paystack onSuccess callback |
+| `POST` | `/api/payments/webhook` | Paystack sig | ✅ | Handle Paystack webhook — verifies charge.success, confirms agreement |
+| `POST` | `/api/platforms/[id]/click` | Required | ✅ | Record a platform click + increment total_clicks |
+| `GET` | `/api/splits` | Required | ✅ | List bill splits for a connection (`?connectionId=`) |
+| `POST` | `/api/splits` | Required | ✅ | Create a new bill split with shares array |
+| `GET` | `/api/splits/[id]` | Required | ✅ | Fetch single split with items |
+| `PATCH` | `/api/splits/[id]` | Required | ✅ | Settle an entire split |
+| `PATCH` | `/api/splits/[id]/items/[itemId]` | Required | ✅ | Toggle paid status on a split item |
+| `POST` | `/api/push/subscribe` | Required | [ ] | Save push subscription |
+| `DELETE` | `/api/push/subscribe` | Required | [ ] | Remove push subscription |
+| `POST` | `/api/push/send` | Internal | [ ] | Send a push notification (internal use only, VAPID-signed) |
 
 ### `apps/admin/app/api/`
 
@@ -1728,64 +1737,109 @@ NEXT_PUBLIC_ADMIN_URL=https://admin.roomie.ng
 
 ## 23. Complete File Map
 
-### Files to Create — `apps/app`
+### Files in `apps/app` — Current State (2026-06-02)
+
+**Legend:** ✅ = exists · [ ] = not yet built
 
 ```
 app/
-├── layout.tsx
-├── page.tsx
-├── manifest.ts
-├── globals.css
-├── offline/page.tsx
+├── layout.tsx                         ✅
+├── page.tsx                           ✅ (/ → /feed or /auth/signin)
+├── manifest.ts                        ✅
+├── globals.css                        ✅
+├── offline/page.tsx                   ✅
 ├── auth/
-│   ├── signin/page.tsx
-│   └── callback/route.ts
+│   ├── signin/page.tsx                ✅
+│   └── callback/route.ts              ✅
 ├── onboarding/
-│   ├── layout.tsx
-│   ├── welcome/page.tsx
-│   ├── basics/page.tsx
-│   ├── university/page.tsx
-│   ├── vibe/page.tsx
-│   ├── budget/page.tsx
-│   └── verify/page.tsx
+│   ├── layout.tsx                     ✅
+│   ├── welcome/page.tsx               ✅
+│   ├── basics/page.tsx                ✅
+│   ├── university/page.tsx            ✅
+│   ├── vibe/page.tsx                  ✅
+│   ├── budget/page.tsx                ✅
+│   └── verify/page.tsx                ✅
+├── feed/page.tsx                      ✅
 ├── discover/
-│   ├── page.tsx
-│   └── [id]/page.tsx
+│   ├── page.tsx                       ✅
+│   └── [id]/page.tsx                  ✅
 ├── connect/
-│   ├── [id]/page.tsx
-│   └── success/page.tsx
+│   ├── [id]/page.tsx                  ✅
+│   └── success/page.tsx               ✅
 ├── chat/
-│   ├── page.tsx
-│   └── [connectionId]/page.tsx
+│   ├── page.tsx                       ✅
+│   └── [connectionId]/page.tsx        ✅
 ├── splits/
-│   ├── page.tsx
-│   └── [connectionId]/page.tsx
-├── housing/page.tsx
+│   ├── page.tsx                       ✅ (index across all connections)
+│   └── [connectionId]/page.tsx        ✅ (detail + add splits, live item toggles)
+├── housing/page.tsx                   ✅
 ├── profile/
-│   ├── page.tsx
-│   └── edit/page.tsx
-├── notifications/page.tsx
+│   ├── page.tsx                       [ ] PENDING
+│   └── edit/page.tsx                  [ ] PENDING
+├── notifications/page.tsx             ✅
+├── privacy/page.tsx                   ✅
+├── terms/page.tsx                     ✅
 └── api/
-    ├── auth/callback/route.ts
-    ├── connections/route.ts
-    ├── connections/[id]/route.ts
-    ├── payments/initialize/route.ts
-    ├── payments/webhook/route.ts
-    ├── platforms/route.ts
-    ├── platforms/click/route.ts
-    └── push/subscribe/route.ts
+    ├── auth/callback/route.ts         ✅
+    ├── connections/route.ts           ✅ (GET + POST)
+    ├── connections/[id]/route.ts      ✅ (GET + PATCH)
+    ├── agreements/route.ts            ✅ (POST)
+    ├── agreements/[id]/route.ts       ✅ (PATCH)
+    ├── agreements/[id]/accept/route.ts ✅ (POST — Paystack init)
+    ├── agreements/[id]/confirm/route.ts ✅ (POST — client confirm)
+    ├── payments/webhook/route.ts      ✅ (POST — Paystack webhook)
+    ├── platforms/[id]/click/route.ts      ✅ (POST)
+    ├── splits/route.ts                    ✅ (GET + POST)
+    ├── splits/[id]/route.ts               ✅ (GET + PATCH settle)
+    ├── splits/[id]/items/[itemId]/route.ts ✅ (PATCH isPaid toggle)
+    └── push/subscribe/route.ts            [ ] PENDING
 
 src/
-├── components/ (all as listed in Section 10)
-├── hooks/ (all as listed in Section 10)
+├── components/
+│   ├── auth/
+│   │   ├── EmailPasswordSignIn.tsx    ✅
+│   │   └── GoogleSignInButton.tsx     ✅
+│   ├── chat/
+│   │   ├── AgreementCard.tsx          ✅
+│   │   ├── ChatInput.tsx              ✅
+│   │   ├── MessageBubble.tsx          ✅
+│   │   └── TypingIndicator.tsx        ✅
+│   ├── discover/
+│   │   ├── CompatibilityScore.tsx     ✅
+│   │   ├── FilterDrawer.tsx           ✅
+│   │   ├── ProfileCard.tsx            ✅
+│   │   └── ProfileCardSkeleton.tsx    ✅
+│   ├── feed/
+│   │   ├── CommentSheet.tsx           ✅
+│   │   ├── PostCard.tsx               ✅
+│   │   └── PostComposer.tsx           ✅
+│   ├── housing/
+│   │   └── PlatformCard.tsx           ✅
+│   ├── layout/
+│   │   ├── AppSidebar.tsx             ✅
+│   │   └── ProfilePreviewCard.tsx     ✅
+│   ├── onboarding/
+│   │   ├── LifestyleTagPicker.tsx     ✅
+│   │   └── OnboardingProgress.tsx     ✅
+│   ├── splits/
+│   │   ├── AddSplitModal.tsx          ✅
+│   │   ├── SplitCard.tsx              ✅
+│   │   └── SplitItemRow.tsx           ✅
+│   └── pwa/
+│       ├── InstallPrompt.tsx          ✅
+│       └── ServiceWorkerRegister.tsx  ✅
 ├── context/
-│   ├── AuthContext.tsx
-│   └── NotificationContext.tsx
+│   ├── AuthContext.tsx                ✅
+│   └── NotificationContext.tsx        ✅
+├── hooks/
+│   ├── useConnections.ts              ✅
+│   ├── useMessages.ts                 ✅
+│   └── useProfile.ts                  ✅
 └── lib/
-    ├── supabase.ts
-    ├── paystack.ts
-    ├── compatibility.ts
-    └── format.ts
+    ├── agreements.ts                  ✅ (agreement business logic)
+    ├── auth-guard.ts                  ✅
+    ├── mockProfiles.ts                ✅ (dev mock data — replaced by Supabase in Phase 3B)
+    └── paystack.ts                    ✅
 ```
 
 ### Files to Create — `apps/web`
@@ -1865,9 +1919,15 @@ packages/
 
 supabase/
 ├── migrations/
-│   └── 0001_initial_schema.sql
-├── seed.sql
-└── config.toml
+│   ├── 0001_initial_schema.sql            ✅ — profiles, connections, messages, payments,
+│   │                                            bill_splits, housing_platforms, notifications,
+│   │                                            push_subscriptions, admin_users, blocks
+│   ├── 0002_feed_tables.sql               ✅ — posts, post_likes, post_comments + triggers
+│   ├── 0003_roommate_agreements.sql       ✅ — roommate_agreements table + new message_type values
+│   ├── 0004_seed_user_passwords.sql       ✅ — seed stub
+│   └── 0005_message_notifications_trigger.sql ✅ — auto-notify on new text/image messages
+├── seed.sql                               ✅
+└── config.toml                            ✅
 ```
 
 ---
@@ -2183,7 +2243,7 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 ---
 
-### Phase 4 — Connection Flow (Free) [ ] NEXT UP
+### Phase 4 — Connection Flow (Free) ✅ COMPLETE
 
 **Prerequisites:** Phase 3 complete. Discovery feed live. `connections` table exists with RLS. Auth confirmed working end-to-end.
 
@@ -2194,31 +2254,31 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 #### Connection API (Free)
 
 ```
-[ ] 1.  Build apps/app/src/lib/auth-guard.ts — withAuth() server helper (§28.2)
+[x] 1.  Build apps/app/src/lib/auth-guard.ts — withAuth() server helper (§28.2)
           Reads session from cookies via createServerClient()
           Returns { user } or throws 401 — used in all API routes
-[ ] 2.  Build apps/app/app/api/connections/route.ts (POST)
+[x] 2.  Build apps/app/app/api/connections/route.ts (POST)
           withAuth guard + Zod validation: { receiverId: z.string().uuid() }
           Self-connection guard (defence in depth alongside DB constraint)
           Check for existing connection via getExistingConnection() — prevent duplicates
           Create connection: status = 'ACTIVE' (free — no payment step)
           Insert notification for receiver: "You have a new roommate connection!"
           Return: { connectionId }
-[ ] 3.  Build apps/app/app/api/connections/[id]/route.ts (PATCH)
-          Actions: decline | cancel
-          Only the relevant party can decline/cancel (check RLS + server-side)
+[x] 3.  Build apps/app/app/api/connections/[id]/route.ts (GET + PATCH)
+          GET: fetch connection details for both parties
+          PATCH: decline | cancel — only the relevant party can act
 ```
 
 #### Connect Page UI
 
 ```
-[ ] 4.  Build apps/app/app/connect/[id]/page.tsx
-          Port two-column layout from GoFinder JoinRoommatesPage (§26.2)
-          Left card: receiver profile summary (avatar, name, university, compatibility score)
-          Right card: what connecting unlocks — "Chat with them directly" + "Find housing together"
+[x] 4.  Build apps/app/app/connect/[id]/page.tsx
+          Two-column layout: receiver profile summary + what connecting unlocks
+          Left card: receiver avatar, name, university, compatibility score
+          Right card: "Chat with them directly" + "Find housing together"
           "Connect" CTA (peach-200 #FAE8CC) — calls POST /api/connections, no payment popup
           Shows existing connection status if already connected
-[ ] 5.  Build apps/app/app/connect/success/page.tsx
+[x] 5.  Build apps/app/app/connect/success/page.tsx
           Confirmation screen after connection is created
           Shows: "You're connected with [Name]!" + "Go to chat" CTA + housing teaser
           connecting.json Lottie animation placeholder (wired in Phase 9)
@@ -2227,7 +2287,7 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 #### Notifications
 
 ```
-[ ] 6.  Build apps/app/src/context/NotificationContext.tsx
+[x] 6.  Build apps/app/src/context/NotificationContext.tsx
           Port unread count pattern from GoFinder MessageContext (§26.5)
           Subscribe to notifications table via Supabase Realtime
           Expose { unreadCount, markAllRead }
@@ -2240,41 +2300,48 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 ---
 
-### Phase 5 — Real-Time Chat & PWA Foundation
+### Phase 5 — Real-Time Chat & PWA Foundation ✅ COMPLETE
 
 **Prerequisites:** Phase 4 complete. ACTIVE connections exist in the database. Supabase Realtime enabled on the project. packages/db client set up with real-time support.
 
-**What this unlocks:** The primary daily engagement surface. Also the host for Phase 6's bill split system messages. The PWA service worker registered here is the foundation Phase 7 builds push notifications on top of.
+**What this unlocks:** The primary daily engagement surface. Also the host for Phase 6's agreement card and system messages. The PWA manifest and offline page registered here are the foundation Phase 7 builds push notifications on top of.
 
 #### Chat Core
 
 ```
-[ ] 1.  Implement apps/app/src/hooks/useMessages.ts (§15)
-          Initial load with sender profile join
+[x] 1.  Implement apps/app/src/hooks/useMessages.ts (§15)
+          Initial load with sender profile join (60 messages per page)
           Supabase Realtime postgres_changes subscription filtered by connection_id
           sendMessage() — insert text or image message
-[ ] 2.  Build apps/app/src/components/chat/MessageBubble.tsx
+          markMessagesRead(), getUnreadCountPerConnection()
+[x] 2.  Build apps/app/src/components/chat/MessageBubble.tsx
           Own messages: right-aligned, brand-500 (#8AAF6E) background
           Other user: left-aligned, #EDE8C8 background
-          system message type: centered, muted — used by Phase 6 bill events
-[ ] 3.  Build apps/app/src/components/chat/ChatInput.tsx
+          system message type: centered, muted
+          agreement_request, agreement_confirmed, agreement_declined types handled via AgreementCard
+[x] 3.  Build apps/app/src/components/chat/ChatInput.tsx
           Text input, send button (peach-200 #FAE8CC), image attach button
-          Image flow: file picker → upload to Supabase Storage chat-images bucket → send as image type
-[ ] 4.  Build apps/app/src/components/chat/TypingIndicator.tsx
+          Image flow: file picker → upload to Supabase Storage → send as image type
+[x] 4.  Build apps/app/src/components/chat/TypingIndicator.tsx
           Renders chat-typing.json Lottie when isTyping = true
-[ ] 5.  Implement typing indicator via Supabase Presence (§15)
+[x] 5.  Implement typing indicator via Supabase Presence (§15)
           presenceChannel.track({ typing: true }) on keydown, auto-clear after 3s idle
-[ ] 6.  Build apps/app/app/chat/[connectionId]/page.tsx
+[x] 6.  Build apps/app/app/chat/[connectionId]/page.tsx
           Message list with auto-scroll to bottom on new message
-          Read receipt: update read_at when other user's messages become visible
+          AgreementCard rendered for agreement_request message type
           "Find your place" banner linking to /housing (visible for ACTIVE connections)
           ChatInput pinned at bottom
+[x]     Build apps/app/src/components/chat/AgreementCard.tsx
+          Special card rendered for agreement_request messages in the chat thread
+          Shows initiator name, what agreeing means, cost (₦2,000)
+          States: pending (Decline + Accept buttons for acceptor), waiting (Cancel for initiator),
+                  confirmed (housing unlocked banner), declined (muted pill)
 ```
 
 #### Chat List
 
 ```
-[ ] 7.  Build apps/app/app/chat/page.tsx
+[x] 7.  Build apps/app/app/chat/page.tsx
           All ACTIVE connections sorted by latest message timestamp
           Last message preview + unread badge (uses NotificationContext from Phase 4)
           Empty state: empty-chat.json Lottie
@@ -2283,31 +2350,39 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 #### PWA Setup
 
 ```
-[ ] 8.  Copy Serwist setup from GoFinder verbatim (§26.4):
-          apps/app/next.config.ts        → withSerwist() wrapper
-          apps/app/src/sw.ts             → service worker, cache strategies from §19 table
-                                           (roomie-static CacheFirst, roomie-images StaleWhileRevalidate,
-                                            chat + payments NetworkOnly)
-          ServiceWorkerRegister.tsx      → copy verbatim, zero changes
-          useInstallPrompt.ts            → copy verbatim
-[ ] 9.  Build apps/app/app/manifest.ts (§19)
-          name: "Roomie", start_url: "/discover"
+[x] 8.  Serwist PWA setup complete:
+          apps/app/next.config.ts        → withSerwistInit() wrapper, swSrc: "src/sw.ts", swDest: "public/sw.js"
+                                           disabled in development (process.env.NODE_ENV === "development")
+          apps/app/src/sw.ts             → Serwist v9 service worker with custom runtime caching:
+                                           Google Fonts → CacheFirst (roomie-fonts)
+                                           Supabase storage / Google avatars → StaleWhileRevalidate (roomie-avatars)
+                                           /chat, /api/payments, /api/agreements → NetworkOnly (never cache)
+                                           /discover, /feed → NetworkFirst (roomie-discover)
+                                           defaultCache from @serwist/next/worker for all Next.js static assets
+          apps/app/src/components/pwa/ServiceWorkerRegister.tsx → client component, registers /sw.js on mount
+[x] 9.  Build apps/app/app/manifest.ts (§19)
+          name: "Roomie", start_url: "/feed"
           theme_color: "#8AAF6E", background_color: "#EDE8C8"
           Shortcuts: Discover, My Chats, Find Housing
-[ ] 10. Build apps/app/app/offline/page.tsx — offline.json Lottie + "You're offline" message
-[ ] 11. Build apps/app/src/components/pwa/InstallPrompt.tsx
-          Adapt from GoFinder, update branding (app name, icon, colours)
+[x] 10. Build apps/app/app/offline/page.tsx — offline.json Lottie + "You're offline" message
+[x] 11. Build apps/app/src/components/pwa/InstallPrompt.tsx
+          Fixed bottom-right card (desktop) / bottom-full-width (mobile)
+          Roomie branded icon, "Install" + "Not now" buttons
+          Uses beforeinstallprompt event, standalone display mode detection
+          Wired into root layout alongside ServiceWorkerRegister
 ```
 
-**Connects to → Phase 6:** Chat accepts `system` message type — bill split events (Phase 6) inject these. Supabase Storage is confirmed working. PWA is registered — Phase 7 adds VAPID push on top.
+**Connects to → Phase 6:** Chat accepts `system` and `agreement_*` message types — Phase 6 agreement flow wires the full Paystack payment and housing unlock. Supabase Storage is confirmed working. PWA manifest is registered — Phase 7 adds VAPID push on top.
 
 ---
 
-### Phase 6 — Roommate Agreement, Housing Access & Bills
+### Phase 6 — Roommate Agreement, Housing Access & Bills ✅ COMPLETE
 
 **Prerequisites:** Phase 5 complete. Chat live with real-time messaging. ACTIVE connections exist in the database.
 
 **What this unlocks:** The ₦2,000 revenue moment — triggered by mutual consent inside the chat, not at a navigation gate. Housing referrals, bill splitting, and student verification.
+
+> **Status as of 2026-06-02:** Agreement flow, Paystack payment, housing provider page, and bill splitting all complete. Student verification (admin review workflow) is a Phase 7+ item.
 
 ---
 
@@ -2329,120 +2404,89 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 ---
 
-#### Database — migration 0003 (new objects for this phase)
+#### Database — migrations applied for this phase ✅
 
-```sql
--- supabase/migrations/0003_roommate_agreements.sql
+```
+[x] supabase/migrations/0003_roommate_agreements.sql ✅ APPLIED
+      New message_type enum values: agreement_request, agreement_confirmed, agreement_declined
+      roommate_agreements table: id, connection_id (UNIQUE), initiator_id, acceptor_id,
+        status (PENDING/DECLINED/CONFIRMED), payment_reference, payment_channel,
+        amount (200000 kobo), paid_at, created_at, accepted_at
+      RLS: agreements_connection_members — only parties to the connection
 
--- New message types for the agreement flow
-ALTER TYPE message_type ADD VALUE 'agreement_request';   -- the proposal card
-ALTER TYPE message_type ADD VALUE 'agreement_confirmed'; -- post-payment confirmation
-ALTER TYPE message_type ADD VALUE 'agreement_declined';  -- if the other party declines
-
--- Roommate agreement record (one per connection, enforced by UNIQUE)
-CREATE TABLE public.roommate_agreements (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  connection_id   UUID NOT NULL UNIQUE REFERENCES public.connections(id) ON DELETE CASCADE,
-  initiator_id    UUID NOT NULL REFERENCES public.profiles(id),
-  acceptor_id     UUID REFERENCES public.profiles(id),    -- set when accepted
-  status          TEXT NOT NULL DEFAULT 'PENDING'
-    CHECK (status IN ('PENDING', 'DECLINED', 'CONFIRMED')),
-  -- Payment
-  payment_reference TEXT,
-  payment_channel   TEXT,
-  amount            INTEGER DEFAULT 200000,               -- 200000 kobo = ₦2,000
-  paid_at           TIMESTAMPTZ,
-  -- Timestamps
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  accepted_at     TIMESTAMPTZ,
-  CONSTRAINT initiator_not_acceptor CHECK (initiator_id <> acceptor_id)
-);
-
-ALTER TABLE public.roommate_agreements ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "agreements_connection_members" ON public.roommate_agreements
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.connections c
-      WHERE c.id = roommate_agreements.connection_id
-        AND (c.requester_id = auth.uid() OR c.receiver_id = auth.uid())
-    )
-  );
+[x] supabase/migrations/0005_message_notifications_trigger.sql ✅ APPLIED
+      Auto-create notifications on new text/image messages (excludes system/agreement types)
+      One unread notification per connection (upsert pattern to prevent duplicates)
 ```
 
 Apply with: `supabase db push`
 
 ---
 
-#### Agreement Initiation — inside the chat thread
+#### Agreement Initiation — inside the chat thread ✅ DONE
 
 ```
-[ ] 1.  Add "Propose Agreement" button to apps/app/app/chat/[connectionId]/page.tsx
-          Position: a soft banner just above the input bar, shown only when:
-            - No agreement exists yet for this connection, OR
-            - The last agreement was DECLINED (can re-propose)
-          Text: "Ready to be roommates? Propose an agreement"
-          Tapping it calls POST /api/agreements — does NOT send a chat message directly
+[x] 1.  Add "Propose Agreement" button to apps/app/app/chat/[connectionId]/page.tsx
+          Shown when no PENDING or CONFIRMED agreement exists for this connection
+          Tapping calls POST /api/agreements — injects agreement_request message into chat
 
-[ ] 2.  Build apps/app/app/api/agreements/route.ts (POST)
+[x] 2.  Build apps/app/app/api/agreements/route.ts (POST) ✅
           withAuth + service role for writes
           Body: { connectionId: string }
-          Guard: user must be a party to this connection (requester_id or receiver_id)
+          Guard: user must be a party to this connection
           Guard: no existing PENDING or CONFIRMED agreement for this connection
           Insert into roommate_agreements: { connection_id, initiator_id, status: 'PENDING' }
-          Inject system message of type 'agreement_request' into the chat:
-            content: "[Name] wants to be your official roommate partner."
-            The message_id is stored in the agreement record so the card can be rendered in chat
-          Notify receiver via notifications table: "Agreement proposal from [Name]"
+          Inject system message of type 'agreement_request' into the chat
+          Notify receiver via notifications table
           Return: { agreementId }
 
-[ ] 3.  Build apps/app/app/api/agreements/[id]/route.ts (PATCH)
+[x] 3.  Build apps/app/app/api/agreements/[id]/route.ts (PATCH) ✅
           Actions: decline | cancel
           'decline' — receiver only — sets status = 'DECLINED', injects 'agreement_declined' message
-          'cancel'  — initiator only — sets status = 'DECLINED' (removes the pending proposal)
+          'cancel'  — initiator only — sets status = 'DECLINED'
 ```
 
 ---
 
-#### Agreement Card — rendered in the chat as a special message bubble
+#### Agreement Card — rendered in the chat as a special message bubble ✅ DONE
 
 ```
-[ ] 4.  Update MessageBubble.tsx to handle message_type = 'agreement_request'
-          Render a special card (not a plain text bubble) with:
+[x] 4.  Build apps/app/src/components/chat/AgreementCard.tsx ✅
+          Rendered by chat/[connectionId]/page.tsx for agreement_request messages
+          Card layout:
             ┌──────────────────────────────────────────┐
-            │  🤝 Roommate Agreement Proposal          │
+            │  Roommate Agreement Proposal             │
             │  [Initiator name] wants to be your      │
             │  official roommate partner.             │
             │                                          │
             │  ✓ Chat together (already unlocked)      │
             │  ✓ Access housing providers              │
-            │  ✓ "Roomie Partners" badge on your       │
-            │    profiles                              │
+            │  ✓ "Roomie Partners" badge on profiles   │
             │                                          │
             │  Cost: ₦2,000 (one-time, paid by you)   │
             │                                          │
             │  [Decline]    [Accept & Pay ₦2,000]      │
             └──────────────────────────────────────────┘
           States:
-            - If current user = acceptor + status = PENDING: show Decline + Accept buttons
-            - If current user = initiator + status = PENDING: show "Waiting for response..." + Cancel
-            - If status = CONFIRMED: show "✓ Agreement confirmed — housing unlocked"
-            - If status = DECLINED: show "Agreement was declined" (muted)
+            - acceptor + PENDING: Decline + Accept buttons → triggers Paystack
+            - initiator + PENDING: "Waiting for response..." + Cancel
+            - CONFIRMED: "Agreement confirmed — housing unlocked" (brand-500)
+            - DECLINED: "Agreement was declined" (muted)
 
-[ ] 5.  Handle message_type = 'agreement_confirmed' in MessageBubble
-          A celebration system message: "🎉 You're official roommate partners! Housing providers unlocked."
+[x] 5.  Handle message_type = 'agreement_confirmed' in MessageBubble ✅
+          Celebration system message: "You're official roommate partners! Housing providers unlocked."
           Brand-500 background, full-width centered card
 
-[ ] 6.  Handle message_type = 'agreement_declined' in MessageBubble
+[x] 6.  Handle message_type = 'agreement_declined' in MessageBubble ✅
           Muted centered pill: "[Name] declined the agreement."
 ```
 
 ---
 
-#### Paystack Payment — triggered by "Accept & Pay"
+#### Paystack Payment — triggered by "Accept & Pay" ✅ DONE
 
 ```
-[ ] 7.  Build apps/app/app/api/agreements/[id]/accept/route.ts (POST) ← THE PAYMENT TRIGGER
+[x] 7.  Build apps/app/app/api/agreements/[id]/accept/route.ts (POST) ✅ — THE PAYMENT TRIGGER
           withAuth + service role for writes
           Only callable by the connection's non-initiator (the acceptor)
           Guard: agreement status = 'PENDING' (idempotent — returns existing if CONFIRMED)
@@ -2458,85 +2502,110 @@ Apply with: `supabase db push`
                 type: "roommate_agreement"
               },
               channels: ["card","bank","ussd","bank_transfer","mobile_money"],
-              callback_url: "https://app.roomie.ng/chat/{connectionId}?agreed=true"
+              callback_url: "/chat/{connectionId}?agreed=true"
             }
           Create pending payment record in payments table
           Set agreement.acceptor_id = user.id
           Return { access_code, reference } to client
 
-[ ] 8.  Build apps/app/src/components/connect/PaystackButton.tsx (reuse for agreement)
-          Load Paystack Inline JS via script tag (lazy, only when mounted)
-          Open popup with access_code from /api/agreements/[id]/accept
-          onSuccess(reference): call POST /api/agreements/[id]/confirm with reference
-          onClose: show "Payment cancelled — you can try again" toast
+[x] 8.  PaystackButton integrated into AgreementCard.tsx ✅
+          Loads Paystack Inline JS via script tag (lazy, only when mounted)
+          Opens popup with access_code from /api/agreements/[id]/accept
+          onSuccess(reference): calls POST /api/agreements/[id]/confirm with reference
+          onClose: shows "Payment cancelled — you can try again" toast
           Button: full-width, peach-200 (#FAE8CC)
 
-[ ] 9.  Build apps/app/app/api/payments/webhook/route.ts ← THE MONEY ACTUALLY ARRIVES HERE
+[x] 9.  Build apps/app/app/api/agreements/[id]/confirm/route.ts (POST) ✅
+          Called by client after Paystack popup onSuccess callback
+          Verifies reference with Paystack API (belt-and-suspenders alongside webhook)
+          Updates agreement status to CONFIRMED
+          Injects agreement_confirmed system message into chat
+
+[x]     Build apps/app/app/api/payments/webhook/route.ts ✅ — THE MONEY ACTUALLY ARRIVES HERE
           HMAC-SHA512 signature verification (x-paystack-signature) — runs BEFORE any DB write
-          Only process event = 'charge.success' AND metadata.type = 'roommate_agreement'
-          Idempotent check: if payment reference already SUCCESS in payments table → return 200
-          Update payment: status = 'SUCCESS', paid_at, payment_channel
-          Update agreement: status = 'CONFIRMED', accepted_at = now(), paid_at, payment_reference
-          Inject message of type 'agreement_confirmed' into the chat for both users
-          Notify both parties:
-            Acceptor: "Your roommate agreement is confirmed! Housing providers are now unlocked."
-            Initiator: "[Name] accepted your agreement and paid. Housing is unlocked for both of you!"
-          Return: { received: true }
+          Only processes event = 'charge.success' AND metadata.type = 'roommate_agreement'
+          Idempotent check: if payment reference already SUCCESS → return 200, no-op
+          Updates payment: status = 'SUCCESS', paid_at, payment_channel
+          Updates agreement: status = 'CONFIRMED', accepted_at, paid_at, payment_reference
+          Injects message of type 'agreement_confirmed' into the chat for both users
+          Notifies both parties via notifications table
+          Returns: { received: true }
 ```
 
 ---
 
-#### Housing Page — shows providers after agreement is confirmed
+#### Housing Page — shows providers after agreement is confirmed ✅ DONE
 
 ```
-[ ] 10. Implement packages/db/src/queries/housing.ts — getRelevantPlatforms()
+[x] 10. Implement packages/db/src/queries/housing.ts — getRelevantPlatforms() ✅
           Filter status = 'ACTIVE', match by city or university via .or()
           Sort: is_featured DESC, total_clicks DESC
           Limit 12
 
-[ ] 11. Build apps/app/app/api/platforms/click/route.ts (POST)
+[x] 11. Build apps/app/app/api/platforms/[id]/click/route.ts (POST) ✅
           Auth guard · insert platform_clicks record
-          Increment housing_platforms.total_clicks via RPC or direct update
+          Increment housing_platforms.total_clicks via direct update
 
-[ ] 12. Build apps/app/src/components/housing/PlatformCard.tsx
+[x] 12. Build apps/app/src/components/housing/PlatformCard.tsx ✅
           Logo, name, cities/campus tags
           "Visit platform" button opens in new tab (click API called first)
           "Featured" badge if is_featured = true
 
-[ ] 13. Build apps/app/app/housing/page.tsx
-          Gate 1: user must have at least one ACTIVE connection → else show "Connect first"
-          Gate 2: connection must have a CONFIRMED agreement → else show "Propose an agreement
-                  from your chat to unlock housing providers"
+[x] 13. Build apps/app/app/housing/page.tsx ✅
+          Gate: connection must have a CONFIRMED agreement → else show "Propose an agreement
+                from your chat to unlock housing providers"
           UNLOCKED (agreement = CONFIRMED):
             List from getRelevantPlatforms(userCity, userUniversity)
             Each card: PlatformCard with click tracking
-            "Back from [Provider]? How did it go?" prompt on return (sessionStorage flag)
-          NO CONNECTION:
-            Empty state → link to /discover
-          HAS CONNECTION but NO CONFIRMED AGREEMENT:
-            "You need a roommate agreement to access housing providers"
-            Link back to /chat with that connection
-            Short explanation of the agreement flow
+          NO CONNECTION or NO CONFIRMED AGREEMENT:
+            Clear CTA linking back to /chat or /discover
 ```
 
 ---
 
-#### Bill Splitting
+#### Bill Splitting ✅ COMPLETE
 
 ```
-[ ] 14. Build apps/app/app/api/bill-splits/route.ts (POST)
-          Auth guard + Zod validation
-          createEqualSplit() — 50/50 default, first user absorbs rounding kobo
-          Insert into bill_splits + bill_split_items
-          Inject system message: "[Name] created a new bill: [Title]"
-[ ] 15. Build apps/app/app/api/bill-splits/[splitId]/items/[itemId]/pay/route.ts (PATCH)
-          Mark is_paid = true, paid_at = now()
-          If all items paid → set bill_splits.is_settled = true
-          Inject system message: "[Name] marked ₦X as paid for [Title]"
-[ ] 16. Build apps/app/src/components/splits/AddSplitModal.tsx
-[ ] 17. Build apps/app/src/components/splits/SplitCard.tsx
-[ ] 18. Build apps/app/app/splits/page.tsx — all splits across all ACTIVE connections
-[ ] 19. Build apps/app/app/splits/[connectionId]/page.tsx
+[x] 14. packages/db/src/queries/billSplits.ts
+          getBillSplitsForConnection(), getAllBillSplitsForUser(), getBillSplitById()
+          createBillSplit() — creates split + items in one transaction
+          markSplitItemPaid(), markSplitItemUnpaid(), settleBillSplit()
+          Exported via @repo/db package.json ("./queries/billSplits")
+
+[x] 15. apps/app/app/api/splits/route.ts (GET + POST)
+          GET ?connectionId=xxx — lists all splits for a connection (connection membership guard)
+          POST — creates new bill split with shares array; validates membership + totalAmount
+
+[x] 16. apps/app/app/api/splits/[id]/route.ts (GET + PATCH)
+          GET — fetch single split with items
+          PATCH { action: "settle" } — mark entire split as settled
+
+[x] 17. apps/app/app/api/splits/[id]/items/[itemId]/route.ts (PATCH)
+          PATCH { isPaid: boolean } — toggle paid status on a split item (either party can mark)
+
+[x] 18. apps/app/src/components/splits/SplitItemRow.tsx
+          Optimistic toggle with server revert on failure
+          Avatar, name, amount, paid checkbox
+[x] 19. apps/app/src/components/splits/SplitCard.tsx
+          Progress bar (paid/total), per-item toggle rows
+          "Mark as settled" button appears when all items paid
+          Settled cards rendered with opacity + "Settled" badge
+[x] 20. apps/app/src/components/splits/AddSplitModal.tsx
+          Slide-up on mobile, centered on desktop
+          Title, description, total amount, per-participant share inputs
+          "Split evenly" button divides total by number of participants
+          Validates that shares sum equals total before submitting
+
+[x] 21. apps/app/app/splits/page.tsx — index across all active connections
+          Loads all connections, fetches splits per connection in parallel
+          Each row: other user avatar + name + active/settled count + amount you owe
+          Links to /splits/[connectionId]
+
+[x] 22. apps/app/app/splits/[connectionId]/page.tsx
+          Header with back button + "New" button
+          Sections: Active splits · Settled splits
+          AddSplitModal wired, split cards with live item toggle
+          Bill Splits shortcut button added to chat thread header (calculator icon)
 ```
 
 ---
@@ -2784,28 +2853,31 @@ Phase 1 ✅ (Infrastructure & Scaffold)
                     ├─► Phase 3B [ ] (Wire Live Supabase Query — after auth confirmed E2E)
                     ├─► Phase 3C ✅ (Social Feed — posts, likes, comments, /feed as root)
                     └─► Phase 4 ✅ (Free Connection Flow — API, connect page, NotificationContext)
-                            └─► Phase 5 ✅ (Real-Time Chat + Mobile Layout)
-                                    └─► Phase 6 [ ] (Roommate Agreement + Housing Access + Bills + Verification)
-                                            │   migration 0003: roommate_agreements table
-                                            │   ₦2,000 paid inside chat at agreement acceptance
-                                            │   /housing unlocked post-agreement for both users
+                            └─► Phase 5 ✅ (Real-Time Chat + Full PWA — SW, manifest, InstallPrompt)
+                                    └─► Phase 6 [~] (Agreement ✅ + Housing ✅ + Bills ✅ + Verification [ ])
+                                            │   migration 0003 ✅: roommate_agreements table
+                                            │   migration 0005 ✅: message notifications trigger
+                                            │   ₦2,000 paid inside chat — agreement flow LIVE
+                                            │   /housing unlocked post-agreement — LIVE
+                                            │   Bill splitting (API + pages + components) — LIVE
+                                            │   Student verification admin review: PENDING
                                             │       └─► Phase 8 [ ] (Admin Dashboard)
                                             │
-                                            └─► Phase 7 [ ] (Push Notifications)
+                                            └─► Phase 7 [ ] (Push Notifications — VAPID + subscribe/send routes)
                                                     └──────────────────────────────────────►
                                                                         Phase 9 [ ] (Marketing SPA + Lottie)
                                                                                 └─► Phase 10 [ ] (Security + Launch)
 ```
 
 **Revenue moment in the chain:**
-> The ₦2,000 charge happens inside **Phase 6**, inside the **chat thread**.
+> The ₦2,000 charge happens inside **Phase 6**, inside the **chat thread**. This is **LIVE**.
 >
-> Full path to revenue:
-> Sign up (P2) → discover profiles (P3) → connect free (P4) → chat (P5) → propose agreement via "Propose Agreement" button in chat → **acceptor pays ₦2,000 via Paystack** → agreement CONFIRMED → "Roomie Partners ✓" badge → `/housing` unlocked for both.
+> Full path to revenue (all steps implemented):
+> Sign up (P2) → discover profiles (P3) → connect free (P4) → chat (P5) → tap "Propose Agreement" in chat → agreement_request card appears → **acceptor taps "Accept & Pay ₦2,000"** → Paystack popup opens → charge.success webhook → agreement CONFIRMED → agreement_confirmed message in chat → `/housing` unlocked for both.
 >
 > The payment is never a UI gate — it's a commitment ceremony. Users pay because they've already decided, not because they hit a wall.
 
-> Each phase is independently shippable. Phases 1–5 are **complete**. Phase 6 delivers the revenue model and value-add features. Phases 7–10 add engagement, admin tooling, and ship it.
+> **Current state (2026-06-02):** Phases 1–6 are largely complete. Service worker (Serwist), PWA install prompt, and bill splitting all shipped in the latest batch. Remaining work: student verification admin review, VAPID push notifications, admin dashboard, marketing SPA, Phase 3B live Supabase query, and security hardening.
 
 ---
 
