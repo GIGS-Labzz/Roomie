@@ -5,10 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@repo/db/client";
 import { getProfileById } from "@repo/db/queries/profiles";
+import { calculateCompatibility } from "@repo/db/lib/compatibility";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CompatibilityScore } from "@/components/discover/CompatibilityScore";
+import { useAuth } from "@/context/AuthContext";
 import type { Database } from "@repo/db/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -58,19 +60,28 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 export default function ProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [myProfile, setMyProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await getProfileById(supabase as any, params.id);
-      setProfile(data as Profile ?? null);
+      const [profileResult, myResult] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getProfileById(supabase as any, params.id),
+        user
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? (supabase as any).from("profiles").select("*").eq("id", user.id).single()
+          : Promise.resolve({ data: null }),
+      ]);
+      setProfile(profileResult.data as Profile ?? null);
+      setMyProfile(myResult.data ?? null);
       setIsLoading(false);
     };
     void load();
-  }, [params.id]);
+  }, [params.id, user]);
 
   if (isLoading) {
     return (
@@ -91,8 +102,7 @@ export default function ProfileDetailPage() {
     );
   }
 
-  // Compatibility score: use hash-based heuristic since we'd need both full profiles for real scoring
-  const compatScore = 45 + (profile.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 50);
+  const compatScore = myProfile ? calculateCompatibility(myProfile, profile) : 0;
   const tags = profile.lifestyle_tags ?? [];
 
   return (

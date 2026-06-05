@@ -5,12 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@repo/db/client";
 import { getDiscoveryFeed } from "@repo/db/queries/profiles";
+import { calculateCompatibility } from "@repo/db/lib/compatibility";
 import { ProfileCard } from "@/components/discover/ProfileCard";
 import { ProfileCardSkeleton } from "@/components/discover/ProfileCardSkeleton";
 import { FilterDrawer } from "@/components/discover/FilterDrawer";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
 import { useAuth } from "@/context/AuthContext";
+import { useConnections } from "@/hooks/useConnections";
 import type { DiscoveryFilters } from "@repo/db/queries/profiles";
 import type { Database } from "@repo/db/types";
 
@@ -21,17 +23,25 @@ const supabase = createClient();
 export default function DiscoverPage() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { getConnectionStatus } = useConnections();
   const [filters, setFilters] = useState<DiscoveryFilters>({});
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [profiles, setProfiles] = useState<FeedProfile[]>([]);
+  const [myProfile, setMyProfile] = useState<FeedProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     const load = async () => {
       setIsLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await getDiscoveryFeed(supabase as any, user?.id ?? "00000000-0000-0000-0000-000000000000", {}, 0);
-      setProfiles((data as FeedProfile[]) ?? []);
+      const [feedResult, profileResult] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getDiscoveryFeed(supabase as any, user.id, {}, 0),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("profiles").select("*").eq("id", user.id).single(),
+      ]);
+      setProfiles((feedResult.data as FeedProfile[]) ?? []);
+      setMyProfile(profileResult.data ?? null);
       setIsLoading(false);
     };
     void load();
@@ -136,7 +146,12 @@ export default function DiscoverPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
               {filtered.map((p) => (
-                <ProfileCard key={p.id} profile={p} connectionStatus={null} />
+                <ProfileCard
+                  key={p.id}
+                  profile={p}
+                  compatibilityScore={myProfile ? calculateCompatibility(myProfile, p) : undefined}
+                  connectionStatus={getConnectionStatus(p.id)}
+                />
               ))}
             </div>
           )}

@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Avatar } from "@repo/ui/avatar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
+import { PushToggle } from "@/components/pwa/PushToggle";
 
 const supabase = createClient();
 
@@ -200,6 +201,13 @@ export default function NotificationsPage() {
             )}
           </div>
         </header>
+
+        {/* Push notification settings */}
+        <div className="max-w-2xl w-full mx-auto px-4 pt-4">
+          <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] px-5 py-4">
+            <PushToggle />
+          </div>
+        </div>
 
         <main className="flex-1 max-w-2xl w-full mx-auto pb-28 md:pb-8">
           {isLoading ? (
