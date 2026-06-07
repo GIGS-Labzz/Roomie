@@ -1,14 +1,38 @@
 -- Seed data for local development
 -- Applied on: supabase db reset
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ─── Housing Platform Auth Users ─────────────────────────────────────────────
+-- All platform accounts use password: Test@1234
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, role, aud, created_at, updated_at, raw_user_meta_data, is_anonymous)
+VALUES
+  ('aaaaaaaa-0001-0001-0001-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@unihousing.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniHousing Lagos","user_type":"provider"}'::jsonb, FALSE),
+  ('aaaaaaaa-0002-0002-0002-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'hello@abujapad.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"AbujaStudentPad","user_type":"provider"}'::jsonb,  FALSE),
+  ('aaaaaaaa-0003-0003-0003-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'info@unicrib.ng',       extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniCrib Ibadan","user_type":"provider"}'::jsonb,   FALSE),
+  ('aaaaaaaa-0004-0004-0004-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'rooms@phrooms.ng',      extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"PortHarcourt Rooms","user_type":"provider"}'::jsonb,FALSE),
+  ('aaaaaaaa-0005-0005-0005-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@enuguhomes.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"EnuguStudentHomes","user_type":"provider"}'::jsonb, FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+-- ─── Super Admin Auth User ────────────────────────────────────────────────────
+-- Super admin: admin@roomie.ng / Admin@1234
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, role, aud, created_at, updated_at, raw_user_meta_data, is_anonymous)
+VALUES
+  ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', 'admin@roomie.ng', extensions.crypt('Admin@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Roomie Super Admin","user_type":"admin"}'::jsonb, FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.admin_users (id, role)
+VALUES ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb', 'super_admin')
+ON CONFLICT (id) DO NOTHING;
+
 -- ─── Sample Housing Platforms ────────────────────────────────────────────────
 INSERT INTO public.housing_platforms (name, description, url, cities, campus_tags, contact_email, status, is_featured)
 VALUES
-  ('UniHousing Lagos', 'Student accommodation near UNILAG and LASU', 'https://example.com/unihousing', ARRAY['Lagos'], ARRAY['UNILAG', 'LASU', 'Yaba'], 'contact@unihousing.ng', 'ACTIVE', TRUE),
-  ('AbujaStudentPad', 'Affordable rooms near UniAbuja and BAZE', 'https://example.com/abujapad', ARRAY['Abuja'], ARRAY['UNIABUJA', 'BAZE'], 'hello@abujapad.ng', 'ACTIVE', FALSE),
-  ('UniCrib Ibadan', 'Hostels and self-cons near UI and LAUTECH', 'https://example.com/unicrib', ARRAY['Ibadan'], ARRAY['UI', 'LAUTECH'], 'info@unicrib.ng', 'ACTIVE', FALSE),
-  ('PortHarcourt Rooms', 'Student rooms near RSU and UniPort', 'https://example.com/phrooms', ARRAY['Port Harcourt'], ARRAY['RSU', 'UNIPORT'], 'rooms@phrooms.ng', 'ACTIVE', FALSE),
-  ('EnuguStudentHomes', 'UNN and Enugu State student accommodation', 'https://example.com/enuguhomes', ARRAY['Enugu', 'Nsukka'], ARRAY['UNN', 'ESUT'], 'contact@enuguhomes.ng', 'PENDING_REVIEW', FALSE);
+  ('UniHousing Lagos',   'Student accommodation near UNILAG and LASU', 'https://example.com/unihousing', ARRAY['Lagos'],          ARRAY['UNILAG','LASU','Yaba'], 'contact@unihousing.ng', 'PENDING_REVIEW', FALSE),
+  ('AbujaStudentPad',    'Affordable rooms near UniAbuja and BAZE',      'https://example.com/abujapad',   ARRAY['Abuja'],          ARRAY['UNIABUJA','BAZE'],      'hello@abujapad.ng',     'PENDING_REVIEW', FALSE),
+  ('UniCrib Ibadan',     'Hostels and self-cons near UI and LAUTECH',    'https://example.com/unicrib',    ARRAY['Ibadan'],         ARRAY['UI','LAUTECH'],         'info@unicrib.ng',       'PENDING_REVIEW', FALSE),
+  ('PortHarcourt Rooms', 'Student rooms near RSU and UniPort',           'https://example.com/phrooms',    ARRAY['Port Harcourt'],  ARRAY['RSU','UNIPORT'],        'rooms@phrooms.ng',      'PENDING_REVIEW', FALSE),
+  ('EnuguStudentHomes',  'UNN and Enugu State student accommodation',    'https://example.com/enuguhomes', ARRAY['Enugu','Nsukka'], ARRAY['UNN','ESUT'],           'contact@enuguhomes.ng', 'PENDING_REVIEW', FALSE);
 
 -- ─── 25 Sample Profiles ───────────────────────────────────────────────────────
 -- We insert directly into auth.users first (bypassing the trigger),
@@ -376,3 +400,104 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 END $$;
+
+-- Ensure directly-seeded Auth users have the metadata/identity rows that GoTrue expects.
+WITH seed_auth_users(id) AS (
+  VALUES
+    ('aaaaaaaa-0001-0001-0001-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0002-0002-0002-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0003-0003-0003-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0004-0004-0004-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0005-0005-0005-aaaaaaaaaaaa'::uuid),
+    ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb'::uuid),
+    ('11111111-0001-0001-0001-000000000001'::uuid),
+    ('11111111-0002-0002-0002-000000000002'::uuid),
+    ('11111111-0003-0003-0003-000000000003'::uuid),
+    ('11111111-0004-0004-0004-000000000004'::uuid),
+    ('11111111-0005-0005-0005-000000000005'::uuid),
+    ('11111111-0006-0006-0006-000000000006'::uuid),
+    ('11111111-0007-0007-0007-000000000007'::uuid),
+    ('11111111-0008-0008-0008-000000000008'::uuid),
+    ('11111111-0009-0009-0009-000000000009'::uuid),
+    ('11111111-0010-0010-0010-000000000010'::uuid),
+    ('11111111-0011-0011-0011-000000000011'::uuid),
+    ('11111111-0012-0012-0012-000000000012'::uuid),
+    ('11111111-0013-0013-0013-000000000013'::uuid),
+    ('11111111-0014-0014-0014-000000000014'::uuid),
+    ('11111111-0015-0015-0015-000000000015'::uuid),
+    ('11111111-0016-0016-0016-000000000016'::uuid),
+    ('11111111-0017-0017-0017-000000000017'::uuid),
+    ('11111111-0018-0018-0018-000000000018'::uuid),
+    ('11111111-0019-0019-0019-000000000019'::uuid),
+    ('11111111-0020-0020-0020-000000000020'::uuid),
+    ('11111111-0021-0021-0021-000000000021'::uuid),
+    ('11111111-0022-0022-0022-000000000022'::uuid),
+    ('11111111-0023-0023-0023-000000000023'::uuid),
+    ('11111111-0024-0024-0024-000000000024'::uuid),
+    ('11111111-0025-0025-0025-000000000025'::uuid)
+)
+UPDATE auth.users AS users
+SET
+  raw_app_meta_data = jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
+  raw_user_meta_data = COALESCE(users.raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('email_verified', true),
+  confirmation_token = COALESCE(users.confirmation_token, ''),
+  recovery_token = COALESCE(users.recovery_token, ''),
+  email_change_token_new = COALESCE(users.email_change_token_new, ''),
+  email_change = COALESCE(users.email_change, ''),
+  email_change_token_current = COALESCE(users.email_change_token_current, ''),
+  phone_change = COALESCE(users.phone_change, ''),
+  phone_change_token = COALESCE(users.phone_change_token, ''),
+  reauthentication_token = COALESCE(users.reauthentication_token, ''),
+  updated_at = NOW()
+FROM seed_auth_users
+WHERE users.id = seed_auth_users.id;
+
+WITH seed_auth_users(id) AS (
+  VALUES
+    ('aaaaaaaa-0001-0001-0001-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0002-0002-0002-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0003-0003-0003-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0004-0004-0004-aaaaaaaaaaaa'::uuid),
+    ('aaaaaaaa-0005-0005-0005-aaaaaaaaaaaa'::uuid),
+    ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb'::uuid),
+    ('11111111-0001-0001-0001-000000000001'::uuid),
+    ('11111111-0002-0002-0002-000000000002'::uuid),
+    ('11111111-0003-0003-0003-000000000003'::uuid),
+    ('11111111-0004-0004-0004-000000000004'::uuid),
+    ('11111111-0005-0005-0005-000000000005'::uuid),
+    ('11111111-0006-0006-0006-000000000006'::uuid),
+    ('11111111-0007-0007-0007-000000000007'::uuid),
+    ('11111111-0008-0008-0008-000000000008'::uuid),
+    ('11111111-0009-0009-0009-000000000009'::uuid),
+    ('11111111-0010-0010-0010-000000000010'::uuid),
+    ('11111111-0011-0011-0011-000000000011'::uuid),
+    ('11111111-0012-0012-0012-000000000012'::uuid),
+    ('11111111-0013-0013-0013-000000000013'::uuid),
+    ('11111111-0014-0014-0014-000000000014'::uuid),
+    ('11111111-0015-0015-0015-000000000015'::uuid),
+    ('11111111-0016-0016-0016-000000000016'::uuid),
+    ('11111111-0017-0017-0017-000000000017'::uuid),
+    ('11111111-0018-0018-0018-000000000018'::uuid),
+    ('11111111-0019-0019-0019-000000000019'::uuid),
+    ('11111111-0020-0020-0020-000000000020'::uuid),
+    ('11111111-0021-0021-0021-000000000021'::uuid),
+    ('11111111-0022-0022-0022-000000000022'::uuid),
+    ('11111111-0023-0023-0023-000000000023'::uuid),
+    ('11111111-0024-0024-0024-000000000024'::uuid),
+    ('11111111-0025-0025-0025-000000000025'::uuid)
+)
+INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, created_at, updated_at)
+SELECT
+  users.id::text,
+  users.id,
+  jsonb_build_object('sub', users.id::text, 'email', users.email, 'email_verified', true, 'phone_verified', false),
+  'email',
+  NOW(),
+  NOW()
+FROM auth.users AS users
+JOIN seed_auth_users ON seed_auth_users.id = users.id
+ON CONFLICT (provider_id, provider) DO UPDATE
+SET
+  user_id = EXCLUDED.user_id,
+  identity_data = EXCLUDED.identity_data,
+  updated_at = NOW();
