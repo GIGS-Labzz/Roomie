@@ -2382,7 +2382,7 @@ The discover page uses a Twitter/X-style layout. See the layout architecture dec
 
 **What this unlocks:** The ₦2,000 revenue moment — triggered by mutual consent inside the chat, not at a navigation gate. Housing referrals, bill splitting, and student verification.
 
-> **Status as of 2026-06-02:** Agreement flow, Paystack payment, housing provider page, and bill splitting all complete. Student verification (admin review workflow) is a Phase 7+ item.
+> **Status as of 2026-06-18:** Agreement flow, Paystack payment, housing provider page, bill splitting, and student verification file upload (tasks 20–21) all complete. Student verification admin review workflow and Lottie animation (task 22 cosmetic) are Phase 7–9 items.
 
 ---
 
@@ -2613,12 +2613,18 @@ Apply with: `supabase db push`
 #### Student Verification
 
 ```
-[ ] 20. Complete file upload in apps/app/app/onboarding/verify/page.tsx
+[x] 20. Complete file upload in apps/app/app/onboarding/verify/page.tsx ✅
           JPG/PNG/WebP/PDF, max 5 MB, upload to private student-ids bucket
-          Path: {userId}/{crypto.randomUUID()}.{ext}
+          Path: {userId}/{side}-{crypto.randomUUID()}.{ext}
           Set verification_status = 'PENDING'
-[ ] 21. "Get verified" CTA on profile page — shows badge + status nudge
-[ ] 22. Wire verified-badge.json Lottie into ProfileCard (Phase 9)
+          Upload slots show done/uploading/error states · skip option available
+[x] 21. "Get verified" CTA on profile page — shows badge + status nudge ✅
+          Unverified: "Get verified" CTA links to /onboarding/verify
+          Pending: "Verification under review" with amber styling
+          Verified: Hidden, badge displays on profile hero card
+[~] 22. Wire verified-badge.json Lottie into ProfileCard — SVG checkmark ready, awaiting Phase 9 ⏳
+          Currently displays as SVG badge with white checkmark on brand-500 circle
+          Phase 9 task: replace SVG with <LottieIcon animationData={verifiedBadgeJson} />
 ```
 
 **Connects to → Phase 7:** Payment webhook, agreement events, and verification events all produce `notifications` rows — Phase 7 sends these as push notifications.

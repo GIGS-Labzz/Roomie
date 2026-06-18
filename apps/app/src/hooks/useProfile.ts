@@ -42,12 +42,13 @@ export function useProfile() {
     if (!user) return;
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: updated } = await (supabase as any)
+    const { data: updated, error } = await (supabase as any)
       .from("profiles")
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq("id", user.id)
       .select()
       .single();
+    if (error) throw error;
     if (updated) setProfile(updated);
     return updated;
   };

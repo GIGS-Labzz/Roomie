@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { LifestyleTagPicker } from "@/components/onboarding/LifestyleTagPicker";
+import { Avatar } from "@repo/ui/avatar";
+import { createClient } from "@repo/db/client";
+import { useAuth } from "@/context/AuthContext";
 import type { Database } from "@repo/db/types";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -72,11 +75,12 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string | null }) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
       {children}
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }
@@ -86,14 +90,17 @@ const inputCls =
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { profile, isLoading, updateProfile } = useProfile();
 
   const [form, setForm] = useState<ProfileUpdate>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  // Seed form from loaded profile
   useEffect(() => {
     if (!profile) return;
     setForm({
@@ -101,6 +108,8 @@ export default function EditProfilePage() {
       age: profile.age,
       gender: profile.gender,
       city: profile.city,
+      bio: profile.bio,
+      phone: profile.phone,
       university: profile.university,
       faculty: profile.faculty,
       course: profile.course,
@@ -113,8 +122,9 @@ export default function EditProfilePage() {
       allows_guests: profile.allows_guests,
       min_budget: profile.min_budget,
       max_budget: profile.max_budget,
+      move_in_date: profile.move_in_date,
       roommate_gender_pref: profile.roommate_gender_pref,
-      bio: profile.bio,
+      avatar_url: profile.avatar_url,
     });
     setSelectedTags(profile.lifestyle_tags ?? []);
   }, [profile]);
@@ -122,12 +132,61 @@ export default function EditProfilePage() {
   const set = <K extends keyof ProfileUpdate>(key: K, val: ProfileUpdate[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
+  const budgetError =
+    form.min_budget && form.max_budget && (form.min_budget as number) > (form.max_budget as number)
+      ? "Min budget can't exceed max budget"
+      : null;
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files?.[0]) return;
+    const file = e.target.files[0];
+
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+    if (!ALLOWED.includes(file.type)) {
+      setSaveError("Only JPG, PNG, or WebP images accepted.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("Image must be under 5 MB.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    setSaveError(null);
+
+    const localPreview = URL.createObjectURL(file);
+    setAvatarPreview(localPreview);
+
+    const supabase = createClient();
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar-${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+
+    if (error) {
+      setSaveError("Avatar upload failed. Please try again.");
+      setAvatarPreview(null);
+      setAvatarUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    set("avatar_url", data.publicUrl);
+    setAvatarUploading(false);
+  };
+
   const handleSave = async () => {
+    if (budgetError) return;
+    setSaveError(null);
     setIsSaving(true);
-    await updateProfile({ ...form, lifestyle_tags: selectedTags });
-    setIsSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await updateProfile({ ...form, lifestyle_tags: selectedTags });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setSaveError("Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -140,6 +199,8 @@ export default function EditProfilePage() {
       </div>
     );
   }
+
+  const currentAvatarSrc = avatarPreview ?? (form.avatar_url as string | null) ?? undefined;
 
   return (
     <div className="min-h-screen bg-sage-surface flex">
@@ -160,7 +221,7 @@ export default function EditProfilePage() {
             <h1 className="font-display font-bold text-slate-900 text-xl flex-1">Edit Profile</h1>
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !!budgetError}
               className={`px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
                 saved
                   ? "bg-brand-100 text-brand-700"
@@ -173,6 +234,51 @@ export default function EditProfilePage() {
         </header>
 
         <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-4 pb-16">
+
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-700">{saveError}</p>
+            </div>
+          )}
+
+          {/* Avatar */}
+          <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] p-6">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <Avatar
+                  src={currentAvatarSrc}
+                  name={(form.display_name as string) ?? ""}
+                  size="xl"
+                  className="ring-2 ring-sage-surface"
+                />
+                {avatarUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-semibold rounded-2xl hover:bg-brand-600 transition-colors active:scale-[0.97]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Change photo
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={avatarUploading}
+                  />
+                </label>
+                <p className="text-xs text-slate-400 mt-1.5">JPG, PNG or WebP · max 5 MB</p>
+              </div>
+            </div>
+          </div>
 
           {/* Basics */}
           <FormSection title="Basics">
@@ -219,6 +325,15 @@ export default function EditProfilePage() {
                 ))}
               </select>
             </Field>
+            <Field label="Phone">
+              <input
+                type="tel"
+                className={inputCls}
+                value={(form.phone as string) ?? ""}
+                onChange={(e) => set("phone", e.target.value || null)}
+                placeholder="e.g. +234 801 234 5678"
+              />
+            </Field>
             <Field label="Bio">
               <textarea
                 className={`${inputCls} resize-none`}
@@ -256,7 +371,16 @@ export default function EditProfilePage() {
                 ))}
               </select>
             </Field>
-            <Field label="Course / Faculty">
+            <Field label="Faculty">
+              <input
+                type="text"
+                className={inputCls}
+                value={(form.faculty as string) ?? ""}
+                onChange={(e) => set("faculty", e.target.value || null)}
+                placeholder="e.g. Engineering, Social Sciences…"
+              />
+            </Field>
+            <Field label="Course">
               <input
                 type="text"
                 className={inputCls}
@@ -339,9 +463,9 @@ export default function EditProfilePage() {
 
           {/* Budget */}
           <FormSection title="Budget & Timeline">
-            <Field label="Min budget (₦)">
+            <Field label="Min budget (₦)" error={budgetError}>
               <select
-                className={inputCls}
+                className={`${inputCls} ${budgetError ? "border-red-300" : ""}`}
                 value={(form.min_budget as number) ?? ""}
                 onChange={(e) => set("min_budget", e.target.value ? Number(e.target.value) : null)}
               >
@@ -355,7 +479,7 @@ export default function EditProfilePage() {
             </Field>
             <Field label="Max budget (₦)">
               <select
-                className={inputCls}
+                className={`${inputCls} ${budgetError ? "border-red-300" : ""}`}
                 value={(form.max_budget as number) ?? ""}
                 onChange={(e) => set("max_budget", e.target.value ? Number(e.target.value) : null)}
               >
@@ -391,7 +515,7 @@ export default function EditProfilePage() {
           {/* Save button (bottom) */}
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !!budgetError}
             className="w-full py-4 bg-brand-500 text-white font-bold rounded-2xl hover:bg-brand-600 transition-all active:scale-[0.98] disabled:opacity-60"
           >
             {isSaving ? "Saving…" : saved ? "Saved!" : "Save changes"}
