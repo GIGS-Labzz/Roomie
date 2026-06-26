@@ -191,6 +191,11 @@ export default function ProfilePage() {
                       : ""}
                   </p>
                 )}
+                {profile?.course && (
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {profile.faculty ? `${profile.faculty} · ` : ""}{profile.course}
+                  </p>
+                )}
                 {profile?.city && (
                   <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
@@ -203,6 +208,13 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Bio */}
+          {profile?.bio && (
+            <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] px-6 py-5">
+              <p className="text-sm text-slate-700 leading-relaxed">{profile.bio}</p>
+            </div>
+          )}
 
           {/* Budget & move-in */}
           <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] p-6">

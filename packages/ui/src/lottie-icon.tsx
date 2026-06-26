@@ -1,24 +1,31 @@
 "use client";
 
-// Filled in Phase 9 — sourcing Lottie JSON files from LottieFiles.com
-// Stub renders a placeholder box until animations are sourced.
+import Lottie from "lottie-react";
 
 interface LottieIconProps {
-  animationData?: object;
+  animationData: object;
   size?: number;
   loop?: boolean;
   autoplay?: boolean;
   className?: string;
+  speed?: number;
 }
 
 export function LottieIcon({
+  animationData,
   size = 40,
+  loop = false,
+  autoplay = true,
   className,
 }: LottieIconProps) {
   return (
-    <div
-      className={`rounded-full bg-brand-100 flex items-center justify-center ${className ?? ""}`}
+    <Lottie
+      animationData={animationData}
+      loop={loop}
+      autoplay={autoplay}
       style={{ width: size, height: size }}
+      className={className}
+      rendererSettings={{ preserveAspectRatio: "xMidYMid meet" }}
     />
   );
 }

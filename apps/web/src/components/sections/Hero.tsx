@@ -1,0 +1,123 @@
+"use client";
+
+import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+import connectingAnimation from "@repo/animations/connecting";
+
+const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
+
+const tagline = ["C", "o", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t", "t"];
+
+export function Hero() {
+  return (
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 py-24">
+      {/* Animated dot background */}
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, #8AAF6E 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* Radial fade mask */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, #EDE8C8 80%)",
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col lg:flex-row items-center gap-16 max-w-6xl w-full mx-auto">
+        {/* Text side */}
+        <div className="flex-1 text-center lg:text-left">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-4"
+          >
+            Student Roommate Matching
+          </motion.p>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-slate-900 mb-2"
+          >
+            Connect and
+          </motion.h1>
+
+          <div className="flex flex-wrap justify-center lg:justify-start mb-6">
+            {tagline.map((letter, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 30, scaleY: 0.5 }}
+                animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                transition={{
+                  delay: 0.35 + i * 0.045,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 18,
+                }}
+                className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-brand-500 inline-block"
+              >
+                {letter}
+              </motion.span>
+            ))}
+          </div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
+            className="text-slate-600 text-lg sm:text-xl max-w-md mx-auto lg:mx-0 mb-10"
+          >
+            Find your perfect student roommate. Pay once. Move in together.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.05, duration: 0.5 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+          >
+            <a
+              href={APP_URL}
+              className="inline-flex items-center justify-center px-8 py-4 bg-peach-200 hover:bg-peach-300 text-slate-900 font-semibold rounded-2xl transition-colors shadow-brutal hover:translate-y-[-2px] active:translate-y-0 duration-150"
+            >
+              Find my roommate
+            </a>
+            <a
+              href="#for-providers"
+              className="inline-flex items-center justify-center px-8 py-4 border-2 border-brand-500 text-brand-600 font-semibold rounded-2xl hover:bg-brand-50 transition-colors duration-150"
+            >
+              I have a housing platform
+            </a>
+          </motion.div>
+        </div>
+
+        {/* Lottie illustration */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.6, type: "spring" }}
+          className="flex-shrink-0 w-64 h-64 sm:w-80 sm:h-80"
+        >
+          <Lottie
+            animationData={connectingAnimation}
+            loop
+            autoplay
+            style={{ width: "100%", height: "100%" }}
+          />
+        </motion.div>
+      </div>
+
+  </section>
+  );
+}

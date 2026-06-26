@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Logo } from "@repo/ui/logo";
 
 const NIGERIAN_CITIES = [
   "Lagos", "Abuja", "Ibadan", "Kano", "Port Harcourt", "Benin City",
@@ -89,13 +90,8 @@ export default function RegisterPage() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 pt-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center mx-auto">
-            <svg className="w-6 h-6 text-white" viewBox="0 0 20 20" fill="none">
-              <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-              <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-              <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-              <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-            </svg>
+          <div className="flex justify-center">
+            <Logo size="lg" showWordmark={false} />
           </div>
           <h1 className="font-display font-bold text-slate-900 text-3xl">List your platform</h1>
           <p className="text-slate-500 text-sm max-w-md mx-auto">

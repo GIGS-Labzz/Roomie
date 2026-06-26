@@ -2,5 +2,18 @@
   "name": "@repo/animations",
   "version": "0.0.0",
   "private": true,
-  "description": "Lottie JSON animation files — sourced from LottieFiles.com in Phase 9"
+  "description": "Lottie JSON animation files for Roomie — placeholder assets for Phase 9",
+  "exports": {
+    "./connecting": "./connecting.json",
+    "./payment-success": "./payment-success.json",
+    "./verified-badge": "./verified-badge.json",
+    "./chat-typing": "./chat-typing.json",
+    "./match-found": "./match-found.json",
+    "./empty-feed": "./empty-feed.json",
+    "./empty-chat": "./empty-chat.json",
+    "./bill-settled": "./bill-settled.json",
+    "./loading": "./loading.json",
+    "./offline": "./offline.json",
+    "./room": "./room.json"
+  }
 }

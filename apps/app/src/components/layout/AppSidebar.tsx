@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@repo/ui/logo";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
 import { useNotifications } from "@/context/NotificationContext";
 
@@ -94,23 +95,9 @@ export function AppSidebar() {
     <aside className="hidden md:flex flex-col w-64 xl:w-72 flex-shrink-0 sticky top-0 h-screen py-4 px-3 gap-1">
 
       {/* Brand */}
-      <Link
-        href="/feed"
-        className="flex items-center gap-2.5 px-3 py-3 mb-1 rounded-2xl hover:bg-white/60 transition-colors group w-fit"
-      >
-        {/* Roomie logomark — leaf/connection shape */}
-        <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center flex-shrink-0">
-          <svg className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="none">
-            <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-            <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-            <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-            <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-          </svg>
-        </div>
-        <span className="font-display font-bold text-slate-900 text-lg leading-none group-hover:text-brand-600 transition-colors">
-          Roomie
-        </span>
-      </Link>
+      <div className="px-3 py-3 mb-1">
+        <Logo href="/feed" size="sm" />
+      </div>
 
       {/* Profile preview */}
       <div className="mb-2">

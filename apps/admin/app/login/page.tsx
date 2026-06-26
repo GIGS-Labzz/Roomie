@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@repo/db/client";
+import { Logo } from "@repo/ui/logo";
 
 const supabase = createClient();
 
@@ -53,13 +54,8 @@ export default function LoginPage() {
       <div className="bg-white rounded-3xl p-8 shadow-[0_4px_24px_rgba(0,0,0,0.08)] max-w-sm w-full space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
-          <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center mx-auto">
-            <svg className="w-6 h-6 text-white" viewBox="0 0 20 20" fill="none">
-              <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-              <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-              <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-              <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-            </svg>
+          <div className="flex justify-center">
+            <Logo size="lg" showWordmark={false} />
           </div>
           <h1 className="font-display font-bold text-slate-900 text-2xl">Roomie Admin</h1>
           <p className="text-slate-500 text-sm">Sign in to your provider dashboard</p>
