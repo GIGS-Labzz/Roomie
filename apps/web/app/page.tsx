@@ -1,3 +1,4 @@
+import { Navbar } from "@/components/sections/Navbar";
 import { Hero } from "@/components/sections/Hero";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { WhyRoomie } from "@/components/sections/WhyRoomie";
@@ -8,7 +9,9 @@ import { Footer } from "@/components/sections/Footer";
 
 export default function HomePage() {
   return (
-    <main className="overflow-x-hidden">
+    <>
+      <Navbar />
+      <main className="overflow-x-hidden scroll-smooth">
       <Hero />
       <HowItWorks />
       <WhyRoomie />
@@ -17,5 +20,6 @@ export default function HomePage() {
       <AppPreview />
       <Footer />
     </main>
+    </>
   );
 }

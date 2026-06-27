@@ -2,15 +2,19 @@
 
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import connectingAnimation from "@repo/animations/connecting";
+import { useWaitlist } from "@/context/waitlist";
 
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
+const DotLottieReact = dynamic(
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false }
+);
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
 
 const tagline = ["C", "o", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t", "t"];
 
 export function Hero() {
+  const { openWaitlist } = useWaitlist();
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 py-24">
       {/* Animated dot background */}
@@ -87,12 +91,12 @@ export function Hero() {
             transition={{ delay: 1.05, duration: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
           >
-            <a
-              href={APP_URL}
+            <button
+              onClick={openWaitlist}
               className="inline-flex items-center justify-center px-8 py-4 bg-peach-200 hover:bg-peach-300 text-slate-900 font-semibold rounded-2xl transition-colors shadow-brutal hover:translate-y-[-2px] active:translate-y-0 duration-150"
             >
               Find my roommate
-            </a>
+            </button>
             <a
               href="#for-providers"
               className="inline-flex items-center justify-center px-8 py-4 border-2 border-brand-500 text-brand-600 font-semibold rounded-2xl hover:bg-brand-50 transition-colors duration-150"
@@ -107,13 +111,12 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4, duration: 0.6, type: "spring" }}
-          className="flex-shrink-0 w-64 h-64 sm:w-80 sm:h-80"
+          className="flex-shrink-0 w-85 h-90 sm:w-[30rem] sm:h-[30rem]"
         >
-          <Lottie
-            animationData={connectingAnimation}
+          <DotLottieReact
+            src="https://lottie.host/61a70a8a-164d-4019-94f6-30dd055be848/lI67sDqalE.lottie"
             loop
             autoplay
-            style={{ width: "100%", height: "100%" }}
           />
         </motion.div>
       </div>

@@ -14,6 +14,7 @@
     "./bill-settled": "./bill-settled.json",
     "./loading": "./loading.json",
     "./offline": "./offline.json",
-    "./room": "./room.json"
+    "./room": "./room.json",
+    "./sandy-loading": "./sandy-loading.json"
   }
 }

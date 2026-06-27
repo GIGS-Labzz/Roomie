@@ -44,9 +44,7 @@ export function ForProviders() {
               transition={{ duration: 0.5 }}
               className="mb-10"
             >
-              <p className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-3">
-                For housing providers
-              </p>
+
               <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900 max-w-xl">
                 Reach students who are ALREADY ready to rent.
               </h2>

@@ -4,6 +4,15 @@
         "/^cd /c/Users/admin/Desktop/Roomie && python - <<'PY'\nfrom pathlib import Path\npath = Path\\('apps/admin/app/api/auth/callback/route\\.ts'\\)\ntext = path\\.read_text\\(\\)\nold = '''      cookies: \\{\n        get\\(name\\) \\{ return cookieStore\\.get\\(name\\)\\?\\.value; \\},\n        set\\(name, value, options\\) \\{ cookieStore\\.set\\(\\{ name, value, \\.\\.\\.options \\}\\); \\},\n        remove\\(name, options\\) \\{ cookieStore\\.set\\(\\{ name, value: \"\", \\.\\.\\.options \\}\\); \\},\n      \\},\n'''\nnew = '''      cookies: \\{\n        get\\(name: string\\) \\{ return cookieStore\\.get\\(name\\)\\?\\.value; \\},\n        set\\(name: string, value: string, options: any\\) \\{ cookieStore\\.set\\(\\{ name, value, \\.\\.\\.options \\}\\); \\},\n        remove\\(name: string, options: any\\) \\{ cookieStore\\.set\\(\\{ name, value: \"\", \\.\\.\\.options \\}\\); \\},\n      \\},\n'''\nif old not in text:\n    raise SystemExit\\('Old text not found'\\)\npath\\.write_text\\(text\\.replace\\(old, new\\)\\)\nprint\\('patched', path\\)\nPY$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "netstat": true,
+        "/^cd /c/Users/admin/Desktop/Roomie && powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue \\| Format-Table -AutoSize\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /c/Users/admin/Desktop/Roomie && powershell -NoProfile -Command \"Get-Process -Id 20064 \\| Format-Table -AutoSize\"$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

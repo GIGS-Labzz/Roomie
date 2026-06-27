@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import roomAnimation from "@repo/animations/room";
+import sandyLoadingAnimation from "@repo/animations/sandy-loading";
 import { Logo } from "@repo/ui/logo";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -17,10 +17,9 @@ export default function Loading() {
         <Logo size="md" />
       </div>
 
-      {/* Bed animation */}
       <div className="w-52 h-52">
         <Lottie
-          animationData={roomAnimation}
+          animationData={sandyLoadingAnimation}
           loop
           autoplay
           style={{ width: "100%", height: "100%" }}

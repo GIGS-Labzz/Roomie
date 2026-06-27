@@ -67,7 +67,7 @@ export function WhyRoomie() {
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section ref={ref} className="py-24 px-6" style={{ background: "#EDE8C8" }}>
+    <section id="why-roomie" ref={ref} className="py-24 px-6" style={{ background: "#EDE8C8" }}>
       <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -75,9 +75,6 @@ export function WhyRoomie() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-3">
-            Why Roomie
-          </p>
           <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900">
             Everything you need to find and live with your roommate
           </h2>

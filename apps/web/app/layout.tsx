@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WaitlistProvider } from "@/context/waitlist";
 
 export const metadata: Metadata = {
   title: "Roomie — Connect and Cooonnectttt",
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet" />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning style={{ scrollBehavior: "smooth" }}>
+        <WaitlistProvider>{children}</WaitlistProvider>
+      </body>
     </html>
   );
 }

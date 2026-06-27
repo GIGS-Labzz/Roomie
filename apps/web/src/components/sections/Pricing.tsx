@@ -3,8 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Check } from "lucide-react";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
+import { useWaitlist } from "@/context/waitlist";
 
 const included = [
   "Browse all student profiles for free",
@@ -16,11 +15,12 @@ const included = [
 ];
 
 export function Pricing() {
+  const { openWaitlist } = useWaitlist();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section ref={ref} className="py-24 px-6 bg-white">
+    <section id="pricing" ref={ref} className="py-24 px-6 bg-white">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -28,10 +28,7 @@ export function Pricing() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-3">
-            Pricing
-          </p>
-          <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900">
+        <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900">
             One simple fee.
           </h2>
         </motion.div>
@@ -87,12 +84,12 @@ export function Pricing() {
                 roommate who accepts the agreement — one payment unlocks housing
                 access for both of you.
               </p>
-              <a
-                href={APP_URL}
+              <button
+                onClick={openWaitlist}
                 className="block w-full text-center py-4 bg-peach-200 hover:bg-peach-300 text-slate-900 font-semibold rounded-2xl transition-colors shadow-brutal hover:translate-y-[-2px] active:translate-y-0 duration-150"
               >
                 Get started for free
-              </a>
+              </button>
             </div>
           </div>
         </motion.div>

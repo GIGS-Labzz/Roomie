@@ -131,9 +131,6 @@ export function AppPreview() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-3">
-            See it in action
-          </p>
           <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900">
             Built for Nigerian students
           </h2>
