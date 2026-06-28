@@ -13,6 +13,8 @@
         "/^cd /c/Users/admin/Desktop/Roomie && powershell -NoProfile -Command \"Get-Process -Id 20064 \\| Format-Table -AutoSize\"$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npx nest": true,
+        "npx -p @nestjs/cli": true
     }
 }

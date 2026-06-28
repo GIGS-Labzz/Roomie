@@ -1,0 +1,36 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: roomie_postgres
+    environment:
+      POSTGRES_DB: roomie
+      POSTGRES_USER: roomie
+      POSTGRES_PASSWORD: localdevpassword
+    ports:
+      - "5433:5432"        # 5433 to avoid clash with any local postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./supabase/init:/docker-entrypoint-initdb.d   # run migrations on first boot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roomie"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: roomie_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: roomie_dev
+      MINIO_ROOT_PASSWORD: localdevpassword
+    ports:
+      - "9000:9000"        # S3 API
+      - "9001:9001"        # MinIO Console UI
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  minio_data:

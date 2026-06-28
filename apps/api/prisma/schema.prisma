@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admin_users {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role       String?   @default("super_admin")
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bill_split_items {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  split_id       String      @db.Uuid
+  user_id        String      @db.Uuid
+  description    String?
+  amount         Int
+  is_paid        Boolean?    @default(false)
+  paid_at        DateTime?   @db.Timestamptz(6)
+  proof_url      String?
+  amount_paid    Int?
+  payment_status String?     @default("unpaid")
+  created_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  bill_splits    bill_splits @relation(fields: [split_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles       profiles    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model bill_splits {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connection_id    String             @db.Uuid
+  created_by       String             @db.Uuid
+  title            String
+  description      String?
+  total_amount     Int
+  currency         String?            @default("NGN")
+  is_settled       Boolean?           @default(false)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  bill_split_items bill_split_items[]
+  connections      connections        @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles         profiles           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model blocks {
+  id                                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  blocker_id                           String    @db.Uuid
+  blocked_id                           String    @db.Uuid
+  created_at                           DateTime? @default(now()) @db.Timestamptz(6)
+  profiles_blocks_blocked_idToprofiles profiles  @relation("blocks_blocked_idToprofiles", fields: [blocked_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_blocks_blocker_idToprofiles profiles  @relation("blocks_blocker_idToprofiles", fields: [blocker_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([blocker_id, blocked_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model connections {
+  id                                          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requester_id                                String               @db.Uuid
+  receiver_id                                 String               @db.Uuid
+  status                                      connection_status    @default(PENDING_PAYMENT)
+  payment_reference                           String?
+  amount_paid                                 Int?
+  paid_at                                     DateTime?            @db.Timestamptz(6)
+  connected_at                                DateTime?            @db.Timestamptz(6)
+  expires_at                                  DateTime?            @db.Timestamptz(6)
+  created_at                                  DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at                                  DateTime?            @default(now()) @db.Timestamptz(6)
+  bill_splits                                 bill_splits[]
+  profiles_connections_receiver_idToprofiles  profiles             @relation("connections_receiver_idToprofiles", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_connections_requester_idToprofiles profiles             @relation("connections_requester_idToprofiles", fields: [requester_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages                                    messages[]
+  payments                                    payments[]
+  platform_clicks                             platform_clicks[]
+  roommate_agreements                         roommate_agreements?
+}
+
+model housing_listings {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform_id       String            @db.Uuid
+  title             String
+  description       String?
+  address           String
+  city              String
+  state             String?
+  price_per_month   Int
+  property_type     String            @default("room")
+  bedrooms          Int               @default(1)
+  bathrooms         Int               @default(1)
+  amenities         String[]          @default([])
+  images            String[]          @default([])
+  campus_tags       String[]          @default([])
+  contact_phone     String?
+  contact_whatsapp  String?
+  is_available      Boolean           @default(true)
+  status            String            @default("published")
+  total_views       Int               @default(0)
+  created_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  housing_platforms housing_platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model housing_platforms {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  description      String?
+  url              String
+  logo_url         String?
+  cities           String[]           @default([])
+  campus_tags      String[]           @default([])
+  contact_name     String?
+  contact_email    String
+  contact_phone    String?
+  status           platform_status?   @default(PENDING_REVIEW)
+  is_featured      Boolean?           @default(false)
+  registered_by    String?            @db.Uuid
+  total_clicks     Int?               @default(0)
+  total_referrals  Int?               @default(0)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  housing_listings housing_listings[]
+  profiles         profiles?          @relation(fields: [registered_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platform_clicks  platform_clicks[]
+}
+
+model messages {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connection_id String        @db.Uuid
+  sender_id     String        @db.Uuid
+  content       String
+  message_type  message_type? @default(text)
+  image_url     String?
+  read_at       DateTime?     @db.Timestamptz(6)
+  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
+  connections   connections   @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles      profiles      @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([connection_id, created_at(sort: Desc)], map: "idx_messages_connection_id")
+}
+
+model notifications {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  type       String
+  title      String
+  body       String?
+  data       Json?     @default("{}")
+  read_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model payments {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String          @db.Uuid
+  connection_id    String?         @db.Uuid
+  reference        String          @unique
+  amount           Int
+  status           payment_status? @default(PENDING)
+  payment_channel  String?
+  gateway_response String?
+  paid_at          DateTime?       @db.Timestamptz(6)
+  created_at       DateTime?       @default(now()) @db.Timestamptz(6)
+  connections      connections?    @relation(fields: [connection_id], references: [id], onUpdate: NoAction)
+  profiles         profiles        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model platform_clicks {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform_id       String            @db.Uuid
+  user_id           String            @db.Uuid
+  connection_id     String?           @db.Uuid
+  clicked_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  connections       connections?      @relation(fields: [connection_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  housing_platforms housing_platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles          profiles          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model post_comments {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  post_id    String    @db.Uuid
+  user_id    String    @db.Uuid
+  content    String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  posts      posts     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([post_id, created_at], map: "idx_post_comments_post_id")
+}
+
+model post_likes {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  post_id    String    @db.Uuid
+  user_id    String    @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  posts      posts     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([post_id, user_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model posts {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String          @db.Uuid
+  content        String
+  city           String?
+  budget_min     Int?
+  budget_max     Int?
+  move_in_date   DateTime?       @db.Date
+  likes_count    Int?            @default(0)
+  comments_count Int?            @default(0)
+  created_at     DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?       @default(now()) @db.Timestamptz(6)
+  post_comments  post_comments[]
+  post_likes     post_likes[]
+  profiles       profiles        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_posts_created_at")
+  @@index([user_id], map: "idx_posts_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model profiles {
+  id                                                             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  display_name                                                   String                @default("")
+  avatar_url                                                     String?
+  bio                                                            String?
+  age                                                            Int?                  @db.SmallInt
+  gender                                                         gender_type?
+  phone                                                          String?
+  city                                                           String?
+  state                                                          String?
+  university                                                     String?
+  faculty                                                        String?
+  course                                                         String?
+  year_of_study                                                  Int?                  @db.SmallInt
+  min_budget                                                     Int?
+  max_budget                                                     Int?
+  move_in_date                                                   DateTime?             @db.Date
+  lifestyle_tags                                                 String[]              @default([])
+  sleep_schedule                                                 sleep_schedule?       @default(flexible)
+  cleanliness                                                    cleanliness_level?    @default(tidy)
+  noise_pref                                                     noise_preference?     @default(moderate)
+  allows_smoking                                                 Boolean?              @default(false)
+  allows_pets                                                    Boolean?              @default(false)
+  allows_guests                                                  Boolean?              @default(true)
+  roommate_gender_pref                                           gender_type?
+  student_verified                                               Boolean?              @default(false)
+  student_id_front_url                                           String?
+  student_id_back_url                                            String?
+  verification_status                                            verification_status?  @default(UNVERIFIED)
+  verified_at                                                    DateTime?             @db.Timestamptz(6)
+  onboarding_step                                                Int?                  @default(0) @db.SmallInt
+  onboarding_complete                                            Boolean?              @default(false)
+  last_seen_at                                                   DateTime?             @default(now()) @db.Timestamptz(6)
+  is_active                                                      Boolean?              @default(true)
+  created_at                                                     DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime?             @default(now()) @db.Timestamptz(6)
+  bill_split_items                                               bill_split_items[]
+  bill_splits                                                    bill_splits[]
+  blocks_blocks_blocked_idToprofiles                             blocks[]              @relation("blocks_blocked_idToprofiles")
+  blocks_blocks_blocker_idToprofiles                             blocks[]              @relation("blocks_blocker_idToprofiles")
+  connections_connections_receiver_idToprofiles                  connections[]         @relation("connections_receiver_idToprofiles")
+  connections_connections_requester_idToprofiles                 connections[]         @relation("connections_requester_idToprofiles")
+  housing_platforms                                              housing_platforms[]
+  messages                                                       messages[]
+  notifications                                                  notifications[]
+  payments                                                       payments[]
+  platform_clicks                                                platform_clicks[]
+  post_comments                                                  post_comments[]
+  post_likes                                                     post_likes[]
+  posts                                                          posts[]
+  push_subscriptions                                             push_subscriptions[]
+  roommate_agreements_roommate_agreements_acceptor_idToprofiles  roommate_agreements[] @relation("roommate_agreements_acceptor_idToprofiles")
+  roommate_agreements_roommate_agreements_initiator_idToprofiles roommate_agreements[] @relation("roommate_agreements_initiator_idToprofiles")
+}
+
+model push_subscriptions {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String    @db.Uuid
+  endpoint        String    @unique
+  p256dh          String
+  auth            String
+  expiration_time BigInt?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  profiles        profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model roommate_agreements {
+  id                                                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connection_id                                       String      @unique @db.Uuid
+  initiator_id                                        String      @db.Uuid
+  acceptor_id                                         String?     @db.Uuid
+  status                                              String      @default("PENDING")
+  payment_reference                                   String?     @unique
+  payment_channel                                     String?
+  amount                                              Int?        @default(200000)
+  created_at                                          DateTime?   @default(now()) @db.Timestamptz(6)
+  accepted_at                                         DateTime?   @db.Timestamptz(6)
+  paid_at                                             DateTime?   @db.Timestamptz(6)
+  profiles_roommate_agreements_acceptor_idToprofiles  profiles?   @relation("roommate_agreements_acceptor_idToprofiles", fields: [acceptor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  connections                                         connections @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_roommate_agreements_initiator_idToprofiles profiles    @relation("roommate_agreements_initiator_idToprofiles", fields: [initiator_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([connection_id], map: "idx_agreements_connection")
+  @@index([status], map: "idx_agreements_status")
+}
+
+model waitlist {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name  String
+  email      String
+  phone      String
+  university String
+  city       String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+enum cleanliness_level {
+  very_tidy
+  tidy
+  relaxed
+  messy
+}
+
+enum connection_status {
+  PENDING_PAYMENT
+  PAID
+  ACTIVE
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum gender_type {
+  male
+  female
+  non_binary
+  prefer_not_to_say
+}
+
+enum message_type {
+  text
+  image
+  system
+  agreement_request
+  agreement_confirmed
+  agreement_declined
+  bill_split
+}
+
+enum noise_preference {
+  very_quiet
+  quiet
+  moderate
+  lively
+}
+
+enum payment_status {
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+}
+
+enum platform_status {
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum sleep_schedule {
+  early_bird
+  night_owl
+  flexible
+}
+
+enum verification_status {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
