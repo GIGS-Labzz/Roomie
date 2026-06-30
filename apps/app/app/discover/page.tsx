@@ -25,10 +25,20 @@ export default function DiscoverPage() {
   const { user } = useAuth();
   const { getConnectionStatus } = useConnections();
   const [filters, setFilters] = useState<DiscoveryFilters>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [profiles, setProfiles] = useState<FeedProfile[]>([]);
   const [myProfile, setMyProfile] = useState<FeedProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Debounce search query to avoid spamming the DB on keypresses
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!user) return;
@@ -36,7 +46,7 @@ export default function DiscoverPage() {
       setIsLoading(true);
       const [feedResult, profileResult] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getDiscoveryFeed(supabase as any, user.id, {}, 0),
+        getDiscoveryFeed(supabase as any, user.id, { ...filters, search: debouncedSearch }, 0),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("profiles").select("*").eq("id", user.id).single(),
       ]);
@@ -45,23 +55,9 @@ export default function DiscoverPage() {
       setIsLoading(false);
     };
     void load();
-  }, [user?.id]);
+  }, [user?.id, filters, debouncedSearch]);
 
-  const filtered = useMemo(() => {
-    return profiles.filter((p) => {
-      if (filters.city?.length && !filters.city.includes(p.city ?? "")) return false;
-      if (filters.university?.length && !filters.university.includes(p.university ?? "")) return false;
-      if (filters.gender && p.gender !== filters.gender) return false;
-      if (filters.minBudget && (p.max_budget ?? 0) < filters.minBudget) return false;
-      if (filters.maxBudget && (p.min_budget ?? 0) > filters.maxBudget) return false;
-      if (filters.verifiedOnly && !p.student_verified) return false;
-      if (filters.tags?.length) {
-        const profileTags = p.lifestyle_tags ?? [];
-        if (!filters.tags.some((t) => profileTags.includes(t))) return false;
-      }
-      return true;
-    });
-  }, [profiles, filters]);
+  const filtered = profiles;
 
   const activeFilterCount = [
     (filters.city?.length ?? 0) > 0,
@@ -136,6 +132,33 @@ export default function DiscoverPage() {
             <p className="text-sm text-slate-400 mt-1">
               {isLoading ? "Loading profiles…" : `${filtered.length} roommate${filtered.length !== 1 ? "s" : ""} near you`}
             </p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mb-6 relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search roommates by name, university, course, or city..."
+              className="block w-full pl-12 pr-10 py-3.5 border border-slate-200 rounded-2xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Clear search"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">

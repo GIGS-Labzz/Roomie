@@ -7,18 +7,18 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- All platform accounts use password: Test@1234
 INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, role, aud, created_at, updated_at, raw_user_meta_data, is_anonymous)
 VALUES
-  ('aaaaaaaa-0001-0001-0001-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@unihousing.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniHousing Lagos","user_type":"provider"}'::jsonb, FALSE),
-  ('aaaaaaaa-0002-0002-0002-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'hello@abujapad.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"AbujaStudentPad","user_type":"provider"}'::jsonb,  FALSE),
-  ('aaaaaaaa-0003-0003-0003-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'info@unicrib.ng',       extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniCrib Ibadan","user_type":"provider"}'::jsonb,   FALSE),
-  ('aaaaaaaa-0004-0004-0004-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'rooms@phrooms.ng',      extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"PortHarcourt Rooms","user_type":"provider"}'::jsonb,FALSE),
-  ('aaaaaaaa-0005-0005-0005-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@enuguhomes.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"EnuguStudentHomes","user_type":"provider"}'::jsonb, FALSE)
+  ('aaaaaaaa-0001-0001-0001-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@unihousing.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniHousing Lagos","user_type":"provider"}'::jsonb, FALSE),
+  ('aaaaaaaa-0002-0002-0002-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'hello@abujapad.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"AbujaStudentPad","user_type":"provider"}'::jsonb,  FALSE),
+  ('aaaaaaaa-0003-0003-0003-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'info@unicrib.ng',       extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"UniCrib Ibadan","user_type":"provider"}'::jsonb,   FALSE),
+  ('aaaaaaaa-0004-0004-0004-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'rooms@phrooms.ng',      extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"PortHarcourt Rooms","user_type":"provider"}'::jsonb,FALSE),
+  ('aaaaaaaa-0005-0005-0005-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000000', 'contact@enuguhomes.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"EnuguStudentHomes","user_type":"provider"}'::jsonb, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── Super Admin Auth User ────────────────────────────────────────────────────
 -- Super admin: admin@roomie.ng / Admin@1234
 INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, role, aud, created_at, updated_at, raw_user_meta_data, is_anonymous)
 VALUES
-  ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', 'admin@roomie.ng', extensions.crypt('Admin@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Roomie Super Admin","user_type":"admin"}'::jsonb, FALSE)
+  ('bbbbbbbb-0001-0001-0001-bbbbbbbbbbbb', '00000000-0000-0000-0000-000000000000', 'admin@roomie.ng', extensions.crypt('Admin@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Roomie Super Admin","user_type":"admin"}'::jsonb, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.admin_users (id, role)
@@ -74,31 +74,31 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, role, aud, created_at, updated_at, raw_user_meta_data, is_anonymous)
 VALUES
-  (uid1,  'amara.okafor@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Amara Okafor",   "avatar_url":"https://i.pravatar.cc/150?img=1"}'::jsonb,  FALSE),
-  (uid2,  'emeka.nwosu@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Emeka Nwosu",    "avatar_url":"https://i.pravatar.cc/150?img=3"}'::jsonb,  FALSE),
-  (uid3,  'fatimah.bello@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Fatimah Bello",  "avatar_url":"https://i.pravatar.cc/150?img=5"}'::jsonb,  FALSE),
-  (uid4,  'chidi.eze@seed.roomie.ng',       extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chidi Eze",      "avatar_url":"https://i.pravatar.cc/150?img=7"}'::jsonb,  FALSE),
-  (uid5,  'ngozi.adeyemi@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Ngozi Adeyemi",  "avatar_url":"https://i.pravatar.cc/150?img=9"}'::jsonb,  FALSE),
-  (uid6,  'tunde.afolabi@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Tunde Afolabi",  "avatar_url":"https://i.pravatar.cc/150?img=11"}'::jsonb, FALSE),
-  (uid7,  'adaeze.okoro@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Adaeze Okoro",   "avatar_url":"https://i.pravatar.cc/150?img=13"}'::jsonb, FALSE),
-  (uid8,  'ibrahim.musa@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Ibrahim Musa",   "avatar_url":"https://i.pravatar.cc/150?img=15"}'::jsonb, FALSE),
-  (uid9,  'chioma.nwachukwu@seed.roomie.ng',extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chioma Nwachukwu","avatar_url":"https://i.pravatar.cc/150?img=17"}'::jsonb,FALSE),
-  (uid10, 'segun.olawale@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Segun Olawale",  "avatar_url":"https://i.pravatar.cc/150?img=19"}'::jsonb, FALSE),
-  (uid11, 'kemi.adebayo@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Kemi Adebayo",   "avatar_url":"https://i.pravatar.cc/150?img=21"}'::jsonb, FALSE),
-  (uid12, 'uche.obiechina@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Uche Obiechina", "avatar_url":"https://i.pravatar.cc/150?img=23"}'::jsonb, FALSE),
-  (uid13, 'halima.abdullahi@seed.roomie.ng',extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Halima Abdullahi","avatar_url":"https://i.pravatar.cc/150?img=25"}'::jsonb,FALSE),
-  (uid14, 'david.akintola@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"David Akintola", "avatar_url":"https://i.pravatar.cc/150?img=27"}'::jsonb, FALSE),
-  (uid15, 'blessing.onyeka@seed.roomie.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Blessing Onyeka","avatar_url":"https://i.pravatar.cc/150?img=29"}'::jsonb, FALSE),
-  (uid16, 'michael.obi@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Michael Obi",    "avatar_url":"https://i.pravatar.cc/150?img=31"}'::jsonb, FALSE),
-  (uid17, 'sade.fashola@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Sade Fashola",   "avatar_url":"https://i.pravatar.cc/150?img=33"}'::jsonb, FALSE),
-  (uid18, 'kenny.okonkwo@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Kenny Okonkwo",  "avatar_url":"https://i.pravatar.cc/150?img=35"}'::jsonb, FALSE),
-  (uid19, 'nkechi.okafor@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Nkechi Okafor",  "avatar_url":"https://i.pravatar.cc/150?img=37"}'::jsonb, FALSE),
-  (uid20, 'frank.egwuatu@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Frank Egwuatu",  "avatar_url":"https://i.pravatar.cc/150?img=39"}'::jsonb, FALSE),
-  (uid21, 'yetunde.balogun@seed.roomie.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Yetunde Balogun","avatar_url":"https://i.pravatar.cc/150?img=41"}'::jsonb, FALSE),
-  (uid22, 'chuka.anyanwu@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chuka Anyanwu",  "avatar_url":"https://i.pravatar.cc/150?img=43"}'::jsonb, FALSE),
-  (uid23, 'aisha.garba@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Aisha Garba",    "avatar_url":"https://i.pravatar.cc/150?img=45"}'::jsonb, FALSE),
-  (uid24, 'rotimi.adeleke@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Rotimi Adeleke", "avatar_url":"https://i.pravatar.cc/150?img=47"}'::jsonb, FALSE),
-  (uid25, 'obiageli.nwobi@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf')), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Obiageli Nwobi", "avatar_url":"https://i.pravatar.cc/150?img=49"}'::jsonb, FALSE)
+  (uid1,  'amara.okafor@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Amara Okafor",   "avatar_url":"https://i.pravatar.cc/150?img=1"}'::jsonb,  FALSE),
+  (uid2,  'emeka.nwosu@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Emeka Nwosu",    "avatar_url":"https://i.pravatar.cc/150?img=3"}'::jsonb,  FALSE),
+  (uid3,  'fatimah.bello@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Fatimah Bello",  "avatar_url":"https://i.pravatar.cc/150?img=5"}'::jsonb,  FALSE),
+  (uid4,  'chidi.eze@seed.roomie.ng',       extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chidi Eze",      "avatar_url":"https://i.pravatar.cc/150?img=7"}'::jsonb,  FALSE),
+  (uid5,  'ngozi.adeyemi@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Ngozi Adeyemi",  "avatar_url":"https://i.pravatar.cc/150?img=9"}'::jsonb,  FALSE),
+  (uid6,  'tunde.afolabi@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Tunde Afolabi",  "avatar_url":"https://i.pravatar.cc/150?img=11"}'::jsonb, FALSE),
+  (uid7,  'adaeze.okoro@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Adaeze Okoro",   "avatar_url":"https://i.pravatar.cc/150?img=13"}'::jsonb, FALSE),
+  (uid8,  'ibrahim.musa@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Ibrahim Musa",   "avatar_url":"https://i.pravatar.cc/150?img=15"}'::jsonb, FALSE),
+  (uid9,  'chioma.nwachukwu@seed.roomie.ng',extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chioma Nwachukwu","avatar_url":"https://i.pravatar.cc/150?img=17"}'::jsonb,FALSE),
+  (uid10, 'segun.olawale@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Segun Olawale",  "avatar_url":"https://i.pravatar.cc/150?img=19"}'::jsonb, FALSE),
+  (uid11, 'kemi.adebayo@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Kemi Adebayo",   "avatar_url":"https://i.pravatar.cc/150?img=21"}'::jsonb, FALSE),
+  (uid12, 'uche.obiechina@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Uche Obiechina", "avatar_url":"https://i.pravatar.cc/150?img=23"}'::jsonb, FALSE),
+  (uid13, 'halima.abdullahi@seed.roomie.ng',extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Halima Abdullahi","avatar_url":"https://i.pravatar.cc/150?img=25"}'::jsonb,FALSE),
+  (uid14, 'david.akintola@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"David Akintola", "avatar_url":"https://i.pravatar.cc/150?img=27"}'::jsonb, FALSE),
+  (uid15, 'blessing.onyeka@seed.roomie.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Blessing Onyeka","avatar_url":"https://i.pravatar.cc/150?img=29"}'::jsonb, FALSE),
+  (uid16, 'michael.obi@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Michael Obi",    "avatar_url":"https://i.pravatar.cc/150?img=31"}'::jsonb, FALSE),
+  (uid17, 'sade.fashola@seed.roomie.ng',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Sade Fashola",   "avatar_url":"https://i.pravatar.cc/150?img=33"}'::jsonb, FALSE),
+  (uid18, 'kenny.okonkwo@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Kenny Okonkwo",  "avatar_url":"https://i.pravatar.cc/150?img=35"}'::jsonb, FALSE),
+  (uid19, 'nkechi.okafor@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Nkechi Okafor",  "avatar_url":"https://i.pravatar.cc/150?img=37"}'::jsonb, FALSE),
+  (uid20, 'frank.egwuatu@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Frank Egwuatu",  "avatar_url":"https://i.pravatar.cc/150?img=39"}'::jsonb, FALSE),
+  (uid21, 'yetunde.balogun@seed.roomie.ng', extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Yetunde Balogun","avatar_url":"https://i.pravatar.cc/150?img=41"}'::jsonb, FALSE),
+  (uid22, 'chuka.anyanwu@seed.roomie.ng',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Chuka Anyanwu",  "avatar_url":"https://i.pravatar.cc/150?img=43"}'::jsonb, FALSE),
+  (uid23, 'aisha.garba@seed.roomie.ng',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Aisha Garba",    "avatar_url":"https://i.pravatar.cc/150?img=45"}'::jsonb, FALSE),
+  (uid24, 'rotimi.adeleke@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Rotimi Adeleke", "avatar_url":"https://i.pravatar.cc/150?img=47"}'::jsonb, FALSE),
+  (uid25, 'obiageli.nwobi@seed.roomie.ng',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"full_name":"Obiageli Nwobi", "avatar_url":"https://i.pravatar.cc/150?img=49"}'::jsonb, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Insert profiles ───────────────────────────────────────────────────────────
@@ -501,3 +501,19 @@ SET
   user_id = EXCLUDED.user_id,
   identity_data = EXCLUDED.identity_data,
   updated_at = NOW();
+
+-- ─── Sample Feed Posts ────────────────────────────────────────────────────────
+INSERT INTO public.posts (id, user_id, content, city, budget_min, budget_max, move_in_date, likes_count, comments_count, created_at, updated_at)
+VALUES
+  ('c0000000-0001-0001-0001-000000000001', '11111111-0001-0001-0001-000000000001', 'Looking for a flatmate to share a 2-bedroom apartment in Yaba, close to UNILAG. Budget is around 100k.', 'Lagos', 80000, 120000, '2026-07-15', 5, 2, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+  ('c0000000-0002-0002-0002-000000000002', '11111111-0002-0002-0002-000000000002', 'Anyone looking for a roommate in Abuja? Moving near UNIABUJA main campus by August. HMU!', 'Abuja', 50000, 80000, '2026-08-01', 3, 0, NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'),
+  ('c0000000-0003-0003-0003-000000000003', '11111111-0003-0003-0003-000000000003', 'Pharmacy student searching for a quiet room or shared apartment in Yaba. I am super tidy and quiet.', 'Lagos', 60000, 100000, '2026-07-01', 2, 1, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  ('c0000000-0004-0004-0004-000000000004', '11111111-0004-0004-0004-000000000004', 'Looking for roommates to rent a house together in Enugu near UNN. Already found a nice 3-bedroom place.', 'Enugu', 40000, 70000, '2026-09-01', 0, 0, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- Ensure all auth.users have the default instance_id set (required by GoTrue auth)
+UPDATE auth.users
+SET instance_id = '00000000-0000-0000-0000-000000000000'
+WHERE instance_id IS NULL;
+
+

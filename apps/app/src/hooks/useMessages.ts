@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 // Stable singleton client — not recreated per render
 const supabase = createClient();
 
+const senderProfileCache = new Map<string, { id: string; display_name: string; avatar_url: string | null }>();
+
 export function useMessages(connectionId: string) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,13 +59,20 @@ export function useMessages(connectionId: string) {
           filter: `connection_id=eq.${connectionId}`,
         },
         async (payload) => {
-          // Fetch sender profile — payload doesn't include joined data
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: sender } = await (supabase as any)
-            .from("profiles")
-            .select("id, display_name, avatar_url")
-            .eq("id", payload.new.sender_id)
-            .single();
+          // Fetch and cache sender profile to prevent DB query waterfalls
+          let sender = senderProfileCache.get(payload.new.sender_id);
+          if (!sender) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data } = await (supabase as any)
+              .from("profiles")
+              .select("id, display_name, avatar_url")
+              .eq("id", payload.new.sender_id)
+              .single();
+            if (data) {
+              sender = data;
+              senderProfileCache.set(payload.new.sender_id, data);
+            }
+          }
 
           const newMsg: Message = {
             ...(payload.new as Message),

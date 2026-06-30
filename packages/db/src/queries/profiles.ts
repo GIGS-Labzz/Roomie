@@ -11,6 +11,7 @@ export interface DiscoveryFilters {
   maxBudget?: number;
   verifiedOnly?: boolean;
   tags?: string[];
+  search?: string;
 }
 
 export async function getConnectedUserIds(
@@ -37,7 +38,6 @@ export async function getDiscoveryFeed(
   page = 0
 ) {
   const PAGE_SIZE = 20;
-  const connectedIds = await getConnectedUserIds(supabase, currentUserId);
 
   // Also exclude blocked users
   const { data: blockData } = await supabase
@@ -49,7 +49,13 @@ export async function getDiscoveryFeed(
     b.blocker_id === currentUserId ? [b.blocked_id] : [b.blocker_id]
   );
 
-  const excludeIds = [...new Set([...connectedIds, ...blockedIds, currentUserId])];
+  let excludeIds: string[];
+  if (filters.search) {
+    excludeIds = [...new Set([...blockedIds, currentUserId])];
+  } else {
+    const connectedIds = await getConnectedUserIds(supabase, currentUserId);
+    excludeIds = [...new Set([...connectedIds, ...blockedIds, currentUserId])];
+  }
 
   let query = supabase
     .from("profiles")
@@ -68,6 +74,11 @@ export async function getDiscoveryFeed(
 
   if (excludeIds.length > 0) {
     query = query.not("id", "in", `(${excludeIds.join(",")})`);
+  }
+
+  if (filters.search) {
+    const s = `%${filters.search}%`;
+    query = query.or(`display_name.ilike.${s},university.ilike.${s},course.ilike.${s},city.ilike.${s}`);
   }
 
   if (filters.city?.length)       query = query.in("city", filters.city);

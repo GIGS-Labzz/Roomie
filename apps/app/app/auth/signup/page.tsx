@@ -1,12 +1,12 @@
 import { AuthLayout } from "@repo/ui/auth-layout";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
-import { EmailPasswordSignIn } from "@/components/auth/EmailPasswordSignIn";
+import { EmailPasswordSignUp } from "@/components/auth/EmailPasswordSignUp";
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <AuthLayout
-      title="Welcome to Roomie"
-      subtitle="Find your perfect student roommate."
+      title="Create your account"
+      subtitle="Join Roomie to find roommate matching vibes."
     >
       <GoogleSignInButton />
 
@@ -15,22 +15,17 @@ export default function SignInPage() {
           <div className="w-full border-t border-slate-100" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-xs text-slate-400 font-medium">or sign in with email</span>
+          <span className="bg-white px-3 text-xs text-slate-400 font-medium">or register with email</span>
         </div>
       </div>
 
-      <EmailPasswordSignIn />
+      <EmailPasswordSignUp />
 
-      <div className="mt-6 flex flex-col gap-3 text-center text-xs text-slate-500">
-        <a href="/auth/forgot" className="hover:text-brand-500 transition-colors">
-          Forgot Password?
+      <div className="mt-6 text-center text-xs text-slate-500">
+        Already have an account?{" "}
+        <a href="/auth/signin" className="font-semibold text-brand-600 hover:text-brand-700 underline">
+          Sign In
         </a>
-        <div>
-          Don&apos;t have an account?{" "}
-          <a href="/auth/signup" className="font-semibold text-brand-600 hover:text-brand-700 underline">
-            Create Account
-          </a>
-        </div>
       </div>
 
       <p className="mt-8 text-center text-[10px] text-slate-400 leading-relaxed">

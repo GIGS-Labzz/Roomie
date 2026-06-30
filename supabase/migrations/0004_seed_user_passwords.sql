@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 UPDATE auth.users
 SET
-  encrypted_password  = extensions.crypt('Test@1234', extensions.gen_salt('bf')),
+  encrypted_password  = extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)),
   email_confirmed_at  = COALESCE(email_confirmed_at, NOW()),
   updated_at          = NOW()
 WHERE email LIKE '%@seed.roomie.ng';

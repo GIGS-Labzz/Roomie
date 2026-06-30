@@ -1,57 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import useSWR from "swr";
 import { createClient } from "@repo/db/client";
 import type { Database } from "@repo/db/types";
 import { useAuth } from "@/context/AuthContext";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
+let lastSeenUpdated = false;
+
 export function useProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) { setIsLoading(false); return; }
-
-    const supabase = createClient();
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = supabase as any;
-
-    const load = async () => {
-      const { data } = await db
+  const { data: profile, error, mutate } = useSWR(
+    user ? `profile-${user.id}` : null,
+    async () => {
+      const supabase = createClient();
+      const { data, error: fetchError } = await (supabase as any)
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", user!.id)
         .single();
-      setProfile(data);
-      setIsLoading(false);
-    };
+      if (fetchError) throw fetchError;
+      return data as Profile;
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Dedup fetches within 1 minute
+    }
+  );
 
-    void load();
-
-    db.from("profiles")
+  useEffect(() => {
+    if (!user || lastSeenUpdated) return;
+    const supabase = createClient();
+    (supabase as any)
+      .from("profiles")
       .update({ last_seen_at: new Date().toISOString() })
       .eq("id", user.id)
-      .then(() => {});
+      .then(() => {
+        lastSeenUpdated = true;
+      });
   }, [user]);
 
   const updateProfile = async (data: Database["public"]["Tables"]["profiles"]["Update"]) => {
     if (!user) return;
     const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: updated, error } = await (supabase as any)
+    const { data: updated, error: updateError } = await (supabase as any)
       .from("profiles")
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq("id", user.id)
       .select()
       .single();
-    if (error) throw error;
-    if (updated) setProfile(updated);
+    if (updateError) throw updateError;
+    if (updated) {
+      await mutate(updated, false); // Optimistically update cache without refetching
+    }
     return updated;
   };
 
-  return { profile, isLoading, updateProfile };
+  return {
+    profile: profile ?? null,
+    isLoading: !profile && !error,
+    updateProfile,
+  };
 }
