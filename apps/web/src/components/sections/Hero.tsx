@@ -9,9 +9,9 @@ const DotLottieReact = dynamic(
   { ssr: false }
 );
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://roomie-app-umber.vercel.app";
 
-const tagline = ["C", "o", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t"];
+const tagline = ["C", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t"];
 
 export function Hero() {
   const { openWaitlist } = useWaitlist();
