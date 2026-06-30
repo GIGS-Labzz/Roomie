@@ -3,7 +3,7 @@ import "./globals.css";
 import { WaitlistProvider } from "@/context/waitlist";
 
 export const metadata: Metadata = {
-  title: "Roomie — Connect and Cooonnectttt",
+  title: "Roomie — Connect and Cooonnecttt",
   description: "Find your perfect student roommate. Pay once. Move in together.",
   openGraph: {
     title: "Roomie",

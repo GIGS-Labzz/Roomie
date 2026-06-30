@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@repo/ui/logo";
+import { useWaitlist } from "@/context/waitlist";
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "https://admin.roomie.ng";
 
 export function Footer() {
+  const { openWaitlist } = useWaitlist();
   return (
     <footer className="bg-slate-900 text-slate-400 py-16 px-6">
       <div className="max-w-5xl mx-auto">
@@ -14,7 +16,7 @@ export function Footer() {
               <Logo href="/" size="md" variant="light" />
             </div>
             <p className="text-sm leading-relaxed max-w-xs">
-              Find your perfect student roommate. Connect and Cooonnectttt.
+              Find your perfect student roommate. Connect and Cooonnecttt.
             </p>
           </div>
 
@@ -56,20 +58,20 @@ export function Footer() {
             </p>
             <ul className="space-y-3 text-sm">
               <li>
-                <a
-                  href={`${ADMIN_URL}/register`}
-                  className="hover:text-white transition-colors"
+                <button
+                  onClick={openWaitlist}
+                  className="hover:text-white transition-colors text-left"
                 >
                   List your platform
-                </a>
+                </button>
               </li>
               <li>
-                <a
-                  href={`${ADMIN_URL}/login`}
-                  className="hover:text-white transition-colors"
+                <button
+                  onClick={openWaitlist}
+                  className="hover:text-white transition-colors text-left"
                 >
                   Provider login
-                </a>
+                </button>
               </li>
               <li>
                 <a
