@@ -6,17 +6,39 @@ type PermissionState = "default" | "granted" | "denied" | "unsupported";
 
 async function subscribeToPush(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(
-      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+  const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapidKey) {
+    console.error("NEXT_PUBLIC_VAPID_PUBLIC_KEY is not defined");
+    return null;
+  }
+
+  // Await ready state with a 3-second timeout to prevent hanging forever
+  const reg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Service worker activation timed out")), 3000)
     ),
+  ]).catch((err) => {
+    console.error("Failed to get active service worker:", err);
+    return null;
   });
-  return sub;
+
+  if (!reg) return null;
+
+  try {
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    });
+    return sub;
+  } catch (err) {
+    console.error("Error subscribing to push notifications:", err);
+    return null;
+  }
 }
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  if (!base64String) return new ArrayBuffer(0);
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
@@ -37,11 +59,17 @@ export function PushToggle() {
     }
     setPermState(Notification.permission as PermissionState);
 
-    // Check if already subscribed
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.pushManager.getSubscription().then((sub) => {
-        setCurrentSub(sub);
-      });
+    // Check if already subscribed without hanging
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (reg) {
+        reg.pushManager.getSubscription().then((sub) => {
+          setCurrentSub(sub);
+        }).catch((err) => {
+          console.error("Error getting push subscription:", err);
+        });
+      }
+    }).catch((err) => {
+      console.error("Error checking service worker registration:", err);
     });
   }, []);
 
@@ -52,10 +80,17 @@ export function PushToggle() {
     try {
       const permission = await Notification.requestPermission();
       setPermState(permission as PermissionState);
-      if (permission !== "granted") { setIsLoading(false); return; }
+      if (permission !== "granted") {
+        setIsLoading(false);
+        return;
+      }
 
       const sub = await subscribeToPush();
-      if (!sub) { setIsLoading(false); return; }
+      if (!sub) {
+        alert("Could not subscribe to push notifications. Ensure your browser supports them and the service worker is active.");
+        setIsLoading(false);
+        return;
+      }
 
       const subJson = sub.toJSON() as {
         endpoint: string;
@@ -63,13 +98,21 @@ export function PushToggle() {
         expirationTime?: number | null;
       };
 
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(subJson),
       });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to save subscription on server");
+      }
+
       setCurrentSub(sub);
+    } catch (err: any) {
+      console.error("Failed to enable push notifications:", err);
+      alert(err?.message || "Failed to enable push notifications.");
     } finally {
       setIsLoading(false);
     }
@@ -79,17 +122,28 @@ export function PushToggle() {
     if (!currentSub) return;
     setIsLoading(true);
     try {
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: currentSub.endpoint }),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to remove subscription from server");
+      }
+
       await currentSub.unsubscribe();
       setCurrentSub(null);
+    } catch (err: any) {
+      console.error("Failed to disable push notifications:", err);
+      alert(err?.message || "Failed to disable push notifications.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const hasVapidKey = typeof window !== "undefined" ? !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY : true;
 
   if (permState === "unsupported") return null;
 
@@ -98,7 +152,9 @@ export function PushToggle() {
       <div>
         <p className="text-sm font-semibold text-slate-800">Push notifications</p>
         <p className="text-xs text-slate-500 mt-0.5">
-          {permState === "denied"
+          {!hasVapidKey
+            ? "Push notifications are not configured on the server (VAPID key missing)"
+            : permState === "denied"
             ? "Blocked in browser settings — enable from site permissions"
             : isEnabled
             ? "You'll be notified for messages and connections"
@@ -113,7 +169,7 @@ export function PushToggle() {
           type="button"
           role="switch"
           aria-checked={isEnabled}
-          disabled={isLoading}
+          disabled={isLoading || !hasVapidKey}
           onClick={isEnabled ? handleDisable : handleEnable}
           className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
             isEnabled ? "bg-brand-500" : "bg-slate-200"
