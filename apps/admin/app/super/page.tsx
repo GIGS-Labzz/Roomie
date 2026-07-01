@@ -7,7 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Users, Building2, Link2, ShieldCheck, Clock, TrendingUp } from "lucide-react";
+import { Users, Building2, Link2, ShieldCheck, Clock, TrendingUp, Download } from "lucide-react";
 
 const supabase = createClient();
 
@@ -21,12 +21,15 @@ interface Overview {
   totalConnections: number;
   activeConnections: number;
   totalRevenue: number;
+  totalInstalls: number;
   connectionsByDay: { date: string; count: number }[];
   usersByDay: { date: string; count: number }[];
+  installsByDay: { date: string; count: number }[];
 }
 
 const BRAND = "#8AAF6E";
 const PEACH = "#e49e45";
+const VIOLET = "#8b5cf6";
 const MUTED = "#e2e8f0";
 
 function StatCard({
@@ -77,30 +80,35 @@ export default function SuperHome() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [profilesRes, platformsRes, connectionsRes] = await Promise.all([
+      const [profilesRes, platformsRes, connectionsRes, installsRes] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("profiles").select("id, verification_status, created_at"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("housing_platforms").select("id, status"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("connections").select("id, status, amount_paid, created_at"),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("pwa_installs").select("id, installed_at"),
       ]);
 
       const profiles: { verification_status: string; created_at: string }[] = profilesRes.data ?? [];
       const platforms: { status: string }[] = platformsRes.data ?? [];
       const connections: { status: string; amount_paid: number; created_at: string }[] = connectionsRes.data ?? [];
+      const installs: { installed_at: string }[] = installsRes.data ?? [];
 
       // Build last-30-day buckets
       const since = new Date();
       since.setDate(since.getDate() - 29);
       const connByDay: Record<string, number> = {};
       const userByDay: Record<string, number> = {};
+      const installByDay: Record<string, number> = {};
       for (let i = 0; i < 30; i++) {
         const d = new Date(since);
         d.setDate(since.getDate() + i);
         const key = d.toISOString().slice(0, 10);
         connByDay[key] = 0;
         userByDay[key] = 0;
+        installByDay[key] = 0;
       }
       connections.forEach((c) => {
         const day = c.created_at?.slice(0, 10);
@@ -109,6 +117,10 @@ export default function SuperHome() {
       profiles.forEach((p) => {
         const day = p.created_at?.slice(0, 10);
         if (day && day in userByDay) userByDay[day]++;
+      });
+      installs.forEach((inst) => {
+        const day = inst.installed_at?.slice(0, 10);
+        if (day && day in installByDay) installByDay[day]++;
       });
 
       setData({
@@ -123,8 +135,10 @@ export default function SuperHome() {
         totalRevenue: connections
           .filter((c) => c.status === "ACTIVE")
           .reduce((s, c) => s + (c.amount_paid ?? 0), 0),
+        totalInstalls:    installs.length,
         connectionsByDay: Object.entries(connByDay).map(([date, count]) => ({ date, count })),
         usersByDay:       Object.entries(userByDay).map(([date, count]) => ({ date, count })),
+        installsByDay:    Object.entries(installByDay).map(([date, count]) => ({ date, count })),
       });
       setLoading(false);
     };
@@ -156,7 +170,7 @@ export default function SuperHome() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <StatCard label="Total Students"        value={data?.totalStudents ?? 0}    icon={Users}       color="brand"
           sub={`${data?.verifiedStudents ?? 0} verified`} />
         <StatCard label="Providers"             value={data?.totalProviders ?? 0}   icon={Building2}   color="peach"
@@ -165,6 +179,8 @@ export default function SuperHome() {
           sub={`${data?.activeConnections ?? 0} active`} />
         <StatCard label="Revenue"               value={fmtNaira(data?.totalRevenue ?? 0)} icon={TrendingUp} color="violet"
           sub="From connection fees" />
+        <StatCard label="App Installs"          value={data?.totalInstalls ?? 0}    icon={Download}    color="emerald"
+          sub="Total PWA installations" />
         <StatCard label="Pending Verifications" value={data?.pendingStudents ?? 0}  icon={Clock}       color="peach"
           sub="Students awaiting review" />
         <StatCard label="Provider Approvals"    value={data?.pendingProviders ?? 0} icon={ShieldCheck} color="brand"
@@ -172,7 +188,7 @@ export default function SuperHome() {
       </div>
 
       {/* Time-series charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5">
           <h2 className="font-display font-semibold text-slate-900 text-base">Connections — last 30 days</h2>
           <p className="text-xs text-slate-400 mt-0.5 mb-4">Daily new roommate connections</p>
@@ -204,6 +220,26 @@ export default function SuperHome() {
               <Tooltip contentStyle={tooltipStyle} labelFormatter={(l) => `Date: ${l}`} formatter={(v) => [v, "Signups"]} />
               <Bar dataKey="count" fill={PEACH} radius={[4, 4, 0, 0]} />
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5">
+          <h2 className="font-display font-semibold text-slate-900 text-base">App Installs — last 30 days</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-4">Daily new PWA installations</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={data?.installsByDay ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="installGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={VIOLET} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={VIOLET} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval={6} />
+              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} labelFormatter={(l) => `Date: ${l}`} formatter={(v) => [v, "Installs"]} />
+              <Area type="monotone" dataKey="count" stroke={VIOLET} strokeWidth={2} fill="url(#installGrad)" dot={false} />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

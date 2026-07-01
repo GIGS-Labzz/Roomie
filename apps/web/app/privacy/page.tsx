@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Download, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, Cookie } from "lucide-react";
 import { ResetCookieConsent } from "./ResetCookieConsent";
 
 export const metadata = {
@@ -102,96 +102,125 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-sage-surface px-4 py-12">
-      <div className="mx-auto w-full max-w-2xl">
-        {/* Logo */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div
-              className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
-              style={{ boxShadow: "0 6px 18px rgba(138,175,110,0.35)" }}
-            >
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-display font-semibold text-xl tracking-tight text-slate-900">
-              Roomie
-            </span>
-          </Link>
-
+    <div className="min-h-screen bg-sage-surface py-16 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto">
+        {/* Navigation / Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div
+                className="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105"
+                style={{ boxShadow: "0 6px 20px rgba(138,175,110,0.3)" }}
+              >
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-display font-bold text-2xl tracking-tight text-slate-900">
+                Roomie
+              </span>
+            </Link>
+          </div>
+          
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              Back to Home
             </Link>
-
+            
             <a
               href="/privacy.pdf"
               download="Roomie_Privacy_Policy.pdf"
-              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold py-1.5 px-3.5 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Download className="w-3.5 h-3.5" />
-              PDF
+              Download PDF
             </a>
           </div>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-8 md:p-10">
-          <div className="mb-8 pb-6 border-b border-slate-100 flex items-center justify-between">
+        {/* Content Card */}
+        <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_8px_40px_rgba(0,0,0,0.04)] p-8 sm:p-12">
+          <div className="mb-10 pb-8 border-b border-slate-100 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-display font-semibold tracking-tight text-slate-900 mb-1">
+              <h1 className="text-3xl font-display font-bold tracking-tight text-slate-900 mb-2">
                 Privacy Policy
               </h1>
-              <p className="text-xs text-slate-400">Last updated: July 1, 2026</p>
+              <p className="text-sm text-slate-400 font-medium">Compliance: NDPA 2023 & NDPR 2019</p>
+            </div>
+            <div className="text-right">
+              <span className="inline-block bg-brand-50 text-brand-700 text-xs px-3 py-1 rounded-full font-semibold">
+                Last updated: July 1, 2026
+              </span>
             </div>
           </div>
 
-          <div className="space-y-7">
+          {/* Table of Contents Quick Links */}
+          <div className="mb-10 bg-slate-50 rounded-2xl p-5 border border-slate-100">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Cookie className="w-3.5 h-3.5 text-brand-600" />
+              Document Sections
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+              {sections.map((sec, index) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="text-slate-600 hover:text-brand-600 font-medium transition-colors hover:underline"
+                >
+                  {sec.title}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Legal Text Sections */}
+          <div className="space-y-8">
             {sections.map((section) => (
-              <div key={section.id} id={section.id}>
-                <h2 className="text-base font-semibold text-slate-800 mb-2">
+              <div key={section.id} id={section.id} className="scroll-mt-6">
+                <h2 className="text-lg font-display font-semibold text-slate-800 border-l-4 border-brand-500 pl-3 mb-3">
                   {section.title}
                 </h2>
 
                 {section.subsections ? (
-                  <ul className="space-y-3 pl-2">
+                  <div className="space-y-4 ml-4">
                     {section.subsections.map((sub) => (
-                      <li key={sub.label} className="text-sm text-slate-600 leading-relaxed">
-                        <span className="font-semibold text-slate-700">{sub.label}: </span>
-                        {sub.text}
-                      </li>
+                      <div key={sub.label} className="text-sm text-slate-600 leading-relaxed">
+                        <h4 className="font-semibold text-slate-700 mb-1">{sub.label}</h4>
+                        <p>{sub.text}</p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
-                  <p className="text-sm text-slate-600 leading-relaxed text-justify">{section.body}</p>
+                  <p className="text-sm text-slate-600 leading-relaxed justify-start text-justify whitespace-pre-line ml-4">
+                    {section.body}
+                  </p>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Revoke Cookie consent preferences inside dashboard */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <h3 className="font-semibold text-slate-800 text-sm mb-1">
-              Your Cookie Consent Preferences
+          {/* Cookie Preferences resets */}
+          <div className="mt-12 pt-8 border-t border-slate-100 bg-brand-50/30 rounded-2xl p-6 border border-brand-100/50">
+            <h3 className="font-display font-semibold text-slate-900 text-sm mb-1">
+              Your Cookie Consent Choices
             </h3>
-            <p className="text-xs text-slate-400 mb-3">
-              If you wish to configure, accept, or reject specific functional or analytics cookies, click below to re-open the settings banner.
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              You can adjust or revoke your cookie approvals (Essential, Analytics, Preferences) at any time. Clicking the button below resets your choice and allows you to customize them again.
             </p>
             <ResetCookieConsent />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-          <p>&copy; 2026 Roomie &bull; A GIGSRentals Product</p>
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 px-2 font-medium">
+          <p>© 2026 Roomie • A GIGSRentals Product</p>
           <div className="flex items-center gap-4">
-            <Link href="/terms" className="hover:text-brand-500 transition-colors">
+            <Link href="/terms" className="hover:text-brand-600 transition-colors">
               Terms of Service
             </Link>
-            <span className="text-brand-600 font-medium">Privacy</span>
+            <span className="text-brand-500">Privacy Policy</span>
           </div>
         </div>
       </div>

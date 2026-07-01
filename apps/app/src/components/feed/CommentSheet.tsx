@@ -96,8 +96,36 @@ export function CommentSheet({
           </button>
         </div>
 
-        {/* Comment list */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
+        {/* Input at the top to prevent bottom nav bar / keyboard obstruction on mobile */}
+        {user && (
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-white z-10">
+            <div className="flex-shrink-0">
+              <Avatar src={authorAvatar} name={authorName} size="sm" />
+            </div>
+            <input
+              ref={inputRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Write a comment..."
+              maxLength={300}
+              className="flex-1 bg-sage-surface rounded-2xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-brand-300 transition-shadow"
+            />
+            <button
+              onClick={() => void handleSend()}
+              disabled={!text.trim() || isSending}
+              className="w-9 h-9 rounded-full bg-brand-500 disabled:opacity-40 flex items-center justify-center text-white hover:bg-brand-600 transition-colors flex-shrink-0"
+              aria-label="Send comment"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Comment list with safe area padding */}
+        <div className="flex-1 overflow-y-auto px-5 py-3 pb-8 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
@@ -130,34 +158,6 @@ export function CommentSheet({
           )}
           <div ref={bottomRef} />
         </div>
-
-        {/* Input */}
-        {user && (
-          <div className="px-5 py-4 border-t border-slate-100 flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <Avatar src={authorAvatar} name={authorName} size="sm" />
-            </div>
-            <input
-              ref={inputRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Write a comment..."
-              maxLength={300}
-              className="flex-1 bg-sage-surface rounded-2xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-brand-300 transition-shadow"
-            />
-            <button
-              onClick={() => void handleSend()}
-              disabled={!text.trim() || isSending}
-              className="w-9 h-9 rounded-full bg-brand-500 disabled:opacity-40 flex items-center justify-center text-white hover:bg-brand-600 transition-colors flex-shrink-0"
-              aria-label="Send comment"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
     </>
   );

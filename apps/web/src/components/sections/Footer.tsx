@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Logo } from "@repo/ui/logo";
 import { useWaitlist } from "@/context/waitlist";

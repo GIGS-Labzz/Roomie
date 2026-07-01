@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Download, Gavel } from "lucide-react";
+import { ArrowLeft, Download, FileText, Gavel } from "lucide-react";
 
 export const metadata = {
   title: "Terms of Service — Roomie",
-  description: "Roomie's Terms of Service for the roommate-matching platform.",
+  description: "Roomie's Terms of Service for our roommate-matching and housing referral platform.",
 };
 
 const sections = [
@@ -81,60 +81,87 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-sage-surface px-4 py-12">
-      <div className="mx-auto w-full max-w-2xl">
-        {/* Logo */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div
-              className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
-              style={{ boxShadow: "0 6px 18px rgba(138,175,110,0.35)" }}
-            >
-              <Gavel className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-display font-semibold text-xl tracking-tight text-slate-900">
-              Roomie
-            </span>
-          </Link>
-
+    <div className="min-h-screen bg-sage-surface py-16 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto">
+        {/* Navigation / Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div
+                className="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105"
+                style={{ boxShadow: "0 6px 20px rgba(138,175,110,0.3)" }}
+              >
+                <Gavel className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-display font-bold text-2xl tracking-tight text-slate-900">
+                Roomie
+              </span>
+            </Link>
+          </div>
+          
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              Back to Home
             </Link>
-
+            
             <a
               href="/terms.pdf"
               download="Roomie_Terms_of_Service.pdf"
-              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold py-1.5 px-3.5 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Download className="w-3.5 h-3.5" />
-              PDF
+              Download PDF
             </a>
           </div>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-8 md:p-10">
-          <div className="mb-8 pb-6 border-b border-slate-100 flex items-center justify-between">
+        {/* Content Card */}
+        <div className="bg-white rounded-[32px] border border-slate-200/50 shadow-[0_8px_40px_rgba(0,0,0,0.04)] p-8 sm:p-12">
+          <div className="mb-10 pb-8 border-b border-slate-100 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-display font-semibold tracking-tight text-slate-900 mb-1">
+              <h1 className="text-3xl font-display font-bold tracking-tight text-slate-900 mb-2">
                 Terms of Service
               </h1>
-              <p className="text-xs text-slate-400">Last updated: July 1, 2026</p>
+              <p className="text-sm text-slate-400 font-medium">Agreement Scope: Nigeria Legal Framework</p>
+            </div>
+            <div className="text-right">
+              <span className="inline-block bg-brand-50 text-brand-700 text-xs px-3 py-1 rounded-full font-semibold">
+                Last updated: July 1, 2026
+              </span>
             </div>
           </div>
 
-          <div className="space-y-7">
+          {/* Table of Contents Quick Links */}
+          <div className="mb-10 bg-slate-50 rounded-2xl p-5 border border-slate-100">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-brand-600" />
+              Document Sections
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+              {sections.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="text-slate-600 hover:text-brand-600 font-medium transition-colors hover:underline"
+                >
+                  {sec.title}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Legal Text Sections */}
+          <div className="space-y-8">
             {sections.map((section) => (
-              <div key={section.id} id={section.id}>
-                <h2 className="text-base font-semibold text-slate-800 mb-2">
+              <div key={section.id} id={section.id} className="scroll-mt-6">
+                <h2 className="text-lg font-display font-semibold text-slate-800 border-l-4 border-brand-500 pl-3 mb-3">
                   {section.title}
                 </h2>
-                <p className="text-sm text-slate-600 leading-relaxed text-justify">
+                <p className="text-sm text-slate-600 leading-relaxed justify-start text-justify whitespace-pre-line ml-4">
                   {section.body}
                 </p>
               </div>
@@ -143,11 +170,11 @@ export default function TermsPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-          <p>&copy; 2026 Roomie &bull; A GIGSRentals Product</p>
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 px-2 font-medium">
+          <p>© 2026 Roomie • A GIGSRentals Product</p>
           <div className="flex items-center gap-4">
-            <span className="text-brand-600 font-medium">Terms</span>
-            <Link href="/privacy" className="hover:text-brand-500 transition-colors">
+            <span className="text-brand-500 font-semibold">Terms of Service</span>
+            <Link href="/privacy" className="hover:text-brand-600 transition-colors">
               Privacy Policy
             </Link>
           </div>

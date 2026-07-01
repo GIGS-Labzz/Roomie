@@ -3,6 +3,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { PwaInstallTracker } from "@/components/pwa/PwaInstallTracker";
+import { CookieBanner } from "@/components/layout/CookieBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -42,6 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NotificationProvider>
             {children}
             <InstallPrompt />
+            <PwaInstallTracker />
+            <CookieBanner />
           </NotificationProvider>
         </AuthProvider>
         <ServiceWorkerRegister />

@@ -8,6 +8,8 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@types/pdfkit": "^0.17.6",
+    "pdfkit": "^0.19.1",
     "turbo": "^2.8.10",
     "typescript": "5.9.2"
   },
