@@ -8,6 +8,7 @@ import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
+import { useNotifications } from "@/context/NotificationContext";
 
 const YEAR_LABELS: Record<number, string> = {
   1: "100 Level", 2: "200 Level", 3: "300 Level", 4: "400 Level",
@@ -92,6 +93,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { profile, isLoading } = useProfile();
+  const { unreadMessageCount } = useNotifications();
 
   const navItems = [
     {
@@ -104,6 +106,7 @@ export default function ProfilePage() {
     },
     {
       key: "chat", label: "Chat", href: "/chat", isActive: pathname.startsWith("/chat"),
+      badgeCount: unreadMessageCount,
       icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
     },
     {

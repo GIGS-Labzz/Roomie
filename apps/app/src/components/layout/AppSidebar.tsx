@@ -89,7 +89,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, unreadMessageCount } = useNotifications();
 
   return (
     <aside className="hidden md:flex flex-col w-64 xl:w-72 flex-shrink-0 sticky top-0 h-screen py-4 px-3 gap-1">
@@ -129,6 +129,11 @@ export function AppSidebar() {
                 {item.key === "notifications" && unreadCount > 0 && (
                   <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center">
                     {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+                {item.key === "chat" && unreadMessageCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
                   </span>
                 )}
                 {isActive && (

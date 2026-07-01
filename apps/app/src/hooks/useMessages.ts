@@ -136,6 +136,16 @@ export function useMessages(connectionId: string) {
         setMessages((prev) =>
           prev.map((m) => (m.id === optimisticMsg.id ? { ...saved, sender: optimisticMsg.sender } : m))
         );
+
+        // Trigger push notification to recipient
+        void fetch("/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            connectionId,
+            body: content.trim(),
+          }),
+        }).catch((err) => console.error("Failed to send chat push notification:", err));
       } else {
         // Remove the optimistic message on failure
         setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));

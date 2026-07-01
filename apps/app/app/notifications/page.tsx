@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Avatar } from "@repo/ui/avatar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
 import { PushToggle } from "@/components/pwa/PushToggle";
+import { useNotifications } from "@/context/NotificationContext";
 
 const supabase = createClient();
 
@@ -93,6 +94,7 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { unreadMessageCount } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -161,6 +163,7 @@ export default function NotificationsPage() {
     },
     {
       key: "chat", label: "Chat", href: "/chat", isActive: pathname.startsWith("/chat"),
+      badgeCount: unreadMessageCount,
       icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
     },
     {
