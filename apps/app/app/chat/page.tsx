@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@repo/db/client";
@@ -18,6 +18,8 @@ import { useNotifications } from "@/context/NotificationContext";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Connection = any;
+
+type Filter = "ALL" | "UNREAD";
 
 const supabase = createClient();
 
@@ -54,48 +56,92 @@ export default function ChatListPage() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { unreadMessageCount } = useNotifications();
+
   const [connections, setConnections] = useState<Connection[]>([]);
   const [lastMessages, setLastMessages] = useState<Record<string, LastMessagePreview>>({});
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
 
+  // UI state — filter pills + search, ported from the guest/host MessagesScreen layout
+  const [filter, setFilter] = useState<Filter>("ALL");
+  const [query, setQuery] = useState("");
+
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
+    let isMounted = true;
 
     const load = async () => {
       setIsLoading(true);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await getUserConnections(supabase as any, user.id);
+      if (!isMounted) return;
+
       const active = (data ?? []).filter((c: Connection) => c.status === "ACTIVE");
 
-      // Sort by most recent activity — will be re-sorted after messages load
-      setConnections(active);
-
-      if (active.length > 0) {
-        const ids = active.map((c: Connection) => c.id as string);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const [msgs, counts] = await Promise.all([
-          getLastMessagesForConnections(supabase as any, ids),
-          getUnreadCountPerConnection(supabase as any, ids, user.id),
-        ]);
-        setLastMessages(msgs);
-        setUnreadCounts(counts);
-
-        // Re-sort connections by most recent message
-        active.sort((a: Connection, b: Connection) => {
-          const aTime = msgs[a.id]?.created_at ?? a.connected_at ?? "";
-          const bTime = msgs[b.id]?.created_at ?? b.connected_at ?? "";
-          return bTime.localeCompare(aTime);
-        });
-        setConnections([...active]);
+      if (active.length === 0) {
+        setConnections([]);
+        setLastMessages({});
+        setUnreadCounts({});
+        setIsLoading(false);
+        return;
       }
 
+      const ids = active.map((c: Connection) => c.id as string);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [msgs, counts] = await Promise.all([
+        getLastMessagesForConnections(supabase as any, ids),
+        getUnreadCountPerConnection(supabase as any, ids, user.id),
+      ]);
+      if (!isMounted) return;
+
+      active.sort((a: Connection, b: Connection) => {
+        const aTime = msgs[a.id]?.created_at ?? a.connected_at ?? "";
+        const bTime = msgs[b.id]?.created_at ?? b.connected_at ?? "";
+        return bTime.localeCompare(aTime);
+      });
+
+      setLastMessages(msgs);
+      setUnreadCounts(counts);
+      setConnections(active);
       setIsLoading(false);
     };
 
     void load();
-  }, [user]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  // Resolve "other participant" once per connection so filtering/search can reuse it
+  const enriched = useMemo(() => {
+    return connections.map((c: Connection) => {
+      const other = c.requester_id === user?.id ? c.receiver : c.requester;
+      const lastMsg = lastMessages[c.id];
+      const unread = unreadCounts[c.id] ?? 0;
+      const isOwnLast = lastMsg?.sender_id === user?.id;
+      return {
+        connection: c,
+        other,
+        lastMsg,
+        unread,
+        preview: previewText(lastMsg, isOwnLast),
+        time: formatChatTime(lastMsg?.created_at ?? c.connected_at),
+      };
+    });
+  }, [connections, lastMessages, unreadCounts, user?.id]);
+
+  const filteredConnections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return enriched
+      .filter((row) => (filter === "UNREAD" ? row.unread > 0 : true))
+      .filter((row) => {
+        if (!q) return true;
+        const name = row.other?.display_name ?? "";
+        const hay = `${name} ${row.lastMsg?.content ?? ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+  }, [enriched, filter, query]);
 
   const navItems = [
     {
@@ -122,43 +168,81 @@ export default function ChatListPage() {
       <AppSidebar />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* ── Header ── */}
+        {/* ── Header (brand bar, kept from original) ── */}
         <header className="sticky top-0 z-30 bg-brand-500 text-white">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
             <h1 className="font-display font-bold text-xl">Chats</h1>
-            <div className="flex items-center gap-3">
-              {/* Search icon placeholder */}
-              <button className="p-1 rounded-full hover:bg-white/10 transition-colors" aria-label="Search">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <circle cx="11" cy="11" r="8" />
-                  <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-                </svg>
-              </button>
-            </div>
           </div>
         </header>
 
-        {/* ── List ── */}
+        {/* ── List panel — layout ported from MessagesScreen's conversation list ── */}
         <main className="flex-1 max-w-2xl w-full mx-auto pb-28 md:pb-6">
-          {isLoading ? (
-            <LoadingSkeletons />
-          ) : connections.length === 0 ? (
-            <EmptyChat />
-          ) : (
-            <ul>
-              {connections.map((conn: Connection, idx: number) => {
-                const other = conn.requester_id === user?.id ? conn.receiver : conn.requester;
-                const lastMsg = lastMessages[conn.id];
-                const unread = unreadCounts[conn.id] ?? 0;
-                const isOwnLast = lastMsg?.sender_id === user?.id;
-                const preview = previewText(lastMsg, isOwnLast);
-                const time = formatChatTime(lastMsg?.created_at ?? conn.connected_at);
+          <div className="px-4 pt-4">
+            {/* Filter pills */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFilter("ALL")}
+                className={`px-4 py-2 rounded-full border font-bold text-sm transition-colors ${
+                  filter === "ALL"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-700 border-slate-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("UNREAD")}
+                className={`px-4 py-2 rounded-full border font-bold text-sm transition-colors ${
+                  filter === "UNREAD"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-700 border-slate-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                }`}
+              >
+                Unread
+              </button>
+            </div>
 
-                return (
+            {/* Search input */}
+            <div className="mt-3 rounded-2xl border border-slate-200 px-4 py-3 flex items-center gap-3">
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="11" cy="11" r="8" />
+                <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search chats"
+                className="flex-1 bg-transparent outline-none text-sm text-slate-900 placeholder:text-slate-400"
+              />
+              {query.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                  aria-label="Clear"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-3">
+            {isLoading ? (
+              <LoadingSkeletons />
+            ) : connections.length === 0 ? (
+              <EmptyChat />
+            ) : filteredConnections.length === 0 ? (
+              <EmptySearch onClear={() => { setQuery(""); setFilter("ALL"); }} />
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {filteredConnections.map(({ connection: conn, other, unread, preview, time }) => (
                   <li key={conn.id}>
-                    {idx > 0 && <div className="ml-[72px] h-px bg-slate-100" />}
                     <div className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
-                      {/* Avatar — taps to profile */}
                       <Link
                         href={`/discover/${other?.id}`}
                         className="flex-shrink-0 mr-3"
@@ -166,46 +250,45 @@ export default function ChatListPage() {
                       >
                         <div className="relative">
                           <Avatar src={other?.avatar_url} name={other?.display_name} size="lg" />
-                          {/* Online dot */}
                           <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-brand-400 rounded-full border-2 border-white" />
                         </div>
                       </Link>
 
-                      {/* Content row — taps to chat */}
                       <Link href={`/chat/${conn.id}`} className="flex-1 min-w-0 flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`font-semibold text-[15px] truncate ${unread > 0 ? "text-slate-900" : "text-slate-800"}`}>
-                              {other.display_name ?? "Roommate"}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`font-semibold text-[15px] truncate ${unread > 0 ? "text-slate-900" : "text-slate-800"}`}>
+                                {other?.display_name ?? "Roommate"}
+                              </span>
+                              {other?.student_verified && (
+                                <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className={`text-[11px] shrink-0 ${unread > 0 ? "text-brand-500 font-semibold" : "text-slate-400"}`}>
+                              {time}
                             </span>
-                            {other?.student_verified && (
-                              <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
+                          </div>
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <p className={`text-sm truncate ${unread > 0 ? "text-slate-800 font-medium" : "text-slate-400"}`}>
+                              {preview}
+                            </p>
+                            {unread > 0 && (
+                              <span className="shrink-0 min-w-[20px] h-5 px-1 bg-brand-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
+                                {unread > 99 ? "99+" : unread}
+                              </span>
                             )}
                           </div>
-                          <p className={`text-sm truncate mt-0.5 ${unread > 0 ? "text-slate-800 font-medium" : "text-slate-400"}`}>
-                            {preview}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                          <span className={`text-[11px] ${unread > 0 ? "text-brand-500 font-semibold" : "text-slate-400"}`}>
-                            {time}
-                          </span>
-                          {unread > 0 && (
-                            <span className="min-w-[20px] h-5 px-1 bg-brand-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
-                              {unread > 99 ? "99+" : unread}
-                            </span>
-                          )}
                         </div>
                       </Link>
                     </div>
                   </li>
-                );
-              })}
-            </ul>
-          )}
+                ))}
+              </ul>
+            )}
+          </div>
         </main>
       </div>
 
@@ -254,6 +337,27 @@ function EmptyChat() {
       >
         Browse profiles
       </Link>
+    </div>
+  );
+}
+
+function EmptySearch({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center px-6 gap-3">
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="11" cy="11" r="8" />
+          <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+        </svg>
+      </div>
+      <p className="font-semibold text-slate-700">No matches</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="text-sm font-bold text-brand-600 hover:text-brand-700"
+      >
+        Clear filters
+      </button>
     </div>
   );
 }
