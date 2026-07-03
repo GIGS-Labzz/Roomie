@@ -504,6 +504,67 @@ export type Database = {
           },
         ]
       }
+      roommate_agreements: {
+        Row: {
+          id: string
+          connection_id: string
+          initiator_id: string
+          acceptor_id: string | null
+          status: string
+          payment_reference: string | null
+          payment_channel: string | null
+          amount: number | null
+          accepted_at: string | null
+          paid_at: string | null
+        }
+        Insert: {
+          id?: string
+          connection_id: string
+          initiator_id: string
+          acceptor_id?: string | null
+          status?: string
+          payment_reference?: string | null
+          payment_channel?: string | null
+          amount?: number | null
+          accepted_at?: string | null
+          paid_at?: string | null
+        }
+        Update: {
+          id?: string
+          connection_id?: string
+          initiator_id?: string
+          acceptor_id?: string | null
+          status?: string
+          payment_reference?: string | null
+          payment_channel?: string | null
+          amount?: number | null
+          accepted_at?: string | null
+          paid_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roommate_agreements_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: true
+            referencedRelation: "connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roommate_agreements_initiator_id_fkey"
+            columns: ["initiator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roommate_agreements_acceptor_id_fkey"
+            columns: ["acceptor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
@@ -511,7 +572,11 @@ export type Database = {
           allows_pets: boolean | null
           allows_smoking: boolean | null
           avatar_url: string | null
+          cover_url: string | null
           bio: string | null
+          birthday: string | null
+          birthday_public: boolean | null
+          username: string | null
           city: string | null
           cleanliness: Database["public"]["Enums"]["cleanliness_level"] | null
           course: string | null
@@ -552,7 +617,11 @@ export type Database = {
           allows_pets?: boolean | null
           allows_smoking?: boolean | null
           avatar_url?: string | null
+          cover_url?: string | null
           bio?: string | null
+          birthday?: string | null
+          birthday_public?: boolean | null
+          username?: string | null
           city?: string | null
           cleanliness?: Database["public"]["Enums"]["cleanliness_level"] | null
           course?: string | null
@@ -593,7 +662,11 @@ export type Database = {
           allows_pets?: boolean | null
           allows_smoking?: boolean | null
           avatar_url?: string | null
+          cover_url?: string | null
           bio?: string | null
+          birthday?: string | null
+          birthday_public?: boolean | null
+          username?: string | null
           city?: string | null
           cleanliness?: Database["public"]["Enums"]["cleanliness_level"] | null
           course?: string | null

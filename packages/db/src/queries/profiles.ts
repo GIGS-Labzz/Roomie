@@ -60,12 +60,12 @@ export async function getDiscoveryFeed(
   let query = supabase
     .from("profiles")
     .select(
-      `id, display_name, avatar_url, age, gender,
+      `id, display_name, username, avatar_url, cover_url, bio, age, gender,
        city, university, year_of_study, course,
        min_budget, max_budget, move_in_date,
        lifestyle_tags, sleep_schedule, cleanliness, noise_pref,
        student_verified, allows_smoking, allows_pets, allows_guests,
-       last_seen_at, onboarding_complete`
+       last_seen_at, onboarding_complete, created_at, birthday, birthday_public`
     )
     .eq("is_active", true)
     .eq("onboarding_complete", true)

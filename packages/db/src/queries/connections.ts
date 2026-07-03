@@ -76,3 +76,36 @@ export async function getConnectedUserIds(
     c.requester_id === userId ? [c.receiver_id] : [c.requester_id]
   );
 }
+
+export async function getActiveConnections(
+  supabase: SupabaseClient<Database>,
+  userId: string
+) {
+  return supabase
+    .from("connections")
+    .select(`
+      id,
+      connected_at,
+      requester:profiles!requester_id(id, display_name, avatar_url, university, city, student_verified, bio),
+      receiver:profiles!receiver_id(id, display_name, avatar_url, university, city, student_verified, bio)
+    `)
+    .eq("status", "ACTIVE")
+    .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
+}
+
+export async function getConfirmedRoomies(
+  supabase: SupabaseClient<Database>,
+  userId: string
+) {
+  return supabase
+    .from("roommate_agreements")
+    .select(`
+      id,
+      accepted_at,
+      initiator:profiles!initiator_id(id, display_name, avatar_url, university, city, student_verified, bio),
+      acceptor:profiles!acceptor_id(id, display_name, avatar_url, university, city, student_verified, bio)
+    `)
+    .eq("status", "CONFIRMED")
+    .or(`initiator_id.eq.${userId},acceptor_id.eq.${userId}`);
+}
+

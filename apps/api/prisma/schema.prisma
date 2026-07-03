@@ -229,9 +229,13 @@ model posts {
 model profiles {
   id                                                             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   display_name                                                   String                @default("")
+  username                                                       String?               @unique
   avatar_url                                                     String?
+  cover_url                                                      String?
   bio                                                            String?
   age                                                            Int?                  @db.SmallInt
+  birthday                                                       DateTime?             @db.Date
+  birthday_public                                                Boolean?              @default(false)
   gender                                                         gender_type?
   phone                                                          String?
   city                                                           String?

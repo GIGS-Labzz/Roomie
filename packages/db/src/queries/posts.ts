@@ -198,3 +198,57 @@ export async function addComment(
   if (error || !data) return null;
   return data as PostComment;
 }
+
+export interface PostWithLikes {
+  id: string;
+  user_id: string;
+  content: string;
+  city: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  move_in_date: string | null;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  post_likes: Array<{
+    user_id: string;
+    profiles: {
+      display_name: string;
+      avatar_url: string | null;
+    } | null;
+  }>;
+}
+
+export async function getUserPosts(
+  supabase: AnyClient,
+  userId: string
+): Promise<PostWithLikes[]> {
+  const db = supabase as AnyClient;
+  const { data, error } = await db
+    .from("posts")
+    .select(`
+      id,
+      user_id,
+      content,
+      city,
+      budget_min,
+      budget_max,
+      move_in_date,
+      likes_count,
+      comments_count,
+      created_at,
+      post_likes (
+        user_id,
+        profiles (
+          display_name,
+          avatar_url
+        )
+      )
+    `)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data as PostWithLikes[];
+}
+
