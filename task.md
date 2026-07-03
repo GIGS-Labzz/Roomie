@@ -1,4 +1,4 @@
-# Tasks: Inline Connect Actions, Tab Items Count, VAPID Config & Mobile Notifications
+# Tasks: Inline Connect, Tab Counts, VAPID, DB Trigger & FAB
 
 - `[x]` Database & Type Changes
   - `[x]` Create SQL migration file `0017_add_username.sql`
@@ -25,5 +25,9 @@
 - `[x]` Mobile Feed Notifications Shortcut
   - `[x]` Add a notification bell icon button at the top right of the mobile feed header
   - `[x]` Display an unread badge counter showing `unreadCount` from NotificationContext
+- `[x]` Floating Action Button (FAB)
+  - `[x]` Add a scroll listener to show a floating pen button when the composer is scrolled away
+  - `[x]` Positioning is optimized: bottom-right (just above bottom tabs) on mobile and right corner on desktop
+  - `[x]` Action scrolls smoothly back to the top of the feed and autofocuses the write input textarea
 - `[x]` Verification
   - `[x]` Run typescript checks using `npm run check-types`

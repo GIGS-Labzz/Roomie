@@ -44,7 +44,28 @@ export default function FeedPage() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [showFab, setShowFab] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 250) {
+        setShowFab(true);
+      } else {
+        setShowFab(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleFabClick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    const textarea = document.querySelector("textarea");
+    if (textarea) {
+      setTimeout(() => textarea.focus(), 300);
+    }
+  };
 
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
     const supabase = createClient();
@@ -247,6 +268,19 @@ export default function FeedPage() {
           </div>
         </main>
       </div>
+
+      {/* Floating Action Button (FAB) for post creation */}
+      {showFab && user && (
+        <button
+          onClick={handleFabClick}
+          className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-40 p-4 bg-brand-500 hover:bg-brand-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-300"
+          aria-label="Create post"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+      )}
 
       {/* Mobile bottom nav */}
       <BottomTabNav items={navItems} hidden={false} />
