@@ -128,23 +128,7 @@ export default function NotificationsPage() {
       .update({ read_at: new Date().toISOString() })
       .eq("id", notificationId);
 
-    const { data: conn } = await (supabase as any)
-      .from("connections")
-      .select("requester_id, receiver:profiles!receiver_id(display_name)")
-      .eq("id", connectionId)
-      .single();
-
-    if (conn) {
-      await (supabase as any).from("notifications").insert({
-        user_id: conn.requester_id,
-        type: "AGREEMENT_CONFIRMED",
-        title: "Connection accepted!",
-        body: `${conn.receiver?.display_name || "Someone"} connected back with you. You can now chat!`,
-        data: {
-          connection_id: connectionId,
-        },
-      });
-    }
+    // Notification is sent automatically by the database trigger on connections status update to ACTIVE
 
     setNotifications((prev) =>
       prev.map((n) =>

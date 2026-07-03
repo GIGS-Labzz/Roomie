@@ -169,25 +169,6 @@ export default function ProfileDetailPage() {
 
       if (connError) throw connError;
 
-      // 2. Fetch my profile info
-      const { data: myProfileData } = await (supabase as any)
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .single();
-
-      // 3. Create connection request notification
-      await (supabase as any).from("notifications").insert({
-        user_id: profile.id,
-        type: "CONNECTION_REQUEST",
-        title: "Connection Request",
-        body: `${myProfileData?.display_name || "Someone"} wants to connect with you.`,
-        data: {
-          connection_id: conn.id,
-          requester_id: user.id,
-        },
-      });
-
       setConnectStatus("PENDING_PAYMENT");
       setExistingConnection(conn);
     } catch (err) {

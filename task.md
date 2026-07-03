@@ -1,0 +1,29 @@
+# Tasks: Inline Connect Actions, Tab Items Count, VAPID Config & Mobile Notifications
+
+- `[x]` Database & Type Changes
+  - `[x]` Create SQL migration file `0017_add_username.sql`
+  - `[x]` Modify `apps/api/prisma/schema.prisma` to include `username` and `birthday_public`
+  - `[x]` Modify `packages/db/src/types.ts` to include `username` and `birthday_public` type definitions
+- `[x]` Discover & Profile Inline Connect
+  - `[x]` Bind inline `handleConnect` to `ProfileCard` Connect button (creates connection row directly)
+  - `[x]` Bind inline `handleConnectDetail` to Discover Detail profile Connect button
+- `[x]` Interactive Notification List
+  - `[x]` Add "Connect Back" and "Decline" actions inside `CONNECTION_REQUEST` notification items in `/notifications`
+  - `[x]` Define `handleConnectBack` (updates status to ACTIVE) and `handleDeclineConnect` (updates status to DECLINED)
+- `[x]` Profile Tab Counts
+  - `[x]` Add counts next to Posts, Connects, Roomies, and Lifestyle tabs on Discover Profile Detail Page
+  - `[x]` Add counts next to Posts, Connects, Roomies, and Lifestyle tabs on My Profile Page
+- `[x]` Onboarding Updates
+  - `[x]` Add Birthday input and Short Bio textarea to the onboarding basics form
+  - `[x]` Limit Genders to Male and Female options only
+  - `[x]` Calculate and update numeric age based on entered birthday during onboarding save
+- `[x]` Database RLS Notifications Fix
+  - `[x]` Create database trigger `on_connection_change` on `connections` table to handle notification creation automatically
+- `[x]` Push Notification Configuration
+  - `[x]` Generate new VAPID public & private key pair
+  - `[x]` Update workspace root `.env`, `apps/app/.env.local`, and `apps/api/.env` with keys
+- `[x]` Mobile Feed Notifications Shortcut
+  - `[x]` Add a notification bell icon button at the top right of the mobile feed header
+  - `[x]` Display an unread badge counter showing `unreadCount` from NotificationContext
+- `[x]` Verification
+  - `[x]` Run typescript checks using `npm run check-types`

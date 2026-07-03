@@ -86,25 +86,6 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
 
       if (connError) throw connError;
 
-      // 2. Fetch my display name
-      const { data: myProfile } = await (supabase as any)
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .single();
-
-      // 3. Send connection request notification
-      await (supabase as any).from("notifications").insert({
-        user_id: profile.id,
-        type: "CONNECTION_REQUEST",
-        title: "Connection Request",
-        body: `${myProfile?.display_name || "Someone"} wants to connect with you.`,
-        data: {
-          connection_id: conn.id,
-          requester_id: user.id,
-        },
-      });
-
       setStatus("PENDING_PAYMENT");
     } catch (err) {
       console.error("Failed to connect:", err);

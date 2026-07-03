@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
@@ -36,7 +37,7 @@ export default function FeedPage() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { unreadMessageCount } = useNotifications();
+  const { unreadCount, unreadMessageCount } = useNotifications();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,16 +156,29 @@ export default function FeedPage() {
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile top bar */}
         <header className="md:hidden sticky top-0 z-30 bg-sage-surface/95 backdrop-blur-md border-b border-sage-light/40">
-          <div className="flex items-center gap-2 px-4 py-3">
-            <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="none">
-                <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-                <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-                <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-                <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-              </svg>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="none">
+                  <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
+                  <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
+                  <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
+                  <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
+                </svg>
+              </div>
+              <span className="font-display font-bold text-slate-900 text-lg leading-none">Feed</span>
             </div>
-            <span className="font-display font-bold text-slate-900 text-lg leading-none">Feed</span>
+
+            <Link href="/notifications" className="relative p-1 text-slate-600 hover:text-brand-600 transition-colors">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-brand-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border border-white animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
           </div>
         </header>
 

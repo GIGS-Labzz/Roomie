@@ -11,9 +11,18 @@ const CITIES = ["Lagos", "Abuja", "Ibadan", "Benin City", "Port Harcourt", "Kano
 const GENDERS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
-  { value: "non_binary", label: "Non-binary" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
+
+function calculateAge(birthdateStr: string): number {
+  const birthDate = new Date(birthdateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 export default function BasicsPage() {
   const router = useRouter();
@@ -21,28 +30,34 @@ export default function BasicsPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<{
     display_name: string;
-    age: string;
+    birthday: string;
     gender: string;
     city: string;
+    bio: string;
   }>({
     display_name: String(user?.user_metadata?.full_name ?? ""),
-    age: "",
+    birthday: "",
     gender: "",
     city: "",
+    bio: "",
   });
 
-  const isValid = form.display_name.trim() && form.age && form.gender && form.city;
+  const isValid = form.display_name.trim() && form.birthday && form.gender && form.city;
 
   const handleNext = async () => {
     if (!user || !isValid) return;
     setLoading(true);
     const supabase = createClient();
+    const age = calculateAge(form.birthday);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from("profiles").update({
       display_name: form.display_name.trim(),
-      age: Number(form.age),
+      birthday: form.birthday,
+      age: age,
       gender: form.gender,
       city: form.city,
+      bio: form.bio.trim() || null,
       onboarding_step: 2,
     }).eq("id", user.id);
     router.push("/onboarding/university");
@@ -68,16 +83,13 @@ export default function BasicsPage() {
           />
         </div>
 
-        {/* Age */}
+        {/* Birthday */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Age</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Birthday</label>
           <input
-            type="number"
-            min={16}
-            max={35}
-            value={form.age}
-            onChange={(e) => setForm({ ...form, age: e.target.value })}
-            placeholder="Your age"
+            type="date"
+            value={form.birthday}
+            onChange={(e) => setForm({ ...form, birthday: e.target.value })}
             className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
           />
         </div>
@@ -114,6 +126,18 @@ export default function BasicsPage() {
             <option value="">Select your city</option>
             {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+        </div>
+
+        {/* Bio */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Short bio</label>
+          <textarea
+            value={form.bio}
+            onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            placeholder="Tell potential roommates a bit about yourself..."
+            rows={3}
+            className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500 resize-none"
+          />
         </div>
       </div>
 
