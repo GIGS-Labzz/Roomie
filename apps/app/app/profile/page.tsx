@@ -300,20 +300,38 @@ export default function ProfilePage() {
 
           {/* Tabs Navigation (X.com Style Underline Tabs) */}
           <div className="flex border-b border-slate-100 bg-white sticky top-14 z-20">
-            {(["posts", "connects", "roomies", "lifestyle"] as TabType[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="flex-1 py-3 text-center text-sm font-bold relative transition-colors text-slate-600 hover:bg-slate-50"
-              >
-                <span className={`capitalize ${activeTab === tab ? "text-slate-950" : "text-slate-500"}`}>
-                  {tab === "roomies" ? "Roomies" : tab === "connects" ? "Connects" : tab}
-                </span>
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-brand-500 rounded-full" />
-                )}
-              </button>
-            ))}
+            {(["posts", "connects", "roomies", "lifestyle"] as TabType[]).map((tab) => {
+              let label = "";
+              let count = 0;
+              if (tab === "posts") {
+                label = "Posts";
+                count = posts.length;
+              } else if (tab === "connects") {
+                label = "Connects";
+                count = connects.length;
+              } else if (tab === "roomies") {
+                label = "Roomies";
+                count = roomies.length;
+              } else if (tab === "lifestyle") {
+                label = "Lifestyle";
+                count = tags.length;
+              }
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex-1 py-3 text-center text-sm font-bold relative transition-colors text-slate-600 hover:bg-slate-50"
+                >
+                  <span className={`capitalize ${activeTab === tab ? "text-slate-950 font-extrabold" : "text-slate-500 font-bold"}`}>
+                    {label} <span className="text-xs font-semibold text-slate-400">({count})</span>
+                  </span>
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-brand-500 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab Contents */}

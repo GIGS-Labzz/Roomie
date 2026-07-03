@@ -108,6 +108,8 @@ export default function ProfileDetailPage() {
 
   // Connection status with this user
   const [existingConnection, setExistingConnection] = useState<any | null>(null);
+  const [connectStatus, setConnectStatus] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -137,6 +139,7 @@ export default function ProfileDetailPage() {
       if (user && params.id) {
         const { data: conn } = await getExistingConnection(supabase as any, user.id, params.id);
         setExistingConnection(conn ?? null);
+        setConnectStatus(conn?.status ?? null);
       }
 
       setIsLoading(false);
@@ -146,6 +149,53 @@ export default function ProfileDetailPage() {
     };
     void load();
   }, [params.id, user]);
+
+  const handleConnectDetail = async () => {
+    if (!user || !profile || connecting) return;
+    setConnecting(true);
+
+    try {
+      // 1. Create connection
+      const { data: conn, error: connError } = await (supabase as any)
+        .from("connections")
+        .insert({
+          requester_id: user.id,
+          receiver_id: profile.id,
+          status: "PENDING_PAYMENT",
+          connected_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (connError) throw connError;
+
+      // 2. Fetch my profile info
+      const { data: myProfileData } = await (supabase as any)
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .single();
+
+      // 3. Create connection request notification
+      await (supabase as any).from("notifications").insert({
+        user_id: profile.id,
+        type: "CONNECTION_REQUEST",
+        title: "Connection Request",
+        body: `${myProfileData?.display_name || "Someone"} wants to connect with you.`,
+        data: {
+          connection_id: conn.id,
+          requester_id: user.id,
+        },
+      });
+
+      setConnectStatus("PENDING_PAYMENT");
+      setExistingConnection(conn);
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -216,24 +266,30 @@ export default function ProfileDetailPage() {
 
         {/* Action Row next to avatar (Connect / Message Buttons) */}
         <div className="flex justify-end p-3 h-14 items-center gap-2">
-          {existingConnection?.status === "ACTIVE" ? (
-            <Link href={`/chat/${existingConnection.id}`}>
+          {connectStatus === "ACTIVE" ? (
+            <Link href={`/chat/${existingConnection?.id || ""}`}>
               <Button variant="primary" size="sm" className="rounded-full font-bold px-5">
                 Message
               </Button>
             </Link>
-          ) : existingConnection?.status === "PENDING_PAYMENT" || existingConnection?.status === "PAID" ? (
-            <Link href={`/connect/${profile.id}`}>
-              <Button variant="secondary" size="sm" className="rounded-full font-bold px-5">
-                Pending Connect
-              </Button>
-            </Link>
+          ) : connectStatus === "PENDING_PAYMENT" || connectStatus === "PAID" ? (
+            <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
+              Pending Connect
+            </Button>
+          ) : connectStatus === "DECLINED" ? (
+            <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
+              Declined
+            </Button>
           ) : (
-            <Link href={`/connect/${profile.id}`}>
-              <Button variant="peach" size="sm" className="rounded-full font-bold px-5">
-                Connect
-              </Button>
-            </Link>
+            <Button
+              variant="peach"
+              size="sm"
+              className="rounded-full font-bold px-5"
+              onClick={handleConnectDetail}
+              disabled={connecting}
+            >
+              {connecting ? "Connecting..." : "Connect"}
+            </Button>
           )}
         </div>
 
@@ -318,20 +374,38 @@ export default function ProfileDetailPage() {
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-100 bg-white sticky top-[61px] z-20">
-          {(["posts", "connects", "roomies", "lifestyle"] as TabType[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="flex-1 py-3 text-center text-sm font-bold relative transition-colors text-slate-600 hover:bg-slate-50"
-            >
-              <span className={`capitalize ${activeTab === tab ? "text-slate-950" : "text-slate-500"}`}>
-                {tab === "roomies" ? "Roomies" : tab === "connects" ? "Connects" : tab}
-              </span>
-              {activeTab === tab && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-brand-500 rounded-full" />
-              )}
-            </button>
-          ))}
+          {(["posts", "connects", "roomies", "lifestyle"] as TabType[]).map((tab) => {
+            let label = "";
+            let count = 0;
+            if (tab === "posts") {
+              label = "Posts";
+              count = posts.length;
+            } else if (tab === "connects") {
+              label = "Connects";
+              count = connects.length;
+            } else if (tab === "roomies") {
+              label = "Roomies";
+              count = roomies.length;
+            } else if (tab === "lifestyle") {
+              label = "Lifestyle";
+              count = tags.length;
+            }
+
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 py-3 text-center text-sm font-bold relative transition-colors text-slate-600 hover:bg-slate-50"
+              >
+                <span className={`capitalize ${activeTab === tab ? "text-slate-950 font-extrabold" : "text-slate-500 font-bold"}`}>
+                  {label} <span className="text-xs font-semibold text-slate-400">({count})</span>
+                </span>
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-brand-500 rounded-full" />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Contents */}

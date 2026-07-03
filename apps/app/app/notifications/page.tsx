@@ -112,6 +112,74 @@ export default function NotificationsPage() {
     setIsLoading(false);
   }, [user]);
 
+  const handleConnectBack = async (notificationId: string, connectionId: string) => {
+    const { error: connError } = await (supabase as any)
+      .from("connections")
+      .update({ status: "ACTIVE", connected_at: new Date().toISOString() })
+      .eq("id", connectionId);
+
+    if (connError) {
+      console.error("Failed to accept connection:", connError);
+      return;
+    }
+
+    await (supabase as any)
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", notificationId);
+
+    const { data: conn } = await (supabase as any)
+      .from("connections")
+      .select("requester_id, receiver:profiles!receiver_id(display_name)")
+      .eq("id", connectionId)
+      .single();
+
+    if (conn) {
+      await (supabase as any).from("notifications").insert({
+        user_id: conn.requester_id,
+        type: "AGREEMENT_CONFIRMED",
+        title: "Connection accepted!",
+        body: `${conn.receiver?.display_name || "Someone"} connected back with you. You can now chat!`,
+        data: {
+          connection_id: connectionId,
+        },
+      });
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId
+          ? { ...n, read_at: new Date().toISOString(), type: "CONNECTION_ACCEPTED" }
+          : n
+      )
+    );
+  };
+
+  const handleDeclineConnect = async (notificationId: string, connectionId: string) => {
+    const { error: connError } = await (supabase as any)
+      .from("connections")
+      .update({ status: "DECLINED" })
+      .eq("id", connectionId);
+
+    if (connError) {
+      console.error("Failed to decline connection:", connError);
+      return;
+    }
+
+    await (supabase as any)
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", notificationId);
+
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId
+          ? { ...n, read_at: new Date().toISOString(), type: "CONNECTION_DECLINED" }
+          : n
+      )
+    );
+  };
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -256,6 +324,44 @@ export default function NotificationsPage() {
                       {n.body && (
                         <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{n.body}</p>
                       )}
+
+                      {n.type === "CONNECTION_REQUEST" && n.data?.connection_id && (
+                        <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleConnectBack(n.id, n.data!.connection_id);
+                            }}
+                            className="px-3.5 py-1.5 bg-brand-500 text-white rounded-full text-xs font-bold hover:bg-brand-600 transition-colors shadow-sm"
+                          >
+                            Connect Back
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDeclineConnect(n.id, n.data!.connection_id);
+                            }}
+                            className="px-3.5 py-1.5 border border-slate-200 text-slate-500 bg-white rounded-full text-xs font-semibold hover:bg-slate-50 transition-colors"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+
+                      {n.type === "CONNECTION_ACCEPTED" && (
+                        <p className="text-xs text-emerald-600 font-bold mt-2 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          You connected back!
+                        </p>
+                      )}
+
+                      {n.type === "CONNECTION_DECLINED" && (
+                        <p className="text-xs text-slate-400 font-medium mt-2">
+                          Declined
+                        </p>
+                      )}
                     </div>
                     {isUnread && (
                       <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0 mt-1.5" />
@@ -263,15 +369,20 @@ export default function NotificationsPage() {
                   </div>
                 );
 
+                // If connection request is still pending, don't allow general redirect to prevent navigation clash
+                const clickHref = n.type === "CONNECTION_REQUEST" ? null : href;
+
                 return (
                   <li key={n.id}>
                     {idx > 0 && <div className="ml-[64px] h-px bg-slate-100" />}
-                    {href ? (
-                      <button className="w-full text-left" onClick={() => router.push(href)}>
+                    {clickHref ? (
+                      <button className="w-full text-left" onClick={() => router.push(clickHref)}>
                         {inner}
                       </button>
                     ) : (
-                      inner
+                      <div className="w-full text-left">
+                        {inner}
+                      </div>
                     )}
                   </li>
                 );
