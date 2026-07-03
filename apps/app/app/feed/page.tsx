@@ -166,7 +166,7 @@ export default function FeedPage() {
                   <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
                 </svg>
               </div>
-              <span className="font-display font-bold text-slate-900 text-lg leading-none">Feed</span>
+              <span className="font-display font-bold text-slate-900 text-lg leading-none">Roomie</span>
             </div>
 
             <Link href="/notifications" className="relative p-1 text-slate-600 hover:text-brand-600 transition-colors">
@@ -185,7 +185,6 @@ export default function FeedPage() {
         {/* Desktop title */}
         <div className="hidden md:flex items-center px-6 pt-6 pb-2">
           <div>
-            <h1 className="font-display font-bold text-slate-900 text-2xl leading-tight">Feed</h1>
             <p className="text-sm text-slate-400 mt-0.5">
               See what other students are looking for
             </p>
@@ -196,7 +195,6 @@ export default function FeedPage() {
         <main className="flex-1 px-4 md:px-6 md:pt-4 pb-28 md:pb-8 max-w-2xl w-full mx-auto">
           {/* Mobile heading */}
           <div className="md:hidden pt-6 pb-4">
-            <h1 className="font-display font-bold text-slate-900 text-3xl leading-tight">Feed</h1>
             <p className="text-sm text-slate-400 mt-1">See what other students are looking for</p>
           </div>
 
