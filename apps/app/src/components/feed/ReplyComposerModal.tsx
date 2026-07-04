@@ -5,6 +5,7 @@ import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
 import { createClient } from "@repo/db/client";
 import { createPost } from "@repo/db/queries/posts";
+import { MentionAutocomplete } from "./MentionAutocomplete";
 import type { Post } from "@repo/db/queries/posts";
 import type { User } from "@supabase/supabase-js";
 
@@ -44,6 +45,8 @@ export function ReplyComposerModal({
       setContent(`@${parentUsername} `);
       setCity("");
       setShowLocation(false);
+      setMentionQuery(null);
+      setMentionStartIndex(-1);
       setTimeout(() => {
         const ta = textareaRef.current;
         if (ta) {
@@ -54,13 +57,74 @@ export function ReplyComposerModal({
     }
   }, [isOpen, parentUsername]);
 
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
+
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+    const val = e.target.value;
+    setContent(val);
     const ta = textareaRef.current;
     if (ta) {
       ta.style.height = "auto";
       ta.style.height = `${ta.scrollHeight}px`;
     }
+
+    const selectionStart = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, selectionStart);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (match) {
+      const query = match[1];
+      setMentionQuery(query);
+      setMentionStartIndex(selectionStart - query.length - 1);
+    } else {
+      setMentionQuery(null);
+      setMentionStartIndex(-1);
+    }
+  };
+
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    const val = ta.value;
+    const selectionStart = ta.selectionStart;
+    const textBeforeCursor = val.slice(0, selectionStart);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (match) {
+      const query = match[1];
+      setMentionQuery(query);
+      setMentionStartIndex(selectionStart - query.length - 1);
+    } else {
+      setMentionQuery(null);
+      setMentionStartIndex(-1);
+    }
+  };
+
+  const handleSelectMention = (username: string) => {
+    if (mentionStartIndex === -1 || !textareaRef.current) return;
+
+    const val = content;
+    const selectionStart = textareaRef.current.selectionStart;
+    const textBeforeMention = val.slice(0, mentionStartIndex);
+    const textAfterMention = val.slice(selectionStart);
+
+    const insertion = `@${username} `;
+    const newContent = textBeforeMention + insertion + textAfterMention;
+
+    setContent(newContent);
+    setMentionQuery(null);
+    setMentionStartIndex(-1);
+
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        const cursorPosition = mentionStartIndex + insertion.length;
+        ta.setSelectionRange(cursorPosition, cursorPosition);
+        ta.style.height = "auto";
+        ta.style.height = `${ta.scrollHeight}px`;
+      }
+    }, 0);
   };
 
   const handleSubmit = async () => {
@@ -94,12 +158,12 @@ export function ReplyComposerModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Dialog */}
-      <div className="fixed inset-x-0 bottom-0 z-50 md:inset-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:max-w-lg bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden max-h-[85vh] animate-slide-up">
+      <div className="fixed inset-x-0 bottom-0 z-[110] md:inset-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:max-w-lg bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden max-h-[85vh] animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <h3 className="font-display font-semibold text-slate-900 text-base">Reply thread</h3>
@@ -140,15 +204,25 @@ export function ReplyComposerModal({
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-3">
               <span className="text-xs text-slate-400 font-medium">Replying to @{parentUsername}</span>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder="Write your reply..."
-                className="w-full resize-none bg-transparent text-slate-800 placeholder:text-slate-400 text-[15px] leading-relaxed outline-none min-h-[100px] max-h-[220px]"
-                maxLength={MAX_LENGTH}
-              />
+              <div className="relative w-full">
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={handleInput}
+                  onSelect={handleSelectionChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Write your reply..."
+                  className="w-full resize-none bg-transparent text-slate-800 placeholder:text-slate-400 text-[15px] leading-relaxed outline-none min-h-[100px] max-h-[220px]"
+                  maxLength={MAX_LENGTH}
+                />
+                {mentionQuery !== null && (
+                  <MentionAutocomplete
+                    userId={user.id}
+                    query={mentionQuery}
+                    onSelect={handleSelectMention}
+                  />
+                )}
+              </div>
 
               {showLocation && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full max-w-[240px] transition-all animate-fade-in">

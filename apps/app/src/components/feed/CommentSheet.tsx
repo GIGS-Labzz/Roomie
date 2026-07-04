@@ -85,12 +85,12 @@ export function CommentSheet({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 md:inset-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-w-full bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh] md:max-h-[70vh]">
+      <div className="fixed inset-x-0 bottom-0 z-[110] md:inset-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-w-full bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[80vh] md:max-h-[70vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h3 className="font-display font-semibold text-slate-900 text-base">Comments</h3>

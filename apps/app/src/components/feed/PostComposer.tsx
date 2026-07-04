@@ -5,6 +5,7 @@ import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
 import { createClient } from "@repo/db/client";
 import { createPost } from "@repo/db/queries/posts";
+import { MentionAutocomplete } from "./MentionAutocomplete";
 import type { User } from "@supabase/supabase-js";
 
 interface PostComposerProps {
@@ -21,18 +22,78 @@ export function PostComposer({ user, authorName, authorAvatar, onPosted }: PostC
   const [city, setCity] = useState("");
   const [showLocation, setShowLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const remaining = MAX_LENGTH - content.length;
   const canSubmit = content.trim().length > 0 && remaining >= 0 && !isSubmitting;
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+    const val = e.target.value;
+    setContent(val);
     const ta = textareaRef.current;
     if (ta) {
       ta.style.height = "auto";
       ta.style.height = `${ta.scrollHeight}px`;
     }
+
+    const selectionStart = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, selectionStart);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (match) {
+      const query = match[1];
+      setMentionQuery(query);
+      setMentionStartIndex(selectionStart - query.length - 1);
+    } else {
+      setMentionQuery(null);
+      setMentionStartIndex(-1);
+    }
+  };
+
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    const val = ta.value;
+    const selectionStart = ta.selectionStart;
+    const textBeforeCursor = val.slice(0, selectionStart);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (match) {
+      const query = match[1];
+      setMentionQuery(query);
+      setMentionStartIndex(selectionStart - query.length - 1);
+    } else {
+      setMentionQuery(null);
+      setMentionStartIndex(-1);
+    }
+  };
+
+  const handleSelectMention = (username: string) => {
+    if (mentionStartIndex === -1 || !textareaRef.current) return;
+
+    const val = content;
+    const selectionStart = textareaRef.current.selectionStart;
+    const textBeforeMention = val.slice(0, mentionStartIndex);
+    const textAfterMention = val.slice(selectionStart);
+
+    const insertion = `@${username} `;
+    const newContent = textBeforeMention + insertion + textAfterMention;
+
+    setContent(newContent);
+    setMentionQuery(null);
+    setMentionStartIndex(-1);
+
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        const cursorPosition = mentionStartIndex + insertion.length;
+        ta.setSelectionRange(cursorPosition, cursorPosition);
+        ta.style.height = "auto";
+        ta.style.height = `${ta.scrollHeight}px`;
+      }
+    }, 0);
   };
 
   const handleSubmit = async () => {
@@ -67,16 +128,26 @@ export function PostComposer({ user, authorName, authorAvatar, onPosted }: PostC
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col gap-3">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          placeholder="Looking for a roommate? Tell people what you need..."
-          className="w-full resize-none bg-transparent text-slate-800 placeholder:text-slate-400 text-[15px] leading-relaxed outline-none min-h-[60px] max-h-[200px]"
-          rows={2}
-          maxLength={MAX_LENGTH}
-        />
+        <div className="relative w-full">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleInput}
+            onSelect={handleSelectionChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Looking for a roommate? Tell people what you need..."
+            className="w-full resize-none bg-transparent text-slate-800 placeholder:text-slate-400 text-[15px] leading-relaxed outline-none min-h-[60px] max-h-[200px]"
+            rows={2}
+            maxLength={MAX_LENGTH}
+          />
+          {mentionQuery !== null && (
+            <MentionAutocomplete
+              userId={user.id}
+              query={mentionQuery}
+              onSelect={handleSelectMention}
+            />
+          )}
+        </div>
 
         {showLocation && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full max-w-[240px] transition-all animate-fade-in">

@@ -86,8 +86,8 @@ export async function getActiveConnections(
     .select(`
       id,
       connected_at,
-      requester:profiles!requester_id(id, display_name, avatar_url, university, city, student_verified, bio),
-      receiver:profiles!receiver_id(id, display_name, avatar_url, university, city, student_verified, bio)
+      requester:profiles!requester_id(id, display_name, username, avatar_url, university, city, student_verified, bio),
+      receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified, bio)
     `)
     .eq("status", "ACTIVE")
     .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
