@@ -256,7 +256,7 @@ export async function getUserPosts(
     `)
     .eq("user_id", userId)
     .eq("is_archived", false)
-    .order("is_pinned", { ascending: false })
+    .order("is_pinned", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];

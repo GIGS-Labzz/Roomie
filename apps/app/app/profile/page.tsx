@@ -104,17 +104,20 @@ export default function ProfilePage() {
 
   const handlePinPost = async (postId: string, isCurrentlyPinned: boolean) => {
     if (!user) return;
+
+    if (!isCurrentlyPinned) {
+      // Check if we already have 3 pinned posts
+      const pinnedCount = posts.filter((p) => p.is_pinned).length;
+      if (pinnedCount >= 3) {
+        alert("You can only pin up to 3 posts to your profile.");
+        setActivePostMenuId(null);
+        return;
+      }
+    }
+
     setActingPostId(postId);
     const supabase = createClient();
     try {
-      if (!isCurrentlyPinned) {
-        // Unpin all other posts of this user first
-        await (supabase as any)
-          .from("posts")
-          .update({ is_pinned: false })
-          .eq("user_id", user.id);
-      }
-
       const { error } = await (supabase as any)
         .from("posts")
         .update({ is_pinned: !isCurrentlyPinned })
