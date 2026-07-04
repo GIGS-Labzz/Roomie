@@ -20,15 +20,26 @@ export async function getConnectedUserIds(
 ): Promise<string[]> {
   const { data } = await supabase
     .from("connections")
-    .select("requester_id, receiver_id")
+    .select("requester_id, receiver_id, status")
     .or(`requester_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-    .in("status", ["PENDING_PAYMENT", "PAID", "ACTIVE", "DECLINED"]);
+    .in("status", ["PENDING_CONNECT", "PENDING_PAYMENT", "PAID", "ACTIVE", "DECLINED"]);
 
   if (!data) return [];
 
-  return data.flatMap((c) =>
-    c.requester_id === currentUserId ? [c.receiver_id] : [c.requester_id]
-  );
+  const excludeIds: string[] = [];
+  for (const c of data) {
+    if (c.status === "ACTIVE" || c.status === "DECLINED") {
+      excludeIds.push(c.requester_id === currentUserId ? c.receiver_id : c.requester_id);
+    } else {
+      // For pending connection requests, only exclude from the requester's feed.
+      // The receiver should still see the requester's card to connect back.
+      if (c.requester_id === currentUserId) {
+        excludeIds.push(c.receiver_id);
+      }
+    }
+  }
+
+  return excludeIds;
 }
 
 export async function getDiscoveryFeed(

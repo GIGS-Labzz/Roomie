@@ -62,7 +62,7 @@ model connections {
   id                                          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   requester_id                                String               @db.Uuid
   receiver_id                                 String               @db.Uuid
-  status                                      connection_status    @default(PENDING_PAYMENT)
+  status                                      connection_status    @default(PENDING_CONNECT)
   payment_reference                           String?
   amount_paid                                 Int?
   paid_at                                     DateTime?            @db.Timestamptz(6)
@@ -335,6 +335,7 @@ enum cleanliness_level {
 }
 
 enum connection_status {
+  PENDING_CONNECT
   PENDING_PAYMENT
   PAID
   ACTIVE

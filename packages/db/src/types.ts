@@ -752,6 +752,7 @@ export type Database = {
     Enums: {
       cleanliness_level: "very_tidy" | "tidy" | "relaxed" | "messy"
       connection_status:
+        | "PENDING_CONNECT"
         | "PENDING_PAYMENT"
         | "PAID"
         | "ACTIVE"
@@ -1347,6 +1348,7 @@ export const Constants = {
     Enums: {
       cleanliness_level: ["very_tidy", "tidy", "relaxed", "messy"],
       connection_status: [
+        "PENDING_CONNECT",
         "PENDING_PAYMENT",
         "PAID",
         "ACTIVE",

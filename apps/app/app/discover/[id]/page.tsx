@@ -155,13 +155,13 @@ export default function ProfileDetailPage() {
     setConnecting(true);
 
     try {
-      // 1. Create connection
+      // 1. Create connection in PENDING_CONNECT status
       const { data: conn, error: connError } = await (supabase as any)
         .from("connections")
         .insert({
           requester_id: user.id,
           receiver_id: profile.id,
-          status: "PENDING_PAYMENT",
+          status: "PENDING_CONNECT",
           connected_at: new Date().toISOString(),
         })
         .select()
@@ -169,10 +169,31 @@ export default function ProfileDetailPage() {
 
       if (connError) throw connError;
 
-      setConnectStatus("PENDING_PAYMENT");
+      setConnectStatus("PENDING_CONNECT");
       setExistingConnection(conn);
     } catch (err) {
       console.error("Failed to connect:", err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleConnectBackDetail = async () => {
+    if (!user || !existingConnection || connecting) return;
+    setConnecting(true);
+
+    try {
+      const { error: connError } = await (supabase as any)
+        .from("connections")
+        .update({ status: "ACTIVE", connected_at: new Date().toISOString() })
+        .eq("id", existingConnection.id);
+
+      if (connError) throw connError;
+
+      setConnectStatus("ACTIVE");
+      setExistingConnection((prev: any) => ({ ...prev, status: "ACTIVE" }));
+    } catch (err) {
+      console.error("Failed to connect back:", err);
     } finally {
       setConnecting(false);
     }
@@ -253,10 +274,22 @@ export default function ProfileDetailPage() {
                 Message
               </Button>
             </Link>
-          ) : connectStatus === "PENDING_PAYMENT" || connectStatus === "PAID" ? (
-            <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
-              Pending Connect
-            </Button>
+          ) : connectStatus === "PENDING_CONNECT" || connectStatus === "PENDING_PAYMENT" || connectStatus === "PAID" ? (
+            existingConnection?.receiver_id === user?.id ? (
+              <Button
+                variant="peach"
+                size="sm"
+                className="rounded-full font-bold px-5"
+                onClick={handleConnectBackDetail}
+                disabled={connecting}
+              >
+                {connecting ? "Connecting..." : "Connect Back"}
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
+                Pending Connect
+              </Button>
+            )
           ) : connectStatus === "DECLINED" ? (
             <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
               Declined

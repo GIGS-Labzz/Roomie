@@ -36,10 +36,18 @@ export function useConnections() {
     return conn?.status ?? null;
   };
 
+  const getConnection = (profileId: string): Connection | null => {
+    if (!connections) return null;
+    return connections.find(
+      (c) => c.requester_id === profileId || c.receiver_id === profileId
+    ) ?? null;
+  };
+
   return {
     connections: connections ?? [],
     isLoading: !connections && !error,
     getConnectionStatus,
+    getConnection,
     mutateConnections: mutate,
   };
 }

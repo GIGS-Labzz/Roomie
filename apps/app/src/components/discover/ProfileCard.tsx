@@ -7,6 +7,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CompatibilityScore } from "./CompatibilityScore";
 import { useAuth } from "@/context/AuthContext";
+import { useConnections } from "@/hooks/useConnections";
 import { createClient } from "@repo/db/client";
 import type { Database } from "@repo/db/types";
 
@@ -22,7 +23,7 @@ interface ProfileCardProps {
     | "username" | "bio" | "created_at" | "birthday" | "birthday_public"
   >;
   compatibilityScore?: number;
-  connectionStatus?: "PENDING_PAYMENT" | "PAID" | "ACTIVE" | "DECLINED" | "EXPIRED" | "CANCELLED" | null;
+  connectionStatus?: "PENDING_CONNECT" | "PENDING_PAYMENT" | "PAID" | "ACTIVE" | "DECLINED" | "EXPIRED" | "CANCELLED" | null;
 }
 
 const YEAR_LABELS: Record<number, string> = {
@@ -58,9 +59,11 @@ function formatBirthday(dateStr?: string | null): string {
 
 export function ProfileCard({ profile, compatibilityScore, connectionStatus }: ProfileCardProps) {
   const { user } = useAuth();
-  const [status, setStatus] = useState<string | null>(connectionStatus ?? null);
+  const { getConnection, mutateConnections } = useConnections();
+  const conn = getConnection(profile.id);
   const [connecting, setConnecting] = useState(false);
 
+  const status = conn?.status ?? connectionStatus ?? null;
   const tags = (profile.lifestyle_tags ?? []).slice(0, 3);
   const handle = profile.username ? `@${profile.username}` : `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}`;
 
@@ -72,23 +75,44 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
 
     const supabase = createClient();
     try {
-      // 1. Create connection in PENDING_PAYMENT status
-      const { data: conn, error: connError } = await (supabase as any)
+      // 1. Create connection in PENDING_CONNECT status
+      const { error: connError } = await (supabase as any)
         .from("connections")
         .insert({
           requester_id: user.id,
           receiver_id: profile.id,
-          status: "PENDING_PAYMENT",
+          status: "PENDING_CONNECT",
           connected_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+        });
 
       if (connError) throw connError;
 
-      setStatus("PENDING_PAYMENT");
+      await mutateConnections();
     } catch (err) {
       console.error("Failed to connect:", err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleConnectBack = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || !conn || connecting) return;
+    setConnecting(true);
+
+    const supabase = createClient();
+    try {
+      const { error: connError } = await (supabase as any)
+        .from("connections")
+        .update({ status: "ACTIVE", connected_at: new Date().toISOString() })
+        .eq("id", conn.id);
+
+      if (connError) throw connError;
+
+      await mutateConnections();
+    } catch (err) {
+      console.error("Failed to connect back:", err);
     } finally {
       setConnecting(false);
     }
@@ -201,10 +225,22 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
               Open chat
             </Button>
           </Link>
-        ) : status === "PENDING_PAYMENT" || status === "PAID" ? (
-          <Button variant="secondary" size="sm" className="w-full rounded-2xl py-2 font-bold text-xs" disabled>
-            Pending Connect
-          </Button>
+        ) : status === "PENDING_CONNECT" || status === "PENDING_PAYMENT" || status === "PAID" ? (
+          conn?.receiver_id === user?.id ? (
+            <Button
+              variant="peach"
+              size="sm"
+              className="w-full rounded-2xl py-2 font-bold text-xs"
+              onClick={handleConnectBack}
+              disabled={connecting}
+            >
+              {connecting ? "Connecting..." : "Connect Back"}
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" className="w-full rounded-2xl py-2 font-bold text-xs" disabled>
+              Pending Connect
+            </Button>
+          )
         ) : status === "DECLINED" ? (
           <Button variant="secondary" size="sm" className="w-full rounded-2xl py-2 font-bold text-xs" disabled>
             Connection declined

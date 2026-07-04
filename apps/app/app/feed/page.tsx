@@ -206,6 +206,7 @@ export default function FeedPage() {
         {/* Desktop title */}
         <div className="hidden md:flex items-center px-6 pt-6 pb-2">
           <div>
+            <h1 className="font-display font-bold text-2xl text-slate-900 leading-tight">Feed</h1>
             <p className="text-sm text-slate-400 mt-0.5">
               See what other students are looking for
             </p>

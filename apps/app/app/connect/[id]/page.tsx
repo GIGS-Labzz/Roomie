@@ -73,7 +73,7 @@ export default function ConnectPage() {
 
   const existingStatus = getConnectionStatus(profile.id);
   const isAlreadyConnected = existingStatus === "ACTIVE";
-  const isPending = existingStatus === "PENDING_PAYMENT" || existingStatus === "PAID";
+  const isPending = existingStatus === "PENDING_CONNECT" || existingStatus === "PENDING_PAYMENT" || existingStatus === "PAID";
 
   const handleConnect = async () => {
     if (!user) {
