@@ -125,7 +125,7 @@ export default function NotificationsPage() {
 
     await (supabase as any)
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
+      .update({ type: "CONNECTION_ACCEPTED", read_at: new Date().toISOString() })
       .eq("id", notificationId);
 
     // Notification is sent automatically by the database trigger on connections status update to ACTIVE
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
 
     await (supabase as any)
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
+      .update({ type: "CONNECTION_DECLINED", read_at: new Date().toISOString() })
       .eq("id", notificationId);
 
     setNotifications((prev) =>
