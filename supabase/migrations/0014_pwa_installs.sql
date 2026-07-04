@@ -3,8 +3,11 @@ CREATE TABLE public.pwa_installs (
   user_id      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   platform     TEXT NOT NULL, -- 'iOS', 'Android', 'Windows', 'macOS', 'Linux', or 'Unknown'
   user_agent   TEXT,
+  device_name  TEXT,
+  browser_name TEXT,
   installed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
 
 ALTER TABLE public.pwa_installs ENABLE ROW LEVEL SECURITY;
 

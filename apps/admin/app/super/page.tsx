@@ -25,13 +25,14 @@ interface Overview {
   connectionsByDay: { date: string; count: number }[];
   usersByDay: { date: string; count: number }[];
   installsByDay: { date: string; count: number }[];
+  recentInstalls: { id: string; installed_at: string; platform: string; device_name: string | null; browser_name: string | null }[];
 }
-
+ 
 const BRAND = "#8AAF6E";
 const PEACH = "#e49e45";
 const VIOLET = "#8b5cf6";
 const MUTED = "#e2e8f0";
-
+ 
 function StatCard({
   label, value, sub, icon: Icon, color = "brand",
 }: {
@@ -57,26 +58,26 @@ function StatCard({
     </div>
   );
 }
-
+ 
 const fmtDate = (d: string) => {
   const dt = new Date(d);
   return `${dt.getMonth() + 1}/${dt.getDate()}`;
 };
-
+ 
 const fmtNaira = (n: number) =>
   n >= 1_000_000 ? `₦${(n / 1_000_000).toFixed(1)}M`
   : n >= 1_000   ? `₦${(n / 1_000).toFixed(0)}K`
   : `₦${n}`;
-
+ 
 const tooltipStyle = {
   borderRadius: 12, border: "none",
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12,
 };
-
+ 
 export default function SuperHome() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
-
+ 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -88,14 +89,14 @@ export default function SuperHome() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("connections").select("id, status, amount_paid, created_at"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from("pwa_installs").select("id, installed_at"),
+        (supabase as any).from("pwa_installs").select("id, installed_at, platform, device_name, browser_name").order("installed_at", { ascending: false }),
       ]);
-
+ 
       const profiles: { verification_status: string; created_at: string }[] = profilesRes.data ?? [];
       const platforms: { status: string }[] = platformsRes.data ?? [];
       const connections: { status: string; amount_paid: number; created_at: string }[] = connectionsRes.data ?? [];
-      const installs: { installed_at: string }[] = installsRes.data ?? [];
-
+      const installs: { id: string; installed_at: string; platform: string; device_name: string | null; browser_name: string | null }[] = installsRes.data ?? [];
+ 
       // Build last-30-day buckets
       const since = new Date();
       since.setDate(since.getDate() - 29);
@@ -122,7 +123,7 @@ export default function SuperHome() {
         const day = inst.installed_at?.slice(0, 10);
         if (day && day in installByDay) installByDay[day]++;
       });
-
+ 
       setData({
         totalStudents:    profiles.length,
         verifiedStudents: profiles.filter((p) => p.verification_status === "VERIFIED").length,
@@ -139,7 +140,9 @@ export default function SuperHome() {
         connectionsByDay: Object.entries(connByDay).map(([date, count]) => ({ date, count })),
         usersByDay:       Object.entries(userByDay).map(([date, count]) => ({ date, count })),
         installsByDay:    Object.entries(installByDay).map(([date, count]) => ({ date, count })),
+        recentInstalls:   installs.slice(0, 10),
       });
+
       setLoading(false);
     };
     void load();
@@ -296,6 +299,44 @@ export default function SuperHome() {
           </div>
         </div>
       </div>
+ 
+      {/* Recent Installs */}
+      <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5">
+        <h2 className="font-display font-semibold text-slate-900 text-base">Recent Installations</h2>
+        <p className="text-xs text-slate-400 mt-0.5 mb-4">Latest devices that installed the PWA</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left text-slate-500">
+            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+              <tr>
+                <th className="px-4 py-3">Platform</th>
+                <th className="px-4 py-3">Device / Model</th>
+                <th className="px-4 py-3">Browser</th>
+                <th className="px-4 py-3">Installed At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.recentInstalls?.map((inst) => (
+                <tr key={inst.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                  <td className="px-4 py-3 font-semibold text-slate-950">{inst.platform}</td>
+                  <td className="px-4 py-3 text-slate-700">{inst.device_name || "Unknown Device"}</td>
+                  <td className="px-4 py-3 text-slate-600">{inst.browser_name || "Unknown Browser"}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">
+                    {new Date(inst.installed_at).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+              {(!data?.recentInstalls || data.recentInstalls.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                    No PWA installations recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
+
