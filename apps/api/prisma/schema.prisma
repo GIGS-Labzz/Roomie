@@ -197,6 +197,7 @@ model post_likes {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   post_id    String    @db.Uuid
   user_id    String    @db.Uuid
+  type       String    @default("love")
   created_at DateTime? @default(now()) @db.Timestamptz(6)
   posts      posts     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -208,6 +209,7 @@ model post_likes {
 model posts {
   id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id        String          @db.Uuid
+  parent_post_id String?         @db.Uuid
   content        String
   city           String?
   budget_min     Int?
@@ -215,14 +217,18 @@ model posts {
   move_in_date   DateTime?       @db.Date
   likes_count    Int?            @default(0)
   comments_count Int?            @default(0)
+  reactions      Json            @default("{\"love\": 0, \"laughter\": 0, \"confusion\": 0, \"applause\": 0, \"anger\": 0}")
   created_at     DateTime?       @default(now()) @db.Timestamptz(6)
   updated_at     DateTime?       @default(now()) @db.Timestamptz(6)
   post_comments  post_comments[]
   post_likes     post_likes[]
   profiles       profiles        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent_post    posts?          @relation("ThreadReplies", fields: [parent_post_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies        posts[]         @relation("ThreadReplies")
 
   @@index([created_at(sort: Desc)], map: "idx_posts_created_at")
   @@index([user_id], map: "idx_posts_user_id")
+  @@index([parent_post_id], map: "idx_posts_parent_post_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

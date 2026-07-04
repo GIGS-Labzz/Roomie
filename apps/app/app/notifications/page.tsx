@@ -64,6 +64,22 @@ function iconForType(type: string) {
           </svg>
         </div>
       );
+    case "POST_TAG":
+      return (
+        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
+          </svg>
+        </div>
+      );
+    case "POST_REPLY":
+      return (
+        <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+        </div>
+      );
     default:
       return (
         <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center flex-shrink-0">
@@ -85,6 +101,9 @@ function linkForNotification(n: Notification): string | null {
     case "AGREEMENT_CONFIRMED":
     case "HOUSING_UNLOCKED":
       return "/housing";
+    case "POST_TAG":
+    case "POST_REPLY":
+      return data.post_id ? `/feed/post/${data.post_id}` : "/feed";
     default:
       return null;
   }

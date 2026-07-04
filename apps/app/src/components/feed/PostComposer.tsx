@@ -18,6 +18,8 @@ const MAX_LENGTH = 500;
 
 export function PostComposer({ user, authorName, authorAvatar, onPosted }: PostComposerProps) {
   const [content, setContent] = useState("");
+  const [city, setCity] = useState("");
+  const [showLocation, setShowLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,10 +39,15 @@ export function PostComposer({ user, authorName, authorAvatar, onPosted }: PostC
     if (!canSubmit) return;
     setIsSubmitting(true);
     const supabase = createClient();
-    const result = await createPost(supabase, user.id, { content: content.trim() });
+    const result = await createPost(supabase, user.id, {
+      content: content.trim(),
+      city: city.trim() || undefined,
+    });
     setIsSubmitting(false);
     if (result) {
       setContent("");
+      setCity("");
+      setShowLocation(false);
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       onPosted(result.id);
     }
@@ -71,12 +78,56 @@ export function PostComposer({ user, authorName, authorAvatar, onPosted }: PostC
           maxLength={MAX_LENGTH}
         />
 
-        <div className="flex items-center justify-between">
-          <span className={`text-xs font-medium tabular-nums ${
-            remaining < 50 ? remaining < 20 ? "text-red-500" : "text-amber-500" : "text-slate-400"
-          }`}>
-            {remaining}
-          </span>
+        {showLocation && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full max-w-[240px] transition-all animate-fade-in">
+            <svg className="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Tag location (e.g. Lekki, Lagos)"
+              className="bg-transparent text-xs text-slate-700 placeholder:text-slate-400 outline-none w-full font-medium"
+            />
+            {city && (
+              <button
+                onClick={() => setCity("")}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                type="button"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1 border-t border-slate-50">
+          <div className="flex items-center gap-3">
+            {/* Location Toggle */}
+            <button
+              onClick={() => setShowLocation((v) => !v)}
+              className={`p-2 rounded-xl transition-colors flex items-center justify-center ${
+                showLocation || city
+                  ? "bg-brand-50 text-brand-600"
+                  : "hover:bg-slate-50 text-slate-400 hover:text-slate-600"
+              }`}
+              title="Add location"
+              type="button"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+
+            <span className={`text-xs font-medium tabular-nums ${
+              remaining < 50 ? remaining < 20 ? "text-red-500" : "text-amber-500" : "text-slate-400"
+            }`}>
+              {remaining}
+            </span>
+          </div>
 
           <Button
             variant="peach"

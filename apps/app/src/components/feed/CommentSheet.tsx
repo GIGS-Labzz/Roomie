@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@repo/ui/avatar";
 import { createClient } from "@repo/db/client";
 import { getComments, addComment } from "@repo/db/queries/posts";
+import { MentionText, registerUsernameId } from "./MentionText";
 import type { PostComment } from "@repo/db/queries/posts";
 import type { User } from "@supabase/supabase-js";
 
@@ -42,6 +43,11 @@ export function CommentSheet({
     setIsLoading(true);
     const supabase = createClient();
     getComments(supabase, postId).then((data) => {
+      data.forEach((c) => {
+        if (c.author.username) {
+          registerUsernameId(c.author.username, c.author.id);
+        }
+      });
       setComments(data);
       setIsLoading(false);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -56,6 +62,9 @@ export function CommentSheet({
     const comment = await addComment(supabase, postId, user.id, text.trim());
     setIsSending(false);
     if (comment) {
+      if (comment.author.username) {
+        registerUsernameId(comment.author.username, comment.author.id);
+      }
       setComments((prev) => [...prev, comment]);
       setText("");
       onCountChange(1);
@@ -151,7 +160,9 @@ export function CommentSheet({
                     </span>
                     <span className="text-xs text-slate-400">{timeAgo(c.created_at)}</span>
                   </div>
-                  <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{c.content}</p>
+                  <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">
+                    <MentionText text={c.content} />
+                  </p>
                 </div>
               </div>
             ))
