@@ -25,7 +25,17 @@ interface Overview {
   connectionsByDay: { date: string; count: number }[];
   usersByDay: { date: string; count: number }[];
   installsByDay: { date: string; count: number }[];
-  recentInstalls: { id: string; installed_at: string; platform: string; device_name: string | null; browser_name: string | null }[];
+  recentInstalls: {
+    id: string;
+    installed_at: string;
+    platform: string;
+    device_name: string | null;
+    browser_name: string | null;
+    ip_address: string | null;
+    country: string | null;
+    region: string | null;
+    city: string | null;
+  }[];
 }
  
 const BRAND = "#8AAF6E";
@@ -69,6 +79,14 @@ const fmtNaira = (n: number) =>
   : n >= 1_000   ? `₦${(n / 1_000).toFixed(0)}K`
   : `₦${n}`;
  
+function formatLocation(inst: { country: string | null; region: string | null; city: string | null }) {
+  const parts = [];
+  if (inst.city) parts.push(inst.city);
+  if (inst.region) parts.push(inst.region);
+  if (inst.country) parts.push(inst.country);
+  return parts.length > 0 ? parts.join(", ") : "Unknown Location";
+}
+
 const tooltipStyle = {
   borderRadius: 12, border: "none",
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12,
@@ -89,13 +107,23 @@ export default function SuperHome() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("connections").select("id, status, amount_paid, created_at"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from("pwa_installs").select("id, installed_at, platform, device_name, browser_name").order("installed_at", { ascending: false }),
+        (supabase as any).from("pwa_installs").select("id, installed_at, platform, device_name, browser_name, ip_address, country, region, city").order("installed_at", { ascending: false }),
       ]);
  
       const profiles: { verification_status: string; created_at: string }[] = profilesRes.data ?? [];
       const platforms: { status: string }[] = platformsRes.data ?? [];
       const connections: { status: string; amount_paid: number; created_at: string }[] = connectionsRes.data ?? [];
-      const installs: { id: string; installed_at: string; platform: string; device_name: string | null; browser_name: string | null }[] = installsRes.data ?? [];
+      const installs: {
+        id: string;
+        installed_at: string;
+        platform: string;
+        device_name: string | null;
+        browser_name: string | null;
+        ip_address: string | null;
+        country: string | null;
+        region: string | null;
+        city: string | null;
+      }[] = installsRes.data ?? [];
  
       // Build last-30-day buckets
       const since = new Date();
@@ -311,6 +339,7 @@ export default function SuperHome() {
                 <th className="px-4 py-3">Platform</th>
                 <th className="px-4 py-3">Device / Model</th>
                 <th className="px-4 py-3">Browser</th>
+                <th className="px-4 py-3">Location</th>
                 <th className="px-4 py-3">Installed At</th>
               </tr>
             </thead>
@@ -320,6 +349,10 @@ export default function SuperHome() {
                   <td className="px-4 py-3 font-semibold text-slate-950">{inst.platform}</td>
                   <td className="px-4 py-3 text-slate-700">{inst.device_name || "Unknown Device"}</td>
                   <td className="px-4 py-3 text-slate-600">{inst.browser_name || "Unknown Browser"}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs">
+                    <div>{formatLocation(inst)}</div>
+                    {inst.ip_address && <div className="text-[10px] text-slate-400">{inst.ip_address}</div>}
+                  </td>
                   <td className="px-4 py-3 text-slate-400 text-xs">
                     {new Date(inst.installed_at).toLocaleString()}
                   </td>
@@ -327,7 +360,7 @@ export default function SuperHome() {
               ))}
               {(!data?.recentInstalls || data.recentInstalls.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
                     No PWA installations recorded yet.
                   </td>
                 </tr>

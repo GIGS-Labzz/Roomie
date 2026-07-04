@@ -61,6 +61,26 @@ export function PwaInstallTracker() {
       const platform = getPlatform();
       const ua = window.navigator.userAgent;
       const { device, browser } = getDeviceDetails();
+
+      let ipAddress = null;
+      let country = null;
+      let region = null;
+      let city = null;
+
+      try {
+        const geoRes = await fetch("/api/geolocation").catch(() => null);
+        if (geoRes && geoRes.ok) {
+          const geoData = await geoRes.json().catch(() => null);
+          if (geoData) {
+            ipAddress = geoData.ip || null;
+            country = geoData.country || null;
+            region = geoData.region || null;
+            city = geoData.city || null;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch client location:", err);
+      }
  
       try {
         const { error } = await (supabase as any).from("pwa_installs").insert({
@@ -69,6 +89,10 @@ export function PwaInstallTracker() {
           user_agent: ua,
           device_name: device,
           browser_name: browser,
+          ip_address: ipAddress,
+          country,
+          region,
+          city,
         });
 
 
