@@ -89,6 +89,25 @@ export function PaystackButton({
 
       if (!data.accessCode) throw new Error("No access code returned from server");
 
+      if (data.accessCode.startsWith("mock_")) {
+        onStarted?.();
+        setTimeout(async () => {
+          try {
+            const confirmRes = await fetch(`/api/agreements/${agreementId}/confirm`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: data.reference }),
+            });
+            if (confirmRes.ok) {
+              onConfirmed?.();
+            }
+          } finally {
+            window.location.href = "/housing";
+          }
+        }, 1500);
+        return;
+      }
+
       await loadPaystackScript();
 
       const PaystackCheckout = window.PaystackPop ?? window.Paystack;

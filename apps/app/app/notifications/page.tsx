@@ -140,16 +140,47 @@ export default function NotificationsPage() {
   };
 
   const handleDeclineConnect = async (notificationId: string, connectionId: string) => {
-    const { error: connError } = await (supabase as any)
+    // 1. Fetch connection details first to get requester_id and receiver_id
+    const { data: conn } = await (supabase as any)
       .from("connections")
-      .update({ status: "DECLINED" })
+      .select("*")
+      .eq("id", connectionId)
+      .maybeSingle();
+
+    if (!conn) return;
+
+    // 2. Delete connection row so status becomes null (allowing resending request)
+    const { error: deleteError } = await (supabase as any)
+      .from("connections")
+      .delete()
       .eq("id", connectionId);
 
-    if (connError) {
-      console.error("Failed to decline connection:", connError);
+    if (deleteError) {
+      console.error("Failed to delete connection on decline:", deleteError);
       return;
     }
 
+    // 3. Fetch receiver's display name to include in the decline notification
+    const { data: receiverProfile } = await (supabase as any)
+      .from("profiles")
+      .select("display_name")
+      .eq("id", conn.receiver_id)
+      .maybeSingle();
+
+    const receiverName = receiverProfile?.display_name || "Someone";
+
+    // 4. Insert notification for the requester
+    await (supabase as any)
+      .from("notifications")
+      .insert({
+        user_id: conn.requester_id,
+        type: "CONNECTION_DECLINED",
+        title: "Connection declined",
+        body: `${receiverName} declined your connection request.`,
+        data: { requester_id: conn.requester_id }
+      });
+
+    // 5. Update the notification row in the receiver's list
     await (supabase as any)
       .from("notifications")
       .update({ type: "CONNECTION_DECLINED", read_at: new Date().toISOString() })

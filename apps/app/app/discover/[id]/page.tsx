@@ -155,22 +155,42 @@ export default function ProfileDetailPage() {
     setConnecting(true);
 
     try {
-      // 1. Create connection in PENDING_CONNECT status
-      const { data: conn, error: connError } = await (supabase as any)
-        .from("connections")
-        .insert({
-          requester_id: user.id,
-          receiver_id: profile.id,
-          status: "PENDING_CONNECT",
-          connected_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      if (existingConnection) {
+        // Update existing connection to PENDING_CONNECT status
+        const { data: conn, error: connError } = await (supabase as any)
+          .from("connections")
+          .update({
+            requester_id: user.id,
+            receiver_id: profile.id,
+            status: "PENDING_CONNECT",
+            connected_at: new Date().toISOString(),
+          })
+          .eq("id", existingConnection.id)
+          .select()
+          .single();
 
-      if (connError) throw connError;
+        if (connError) throw connError;
 
-      setConnectStatus("PENDING_CONNECT");
-      setExistingConnection(conn);
+        setConnectStatus("PENDING_CONNECT");
+        setExistingConnection(conn);
+      } else {
+        // 1. Create connection in PENDING_CONNECT status
+        const { data: conn, error: connError } = await (supabase as any)
+          .from("connections")
+          .insert({
+            requester_id: user.id,
+            receiver_id: profile.id,
+            status: "PENDING_CONNECT",
+            connected_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (connError) throw connError;
+
+        setConnectStatus("PENDING_CONNECT");
+        setExistingConnection(conn);
+      }
     } catch (err) {
       console.error("Failed to connect:", err);
     } finally {
@@ -290,10 +310,6 @@ export default function ProfileDetailPage() {
                 Pending Connect
               </Button>
             )
-          ) : connectStatus === "DECLINED" ? (
-            <Button variant="secondary" size="sm" className="rounded-full font-bold px-5" disabled>
-              Declined
-            </Button>
           ) : (
             <Button
               variant="peach"

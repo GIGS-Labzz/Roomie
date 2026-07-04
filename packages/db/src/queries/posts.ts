@@ -21,6 +21,8 @@ export interface Post {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  is_archived: boolean;
+  is_pinned: boolean;
   author: PostProfile;
   liked_by_me?: boolean;
 }
@@ -45,6 +47,8 @@ const AUTHOR_SELECT = `
   likes_count,
   comments_count,
   created_at,
+  is_archived,
+  is_pinned,
   author:profiles!posts_user_id_fkey (
     id, display_name, avatar_url, university, city, student_verified
   )
@@ -62,6 +66,7 @@ export async function getFeed(
   const { data, error } = await db
     .from("posts")
     .select(AUTHOR_SELECT)
+    .eq("is_archived", false)
     .order("created_at", { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -210,6 +215,8 @@ export interface PostWithLikes {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  is_archived: boolean;
+  is_pinned: boolean;
   post_likes: Array<{
     user_id: string;
     profiles: {
@@ -237,6 +244,8 @@ export async function getUserPosts(
       likes_count,
       comments_count,
       created_at,
+      is_archived,
+      is_pinned,
       post_likes (
         user_id,
         profiles (
@@ -246,6 +255,8 @@ export async function getUserPosts(
       )
     `)
     .eq("user_id", userId)
+    .eq("is_archived", false)
+    .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];

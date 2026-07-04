@@ -98,6 +98,88 @@ export default function ProfilePage() {
   const [roomies, setRoomies] = useState<any[]>([]);
   const [roomiesLoading, setRoomiesLoading] = useState(true);
 
+  // Post action states
+  const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
+  const [actingPostId, setActingPostId] = useState<string | null>(null);
+
+  const handlePinPost = async (postId: string, isCurrentlyPinned: boolean) => {
+    if (!user) return;
+    setActingPostId(postId);
+    const supabase = createClient();
+    try {
+      if (!isCurrentlyPinned) {
+        // Unpin all other posts of this user first
+        await (supabase as any)
+          .from("posts")
+          .update({ is_pinned: false })
+          .eq("user_id", user.id);
+      }
+
+      const { error } = await (supabase as any)
+        .from("posts")
+        .update({ is_pinned: !isCurrentlyPinned })
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      // Reload posts
+      const postsRes = await getUserPosts(supabase, user.id);
+      setPosts(postsRes);
+    } catch (err) {
+      console.error("Failed to pin/unpin post:", err);
+    } finally {
+      setActingPostId(null);
+      setActivePostMenuId(null);
+    }
+  };
+
+  const handleArchivePost = async (postId: string) => {
+    if (!user) return;
+    setActingPostId(postId);
+    const supabase = createClient();
+    try {
+      const { error } = await (supabase as any)
+        .from("posts")
+        .update({ is_archived: true })
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      // Reload posts
+      const postsRes = await getUserPosts(supabase, user.id);
+      setPosts(postsRes);
+    } catch (err) {
+      console.error("Failed to archive post:", err);
+    } finally {
+      setActingPostId(null);
+      setActivePostMenuId(null);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!user) return;
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    setActingPostId(postId);
+    const supabase = createClient();
+    try {
+      const { error } = await (supabase as any)
+        .from("posts")
+        .delete()
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      // Reload posts
+      const postsRes = await getUserPosts(supabase, user.id);
+      setPosts(postsRes);
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+    } finally {
+      setActingPostId(null);
+      setActivePostMenuId(null);
+    }
+  };
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -348,8 +430,83 @@ export default function ProfilePage() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {posts.map((post) => (
-                      <div key={post.id} className="py-4 first:pt-0 last:pb-0 space-y-3">
-                        <p className="text-sm text-slate-700 leading-relaxed">{post.content}</p>
+                      <div key={post.id} className="py-4 first:pt-0 last:pb-0 space-y-3 relative group">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1 space-y-1">
+                            {post.is_pinned && (
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-1">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M16 12V4h1v8l2 2v2h-7v6l-1 1-1-1v-6H5v-2l2-2V4h1v8l2 2h6z" />
+                                </svg>
+                                Pinned to profile
+                              </div>
+                            )}
+                            <p className="text-sm text-slate-700 leading-relaxed">{post.content}</p>
+                          </div>
+
+                          {/* Action Button Dropdown */}
+                          <div className="relative flex-shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePostMenuId(activePostMenuId === post.id ? null : post.id);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                              aria-label="Post Actions"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                              </svg>
+                            </button>
+
+                            {activePostMenuId === post.id && (
+                              <>
+                                {/* Click outside overlay to close */}
+                                <div
+                                  className="fixed inset-0 z-40"
+                                  onClick={() => setActivePostMenuId(null)}
+                                />
+                                <div className="absolute right-0 mt-1 w-44 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                                  <button
+                                    onClick={() => handlePinPost(post.id, post.is_pinned)}
+                                    disabled={actingPostId !== null}
+                                    className="flex w-full items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors text-left disabled:opacity-50"
+                                  >
+                                    <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414m-1.422-3.178l-6.2 6.2a2 2 0 11-2.83-2.83l6.2-6.2a2 2 0 112.83 2.83z" />
+                                    </svg>
+                                    {post.is_pinned ? "Unpin from profile" : "Pin to profile"}
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleArchivePost(post.id)}
+                                    disabled={actingPostId !== null}
+                                    className="flex w-full items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors text-left disabled:opacity-50"
+                                  >
+                                    <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                    </svg>
+                                    Archive / Hide
+                                  </button>
+
+                                  <div className="h-px bg-slate-100 my-1" />
+
+                                  <button
+                                    onClick={() => handleDeletePost(post.id)}
+                                    disabled={actingPostId !== null}
+                                    className="flex w-full items-center gap-2 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors text-left disabled:opacity-50"
+                                  >
+                                    <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete post
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>{new Date(post.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</span>
                           <div className="flex items-center gap-1.5 text-slate-500 font-medium">

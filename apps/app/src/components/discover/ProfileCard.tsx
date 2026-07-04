@@ -75,17 +75,32 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
 
     const supabase = createClient();
     try {
-      // 1. Create connection in PENDING_CONNECT status
-      const { error: connError } = await (supabase as any)
-        .from("connections")
-        .insert({
-          requester_id: user.id,
-          receiver_id: profile.id,
-          status: "PENDING_CONNECT",
-          connected_at: new Date().toISOString(),
-        });
+      if (conn) {
+        // Update existing connection to PENDING_CONNECT status
+        const { error: connError } = await (supabase as any)
+          .from("connections")
+          .update({
+            requester_id: user.id,
+            receiver_id: profile.id,
+            status: "PENDING_CONNECT",
+            connected_at: new Date().toISOString(),
+          })
+          .eq("id", conn.id);
 
-      if (connError) throw connError;
+        if (connError) throw connError;
+      } else {
+        // 1. Create connection in PENDING_CONNECT status
+        const { error: connError } = await (supabase as any)
+          .from("connections")
+          .insert({
+            requester_id: user.id,
+            receiver_id: profile.id,
+            status: "PENDING_CONNECT",
+            connected_at: new Date().toISOString(),
+          });
+
+        if (connError) throw connError;
+      }
 
       await mutateConnections();
     } catch (err) {
@@ -241,10 +256,6 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
               Pending Connect
             </Button>
           )
-        ) : status === "DECLINED" ? (
-          <Button variant="secondary" size="sm" className="w-full rounded-2xl py-2 font-bold text-xs" disabled>
-            Connection declined
-          </Button>
         ) : (
           <Button
             variant="peach"
