@@ -28,6 +28,7 @@ export default function BasicsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [customCity, setCustomCity] = useState("");
   const [form, setForm] = useState<{
     display_name: string;
     birthday: string;
@@ -42,13 +43,19 @@ export default function BasicsPage() {
     bio: "",
   });
 
-  const isValid = form.display_name.trim() && form.birthday && form.gender && form.city;
+  const isCustomCity = form.city === "Other";
+  const isValid =
+    form.display_name.trim() &&
+    form.birthday &&
+    form.gender &&
+    (isCustomCity ? customCity.trim() : form.city);
 
   const handleNext = async () => {
     if (!user || !isValid) return;
     setLoading(true);
     const supabase = createClient();
     const age = calculateAge(form.birthday);
+    const finalCity = isCustomCity ? customCity.trim() : form.city;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from("profiles").update({
@@ -56,12 +63,13 @@ export default function BasicsPage() {
       birthday: form.birthday,
       age: age,
       gender: form.gender,
-      city: form.city,
+      city: finalCity,
       bio: form.bio.trim() || null,
       onboarding_step: 2,
     }).eq("id", user.id);
     router.push("/onboarding/university");
   };
+
 
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 py-10">
@@ -120,13 +128,34 @@ export default function BasicsPage() {
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">City</label>
           <select
             value={form.city}
-            onChange={(e) => setForm({ ...form, city: e.target.value })}
+            onChange={(e) => {
+              const val = e.target.value;
+              setForm({ ...form, city: val });
+              if (val !== "Other") {
+                setCustomCity("");
+              }
+            }}
             className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
           >
             <option value="">Select your city</option>
             {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            <option value="Other">My city is not listed...</option>
           </select>
         </div>
+ 
+        {isCustomCity && (
+          <div className="mt-2">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Specify your city</label>
+            <input
+              type="text"
+              value={customCity}
+              onChange={(e) => setCustomCity(e.target.value)}
+              placeholder="Enter your city name"
+              className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
+            />
+          </div>
+        )}
+
 
         {/* Bio */}
         <div>

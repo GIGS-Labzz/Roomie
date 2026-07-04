@@ -93,13 +93,15 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { profile, isLoading, updateProfile } = useProfile();
-
+ 
+  const [customCity, setCustomCity] = useState("");
   const [form, setForm] = useState<ProfileUpdate>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+
 
   // Avatar Upload State
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -111,13 +113,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!profile) return;
+    const isPreset = profile.city ? NIGERIAN_CITIES.includes(profile.city) : true;
     setForm({
       display_name: profile.display_name,
       username: profile.username,
       birthday: profile.birthday,
       birthday_public: profile.birthday_public,
       gender: profile.gender,
-      city: profile.city,
+      city: isPreset ? profile.city : "Other",
       bio: profile.bio,
       phone: profile.phone,
       university: profile.university,
@@ -137,8 +140,10 @@ export default function SettingsPage() {
       avatar_url: profile.avatar_url,
       cover_url: profile.cover_url,
     });
+    setCustomCity(isPreset ? "" : (profile.city ?? ""));
     setSelectedTags(profile.lifestyle_tags ?? []);
   }, [profile]);
+
 
   const set = <K extends keyof ProfileUpdate>(key: K, val: ProfileUpdate[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -239,10 +244,12 @@ export default function SettingsPage() {
     setSaveError(null);
     setIsSaving(true);
     try {
-      await updateProfile({ ...form, lifestyle_tags: selectedTags });
+      const finalCity = form.city === "Other" ? customCity.trim() : form.city;
+      await updateProfile({ ...form, city: finalCity || null, lifestyle_tags: selectedTags });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: any) {
+
       if (err?.message?.includes("unique") || err?.code === "23505" || String(err).includes("23505")) {
         setSaveError("This username is already reserved. Please choose a different one.");
       } else {
@@ -438,14 +445,33 @@ export default function SettingsPage() {
               <select
                 className={inputCls}
                 value={(form.city as string) ?? ""}
-                onChange={(e) => set("city", e.target.value || null)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  set("city", val || null);
+                  if (val !== "Other") {
+                    setCustomCity("");
+                  }
+                }}
               >
                 <option value="">Select city</option>
                 {NIGERIAN_CITIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
+                <option value="Other">Other (Type below...)</option>
               </select>
             </Field>
+            {form.city === "Other" && (
+              <Field label="Specify your city">
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={customCity}
+                  onChange={(e) => setCustomCity(e.target.value)}
+                  placeholder="Enter your city name"
+                />
+              </Field>
+            )}
+
             <Field label="Phone">
               <input
                 type="tel"
