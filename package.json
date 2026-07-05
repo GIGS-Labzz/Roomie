@@ -10,6 +10,7 @@
   "devDependencies": {
     "@types/pdfkit": "^0.17.6",
     "pdfkit": "^0.19.1",
+    "pg": "^8.22.0",
     "turbo": "^2.8.10",
     "typescript": "5.9.2"
   },

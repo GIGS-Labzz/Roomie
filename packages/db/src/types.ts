@@ -723,6 +723,7 @@ export type Database = {
           bio: string | null
           birthday: string | null
           birthday_public: boolean | null
+          roommate_pref_public: boolean | null
           username: string | null
           city: string | null
           cleanliness: Database["public"]["Enums"]["cleanliness_level"] | null
@@ -768,6 +769,7 @@ export type Database = {
           bio?: string | null
           birthday?: string | null
           birthday_public?: boolean | null
+          roommate_pref_public?: boolean | null
           username?: string | null
           city?: string | null
           cleanliness?: Database["public"]["Enums"]["cleanliness_level"] | null
@@ -813,6 +815,7 @@ export type Database = {
           bio?: string | null
           birthday?: string | null
           birthday_public?: boolean | null
+          roommate_pref_public?: boolean | null
           username?: string | null
           city?: string | null
           cleanliness?: Database["public"]["Enums"]["cleanliness_level"] | null

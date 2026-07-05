@@ -130,6 +130,7 @@ export default function SettingsPage() {
       max_budget: profile.max_budget,
       move_in_date: profile.move_in_date,
       roommate_gender_pref: profile.roommate_gender_pref,
+      roommate_pref_public: (profile as any).roommate_pref_public,
       avatar_url: profile.avatar_url,
       cover_url: profile.cover_url,
       state: profile.state,
@@ -246,17 +247,34 @@ export default function SettingsPage() {
       const finalCity = form.city === "Other" ? customCity.trim() : form.city;
       const finalUniversity = isOtherUni ? customUniversityName.trim() : form.university;
       const finalState = isOtherUni ? customUniversityState : null;
-      await updateProfile({
+      
+      const payload = {
         ...form,
         city: finalCity || null,
         university: finalUniversity || null,
         state: finalState || null,
         lifestyle_tags: selectedTags,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
+      };
 
+      try {
+        await updateProfile(payload);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch (err: any) {
+        if (err?.code === "42703" || String(err?.message || "").includes("roommate_pref_public") || String(err?.message || "").includes("42703")) {
+          // Retry without roommate_pref_public
+          const fallbackPayload = { ...payload };
+          delete (fallbackPayload as any).roommate_pref_public;
+          await updateProfile(fallbackPayload);
+          
+          setSaveError("Settings saved successfully, except 'Show roommate gender preference publicly'. Please run the SQL migration in your Supabase SQL Editor: ALTER TABLE public.profiles ADD COLUMN roommate_pref_public BOOLEAN DEFAULT true;");
+          setSaved(true);
+          setTimeout(() => setSaved(false), 3000);
+        } else {
+          throw err;
+        }
+      }
+    } catch (err: any) {
       if (err?.message?.includes("unique") || err?.code === "23505" || String(err).includes("23505")) {
         setSaveError("This username is already reserved. Please choose a different one.");
       } else {
@@ -707,6 +725,28 @@ export default function SettingsPage() {
                 onChange={(v) => set("roommate_gender_pref", v as ProfileUpdate["roommate_gender_pref"])}
               />
             </Field>
+
+            <div className="flex items-center justify-between py-1.5 border border-slate-100 rounded-2xl px-4 bg-slate-50 mt-1">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Show roommate gender preference publicly</span>
+                <span className="text-[10px] text-slate-400">Controls visibility of your preferred roommate gender on your discover profile</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.roommate_pref_public !== false}
+                onClick={() => set("roommate_pref_public", form.roommate_pref_public === false)}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                  form.roommate_pref_public !== false ? "bg-brand-500" : "bg-slate-200"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    form.roommate_pref_public !== false ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           </FormSection>
 
           {/* Password & Security */}

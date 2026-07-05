@@ -376,6 +376,23 @@ export default function ProfileDetailPage() {
                 <span>Birthday: {formatBirthday(profile.birthday)}</span>
               </div>
             )}
+            {profile.roommate_gender_pref && (
+              <div className="flex items-center gap-1">
+                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>
+                  Roommate: {
+                    profile.roommate_gender_pref === "male"
+                      ? "Male preferred"
+                      : profile.roommate_gender_pref === "female"
+                      ? "Female preferred"
+                      : "Any gender"
+                  }
+                  {(profile as any).roommate_pref_public === false ? " (Private)" : ""}
+                </span>
+              </div>
+            )}
             {profile.created_at && (
               <div className="flex items-center gap-1">
                 <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -600,6 +617,15 @@ export default function ProfileDetailPage() {
                 <h4 className="font-bold text-slate-900 text-sm">Budget & Move-in</h4>
                 <InfoRow label="Monthly budget" value={formatBudget(profile.min_budget, profile.max_budget)} />
                 <InfoRow label="Move-in date" value={formatDate(profile.move_in_date)} />
+                {profile.roommate_pref_public !== false ? (
+                  <InfoRow label="Roommate preference" value={
+                    profile.roommate_gender_pref
+                      ? profile.roommate_gender_pref.charAt(0).toUpperCase() + profile.roommate_gender_pref.slice(1).replace("_", " ")
+                      : "Any"
+                  } />
+                ) : (
+                  <InfoRow label="Roommate preference" value="Private" />
+                )}
               </div>
 
               <div className="border border-slate-100 rounded-2xl p-4 space-y-1">
