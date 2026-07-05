@@ -13,6 +13,7 @@ import { BillSplitPinnedBanner } from "@/components/splits/BillSplitPinnedBanner
 import { Avatar } from "@repo/ui/avatar";
 import { createClient } from "@repo/db/client";
 import { getConnectionById } from "@repo/db/queries/connections";
+import { useProfile } from "@/hooks/useProfile";
 
 const supabase = createClient();
 
@@ -42,6 +43,7 @@ export default function ChatThreadPage() {
   const params = useParams<{ connectionId: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { profile } = useProfile();
 
   const connectionId = params.connectionId;
 
@@ -60,7 +62,10 @@ export default function ChatThreadPage() {
   const isSupport =
     other?.id === "a99928a0-8de7-4da0-871a-22077d13945d" ||
     other?.display_name?.toLowerCase() === "roomie.app" ||
-    other?.username?.toLowerCase() === "fav_roomiee";
+    other?.username?.toLowerCase() === "fav_roomiee" ||
+    profile?.id === "a99928a0-8de7-4da0-871a-22077d13945d" ||
+    profile?.display_name?.toLowerCase() === "roomie.app" ||
+    profile?.username?.toLowerCase() === "fav_roomiee";
 
   // Auto-scroll on new messages
   useEffect(() => {
