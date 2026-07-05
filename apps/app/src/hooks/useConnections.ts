@@ -12,7 +12,7 @@ export function useConnections() {
   const { user } = useAuth();
 
   const { data: connections, error, mutate } = useSWR(
-    user ? `connections-${user.id}` : null,
+  user ? `connections-${user.id}` : null,
     async () => {
       const supabase = createClient();
       const { data, error: fetchError } = await (supabase as any)

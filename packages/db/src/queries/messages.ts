@@ -48,17 +48,23 @@ export async function sendMessage(
   senderId: string,
   content: string,
   messageType: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined" | "bill_split" = "text",
-  imageUrl?: string
+  imageUrl?: string,
+  messageId?: string,
+  createdAt?: string
 ): Promise<Message | null> {
+  const insertPayload: any = {
+    connection_id: connectionId,
+    sender_id: senderId,
+    content,
+    message_type: messageType,
+    image_url: imageUrl ?? null,
+  };
+  if (messageId) insertPayload.id = messageId;
+  if (createdAt) insertPayload.created_at = createdAt;
+
   const { data, error } = await supabase
     .from("messages")
-    .insert({
-      connection_id: connectionId,
-      sender_id: senderId,
-      content,
-      message_type: messageType,
-      image_url: imageUrl ?? null,
-    })
+    .insert(insertPayload)
     .select(`
       id, connection_id, sender_id, content, message_type,
       image_url, read_at, created_at,

@@ -1,12 +1,13 @@
 import { Avatar } from "@repo/ui/avatar";
-import type { Message } from "@repo/db/queries/messages";
+import type { ExtendedMessage } from "@/hooks/useMessages";
 import { AgreementCard } from "./AgreementCard";
 import { BillSplitChatMessage } from "./BillSplitChatMessage";
 
 interface MessageBubbleProps {
-  message: Message;
+  message: ExtendedMessage;
   isOwn: boolean;
   currentUserId?: string;
+  onRetry?: (messageId: string) => void;
 }
 
 function formatTime(isoString: string): string {
@@ -34,7 +35,16 @@ function Ticks({ read }: { read: boolean }) {
   );
 }
 
-export function MessageBubble({ message, isOwn, currentUserId }: MessageBubbleProps) {
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="7" />
+      <polyline points="8 4 8 8 10 9.5" />
+    </svg>
+  );
+}
+
+export function MessageBubble({ message, isOwn, currentUserId, onRetry }: MessageBubbleProps) {
   // ── Bill split events (created, item paid/unpaid, settled) ─────────────
   if (message.message_type === "bill_split") {
     return (
@@ -115,19 +125,42 @@ export function MessageBubble({ message, isOwn, currentUserId }: MessageBubblePr
             <>
               <span>{message.content}</span>
               {/* Inline spacer so timestamp never overlaps text */}
-              <span className={`inline-block w-12 h-3 ${isOwn ? "" : ""}`} />
+              <span className="inline-block w-14 h-3" />
             </>
           )}
 
           {/* Timestamp + ticks overlay — bottom-right inside bubble */}
-          <div className={`absolute bottom-1.5 right-2.5 flex items-center gap-0.5 ${isOwn ? "" : ""}`}>
+          <div className="absolute bottom-1.5 right-2.5 flex items-center gap-1">
             <span className={`text-[10px] leading-none ${isOwn ? "text-white/70" : "text-slate-400"}`}>
               {formatTime(message.created_at)}
             </span>
-            {isOwn && <Ticks read={!!message.read_at} />}
+            {isOwn && (
+              message.isSending ? (
+                <ClockIcon className="w-3 h-3 text-white/70" />
+              ) : message.isFailed ? (
+                <span className="text-[10px] text-red-200 font-bold leading-none">
+                  !
+                </span>
+              ) : (
+                <Ticks read={!!message.read_at} />
+              )
+            )}
           </div>
         </div>
       </div>
+
+      {/* Retry button for failed own messages */}
+      {isOwn && message.isFailed && (
+        <button
+          onClick={() => onRetry?.(message.id)}
+          className="p-1 text-red-500 hover:text-red-600 transition-colors flex-shrink-0 self-center"
+          title="Failed to send. Tap to retry."
+        >
+          <svg className="w-5 h-5 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 6.5M12 9v4l3 3" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

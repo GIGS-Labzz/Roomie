@@ -120,6 +120,111 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, [user, fetchUnreadMessages]);
 
+  // Background outbox sync worker
+  useEffect(() => {
+    if (!user) return;
+
+    interface OutboxMessage {
+      id: string;
+      connection_id: string;
+      sender_id: string;
+      content: string;
+      created_at: string;
+      error?: boolean;
+    }
+
+    const isOlderThan = (isoString: string, seconds: number) => {
+      return new Date().getTime() - new Date(isoString).getTime() > seconds * 1000;
+    };
+
+    const retryAllOutboxes = async (supabaseClient: any, userId: string) => {
+      if (typeof window === "undefined") return;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("outbox:")) {
+            const connectionId = key.substring(7);
+            const data = localStorage.getItem(key);
+            if (data) {
+              const outboxList: OutboxMessage[] = JSON.parse(data);
+              let updatedList = [...outboxList];
+              let changed = false;
+
+              for (const om of outboxList) {
+                // Retry if it's already failed or has been in outbox for > 8s
+                if (om.error || isOlderThan(om.created_at, 8)) {
+                  try {
+                    const { data: saved, error } = await supabaseClient
+                      .from("messages")
+                      .insert({
+                        id: om.id,
+                        connection_id: connectionId,
+                        sender_id: userId,
+                        content: om.content.trim(),
+                        message_type: "text",
+                        image_url: null,
+                      })
+                      .select(`
+                        id, connection_id, sender_id, content, message_type,
+                        image_url, read_at, created_at,
+                        sender:profiles!sender_id(id, display_name, avatar_url)
+                      `)
+                      .single();
+
+                    if (saved || (error && error.code === "23505")) { // 23505: duplicate key
+                      updatedList = updatedList.filter((m) => m.id !== om.id);
+                      changed = true;
+
+                      // Broadcast
+                      const channelName = `chat:${connectionId}`;
+                      const channel = supabaseClient.channel(channelName);
+                      channel.subscribe((status: string) => {
+                        if (status === "SUBSCRIBED") {
+                          channel.send({
+                            type: "broadcast",
+                            event: "new_message",
+                            payload: saved || om,
+                          });
+                          void supabaseClient.removeChannel(channel);
+                        }
+                      });
+                    } else {
+                      updatedList = updatedList.map((m) => m.id === om.id ? { ...m, error: true } : m);
+                      changed = true;
+                    }
+                  } catch (err) {
+                    console.error("Background outbox retry error:", err);
+                    updatedList = updatedList.map((m) => m.id === om.id ? { ...m, error: true } : m);
+                    changed = true;
+                  }
+                }
+              }
+
+              if (changed) {
+                if (updatedList.length === 0) {
+                  localStorage.removeItem(key);
+                } else {
+                  localStorage.setItem(key, JSON.stringify(updatedList));
+                }
+                window.dispatchEvent(new Event("storage"));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to run background outbox sync:", err);
+      }
+    };
+
+    void retryAllOutboxes(supabase, user.id);
+
+    const interval = setInterval(() => {
+      void retryAllOutboxes(supabase, user.id);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const markAllRead = useCallback(async () => {
     if (!user) return;
 

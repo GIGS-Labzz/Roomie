@@ -22,7 +22,7 @@ export function ChatInput({
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || isSending || disabled) return;
+    if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
     if (textareaRef.current) {
@@ -69,13 +69,11 @@ export function ChatInput({
       {/* Send / Mic button */}
       <button
         onClick={hasText ? handleSend : undefined}
-        disabled={!hasText && !isSending ? false : !hasText || isSending || disabled}
+        disabled={!hasText ? false : disabled}
         aria-label={hasText ? "Send message" : "Voice message"}
         className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 bg-brand-500 hover:bg-brand-600 active:scale-95 shadow-sm disabled:opacity-50"
       >
-        {isSending ? (
-          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-        ) : hasText ? (
+        {hasText ? (
           // Send icon
           <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

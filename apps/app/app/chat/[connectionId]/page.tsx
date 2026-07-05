@@ -45,13 +45,15 @@ export default function ChatThreadPage() {
 
   const connectionId = params.connectionId;
 
-  const { messages, isLoading, isSending, sendMessage } = useMessages(connectionId);
+  const { messages, isLoading, isSending, sendMessage, retryMessage } = useMessages(connectionId);
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
 
   const [other, setOther] = useState<OtherUser | null>(null);
   const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
   const [isProposingAgreement, setIsProposingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState("");
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [agreementLoadError, setAgreementLoadError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -64,13 +66,22 @@ export default function ChatThreadPage() {
   useEffect(() => {
     if (!connectionId || !user) return;
     const load = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: conn } = await getConnectionById(supabase as any, connectionId);
-      if (!conn) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const connAny = conn as any;
-      const otherUser = conn.requester_id === user.id ? connAny.receiver : connAny.requester;
-      setOther(otherUser ?? null);
+      setConnectionError(null);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: conn, error: fetchError } = await getConnectionById(supabase as any, connectionId);
+        if (fetchError) throw fetchError;
+        if (!conn) {
+          throw new Error("Connection not found");
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const connAny = conn as any;
+        const otherUser = conn.requester_id === user.id ? connAny.receiver : connAny.requester;
+        setOther(otherUser ?? null);
+      } catch (err) {
+        console.error("Failed to load connection:", err);
+        setConnectionError(err instanceof Error ? err.message : "Failed to load connection details");
+      }
     };
     void load();
   }, [connectionId, user]);
@@ -79,13 +90,20 @@ export default function ChatThreadPage() {
   useEffect(() => {
     if (!connectionId || !user) return;
     const load = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from("roommate_agreements")
-        .select("status")
-        .eq("connection_id", connectionId)
-        .maybeSingle();
-      setAgreementStatus(data?.status ?? "NONE");
+      setAgreementLoadError(null);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase as any)
+          .from("roommate_agreements")
+          .select("status")
+          .eq("connection_id", connectionId)
+          .maybeSingle();
+        if (error) throw error;
+        setAgreementStatus(data?.status ?? "NONE");
+      } catch (err) {
+        console.error("Failed to load roommate agreement status:", err);
+        setAgreementLoadError(err instanceof Error ? err.message : "Failed to load agreement status");
+      }
     };
     void load();
   }, [connectionId, user]);
@@ -158,6 +176,16 @@ export default function ChatThreadPage() {
                   </p>
                 </div>
               </Link>
+            ) : connectionError ? (
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 text-white font-bold">
+                  !
+                </div>
+                <div>
+                  <p className="font-semibold text-white text-[15px] leading-tight">Error Loading User</p>
+                  <p className="text-red-200 text-xs truncate leading-tight">Please refresh the page</p>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-white/20 animate-pulse flex-shrink-0" />
@@ -193,7 +221,8 @@ export default function ChatThreadPage() {
 
           {/* Warning Banner */}
           <div className="bg-red-600 text-white px-4 py-2 text-center text-xs font-medium shadow-sm flex-shrink-0 leading-snug">
-            Please endeavour to wait till message is deliverred before exiting , it might take max 10 secs, Bear with us , we are working on the lag
+            <div>Please wait for Chat to be sent before exiting, Might take long (10 secs Max)</div>
+            <div className="opacity-90 mt-0.5">Technical fixes in progress</div>
           </div>
 
           {/* ── Pinned bill split reminder ── */}
@@ -206,7 +235,27 @@ export default function ChatThreadPage() {
             className="flex-1 min-h-0 overflow-y-auto py-3 px-3 md:px-4 space-y-1"
             style={{ background: "#EDE8C8" }}
           >
-            {isLoading ? (
+            {connectionError ? (
+              <div className="flex flex-col items-center justify-center min-h-[60%] text-center gap-3 py-12 px-6">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center shadow-sm">
+                  <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700 text-sm">Failed to load connection</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+                    {connectionError}. Please check your connection or try again.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.refresh()}
+                  className="mt-2 px-4 py-2 bg-brand-500 text-white text-xs font-semibold rounded-xl hover:bg-brand-600 transition-colors"
+                >
+                  Retry Load
+                </button>
+              </div>
+            ) : isLoading ? (
               <MessageSkeletons />
             ) : messages.length === 0 ? (
               <EmptyThread name={other?.display_name} />
@@ -229,6 +278,7 @@ export default function ChatThreadPage() {
                         message={msg}
                         isOwn={msg.sender_id === user.id}
                         currentUserId={user.id}
+                        onRetry={retryMessage}
                       />
                     </div>
                   );
@@ -248,6 +298,16 @@ export default function ChatThreadPage() {
 
           {/* ── Footer: agreement banner + input ── */}
           <div className="flex-shrink-0 bg-[#F0F0F0]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+            {/* Agreement load error if any */}
+            {agreementLoadError && (
+              <div className="bg-red-50 border-t border-red-200 px-4 py-2 text-center text-xs font-semibold text-red-700 flex items-center justify-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Failed to load roommate agreement status: {agreementLoadError}
+              </div>
+            )}
+
             {/* Agreement propose banner */}
             {agreementStatus !== "PENDING" && agreementStatus !== "CONFIRMED" && (
               <div className="bg-white border-t border-slate-200 px-4 py-2">

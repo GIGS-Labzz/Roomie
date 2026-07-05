@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@repo/db/client";
 import { getMessages, sendMessage as dbSendMessage, markMessagesRead } from "@repo/db/queries/messages";
 import type { Message } from "@repo/db/queries/messages";
+import { getConnectionById } from "@repo/db/queries/connections";
 import { useAuth } from "@/context/AuthContext";
 
 // Stable singleton client — not recreated per render
@@ -11,12 +12,133 @@ const supabase = createClient();
 
 const senderProfileCache = new Map<string, { id: string; display_name: string; avatar_url: string | null }>();
 
+export type ExtendedMessage = Message & {
+  isSending?: boolean;
+  isFailed?: boolean;
+};
+
+export interface OutboxMessage {
+  id: string;
+  connection_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  error?: boolean;
+}
+
+const getOutbox = (connectionId: string): OutboxMessage[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(`outbox:${connectionId}`);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveOutbox = (connectionId: string, messages: OutboxMessage[]) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`outbox:${connectionId}`, JSON.stringify(messages));
+  } catch (err) {
+    console.error("Failed to save outbox to localStorage:", err);
+  }
+};
+
+const addToOutbox = (connectionId: string, message: OutboxMessage) => {
+  const current = getOutbox(connectionId);
+  if (!current.some((m) => m.id === message.id)) {
+    saveOutbox(connectionId, [...current, message]);
+  }
+};
+
+const removeFromOutbox = (connectionId: string, messageId: string) => {
+  const current = getOutbox(connectionId);
+  saveOutbox(connectionId, current.filter((m) => m.id !== messageId));
+};
+
+const markOutboxError = (connectionId: string, messageId: string) => {
+  const current = getOutbox(connectionId);
+  saveOutbox(connectionId, current.map((m) => m.id === messageId ? { ...m, error: true } : m));
+};
+
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function useMessages(connectionId: string) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const retryOutbox = useCallback(async (outboxList: OutboxMessage[]) => {
+    if (!user) return;
+    for (const om of outboxList) {
+      try {
+        // Broadcast the retry instantly in case it wasn't received
+        const retryOptimistic: ExtendedMessage = {
+          id: om.id,
+          connection_id: connectionId,
+          sender_id: user.id,
+          content: om.content.trim(),
+          message_type: "text",
+          image_url: null,
+          read_at: null,
+          created_at: om.created_at,
+          sender: {
+            id: user.id,
+            display_name: user.user_metadata?.full_name ?? "You",
+            avatar_url: user.user_metadata?.avatar_url ?? null,
+          },
+        };
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: "broadcast",
+            event: "new_message",
+            payload: retryOptimistic,
+          });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const saved = await dbSendMessage(
+          supabase as any,
+          connectionId,
+          user.id,
+          om.content.trim(),
+          "text",
+          undefined,
+          om.id,
+          om.created_at
+        );
+        if (saved) {
+          removeFromOutbox(connectionId, om.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === om.id ? { ...saved, sender: m.sender, isSending: false, isFailed: false } : m))
+          );
+        } else {
+          markOutboxError(connectionId, om.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === om.id ? { ...m, isSending: false, isFailed: true } : m))
+          );
+        }
+      } catch (err) {
+        console.error("Error retrying outbox message:", err);
+        markOutboxError(connectionId, om.id);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === om.id ? { ...m, isSending: false, isFailed: true } : m))
+        );
+      }
+    }
+  }, [connectionId, user]);
 
   // Initial load
   useEffect(() => {
@@ -24,10 +146,56 @@ export function useMessages(connectionId: string) {
 
     const load = async () => {
       setIsLoading(true);
+
+      // Fetch connection to pre-populate senderProfileCache with both users' profiles
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: conn } = await getConnectionById(supabase as any, connectionId);
+      if (conn) {
+        const connAny = conn as any;
+        if (connAny.requester) {
+          senderProfileCache.set(connAny.requester.id, {
+            id: connAny.requester.id,
+            display_name: connAny.requester.display_name,
+            avatar_url: connAny.requester.avatar_url,
+          });
+        }
+        if (connAny.receiver) {
+          senderProfileCache.set(connAny.receiver.id, {
+            id: connAny.receiver.id,
+            display_name: connAny.receiver.display_name,
+            avatar_url: connAny.receiver.avatar_url,
+          });
+        }
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const msgs = await getMessages(supabase as any, connectionId);
-      setMessages(msgs);
+      
+      // Load outbox messages and append them to messages state
+      const outbox = getOutbox(connectionId);
+      const outboxMsgs: ExtendedMessage[] = outbox.map((om) => ({
+        id: om.id,
+        connection_id: om.connection_id,
+        sender_id: om.sender_id,
+        content: om.content,
+        message_type: "text",
+        image_url: null,
+        read_at: null,
+        created_at: om.created_at,
+        isFailed: om.error,
+        sender: user ? {
+          id: user.id,
+          display_name: user.user_metadata?.full_name ?? "You",
+          avatar_url: user.user_metadata?.avatar_url ?? null,
+        } : undefined,
+      }));
+
+      setMessages([...msgs, ...outboxMsgs]);
       setIsLoading(false);
+
+      if (outbox.length > 0) {
+        void retryOutbox(outbox);
+      }
 
       // Mark all messages from the other user as read
       if (user) {
@@ -37,7 +205,7 @@ export function useMessages(connectionId: string) {
     };
 
     void load();
-  }, [connectionId, user]);
+  }, [connectionId, user, retryOutbox]);
 
   // Realtime subscription
   useEffect(() => {
@@ -51,6 +219,26 @@ export function useMessages(connectionId: string) {
     const channel = supabase
       .channel(`chat:${connectionId}`)
       .on(
+        "broadcast",
+        { event: "new_message" },
+        (payload: { payload: Message }) => {
+          const newMsg = payload.payload;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+
+          // Mark as read immediately if it's from the other user
+          if (user && newMsg.sender_id !== user.id) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            void (supabase as any)
+              .from("messages")
+              .update({ read_at: new Date().toISOString() })
+              .eq("id", newMsg.id);
+          }
+        }
+      )
+      .on(
         "postgres_changes",
         {
           event: "INSERT",
@@ -58,37 +246,43 @@ export function useMessages(connectionId: string) {
           table: "messages",
           filter: `connection_id=eq.${connectionId}`,
         },
-        async (payload) => {
-          // Fetch and cache sender profile to prevent DB query waterfalls
-          let sender = senderProfileCache.get(payload.new.sender_id);
-          if (!sender) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data } = await (supabase as any)
-              .from("profiles")
-              .select("id, display_name, avatar_url")
-              .eq("id", payload.new.sender_id)
-              .single();
-            if (data) {
-              sender = data;
-              senderProfileCache.set(payload.new.sender_id, data);
-            }
-          }
-
+        (payload) => {
+          const senderId = payload.new.sender_id;
+          let sender = senderProfileCache.get(senderId);
           const newMsg: Message = {
             ...(payload.new as Message),
             sender: sender ?? undefined,
           };
 
           setMessages((prev) => {
-            // Deduplicate (optimistic update may already have added it)
+            // Deduplicate (optimistic update or broadcast update may already have added it)
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
 
+          if (!sender) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            void (supabase as any)
+              .from("profiles")
+              .select("id, display_name, avatar_url")
+              .eq("id", senderId)
+              .single()
+              .then(({ data }: any) => {
+                if (data) {
+                  senderProfileCache.set(senderId, data);
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === newMsg.id ? { ...m, sender: data } : m
+                    )
+                  );
+                }
+              });
+          }
+
           // Mark as read immediately if it's from the other user
           if (user && payload.new.sender_id !== user.id) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any)
+            void (supabase as any)
               .from("messages")
               .update({ read_at: new Date().toISOString() })
               .eq("id", newMsg.id);
@@ -105,14 +299,68 @@ export function useMessages(connectionId: string) {
     };
   }, [connectionId, user]);
 
+  // Periodic background poll fallback (every 15s)
+  useEffect(() => {
+    if (!connectionId) return;
+
+    const interval = setInterval(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msgs = await getMessages(supabase as any, connectionId);
+      if (msgs && msgs.length > 0) {
+        setMessages((prev) => {
+          const merged = [...prev];
+          let changed = false;
+          for (const m of msgs) {
+            if (!merged.some((existing) => existing.id === m.id)) {
+              merged.push(m);
+              changed = true;
+            }
+          }
+          if (changed) {
+            return merged.sort((a, b) => a.created_at.localeCompare(b.created_at));
+          }
+          return prev;
+        });
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [connectionId]);
+
+  // Synchronize outbox states from localStorage changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleStorageChange = () => {
+      const outbox = getOutbox(connectionId);
+      setMessages((prev) => {
+        return prev.map((m) => {
+          const om = outbox.find((o) => o.id === m.id);
+          if (om) {
+            return { ...m, isFailed: !!om.error, isSending: !om.error };
+          }
+          if (m.isSending || m.isFailed) {
+            return { ...m, isSending: false, isFailed: false };
+          }
+          return m;
+        });
+      });
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [connectionId]);
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user || !content.trim()) return;
       setIsSending(true);
 
+      const messageId = generateUUID();
+
       // Optimistic update — add the message immediately to UI
-      const optimisticMsg: Message = {
-        id: `optimistic-${Date.now()}`,
+      const optimisticMsg: ExtendedMessage = {
+        id: messageId,
         connection_id: connectionId,
         sender_id: user.id,
         content: content.trim(),
@@ -125,38 +373,149 @@ export function useMessages(connectionId: string) {
           display_name: user.user_metadata?.full_name ?? "You",
           avatar_url: user.user_metadata?.avatar_url ?? null,
         },
+        isSending: true,
       };
       setMessages((prev) => [...prev, optimisticMsg]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const saved = await dbSendMessage(supabase as any, connectionId, user.id, content.trim());
-
-      if (saved) {
-        // Replace the optimistic message with the real one
-        setMessages((prev) =>
-          prev.map((m) => (m.id === optimisticMsg.id ? { ...saved, sender: optimisticMsg.sender } : m))
-        );
-
-        // Trigger push notification to recipient
-        void fetch("/api/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            connectionId,
-            body: content.trim(),
-          }),
-        }).catch((err) => console.error("Failed to send chat push notification:", err));
-      } else {
-        // Remove the optimistic message on failure
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      // Broadcast immediately to the recipient channel before DB insert starts
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: { ...optimisticMsg, isSending: false },
+        });
       }
 
-      setIsSending(false);
+      // Save to outbox
+      const outboxMsg: OutboxMessage = {
+        id: optimisticMsg.id,
+        connection_id: connectionId,
+        sender_id: user.id,
+        content: optimisticMsg.content,
+        created_at: optimisticMsg.created_at,
+      };
+      addToOutbox(connectionId, outboxMsg);
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const saved = await dbSendMessage(
+          supabase as any,
+          connectionId,
+          user.id,
+          content.trim(),
+          "text",
+          undefined,
+          messageId,
+          optimisticMsg.created_at
+        );
+
+        if (saved) {
+          removeFromOutbox(connectionId, optimisticMsg.id);
+
+          // Replace the optimistic message with the real database properties, set isSending to false
+          setMessages((prev) =>
+            prev.map((m) => (m.id === optimisticMsg.id ? { ...saved, sender: optimisticMsg.sender, isSending: false } : m))
+          );
+
+          // Trigger push notification to recipient
+          void fetch("/api/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              connectionId,
+              body: content.trim(),
+            }),
+          }).catch((err) => console.error("Failed to send chat push notification:", err));
+        } else {
+          markOutboxError(connectionId, optimisticMsg.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === optimisticMsg.id ? { ...m, isSending: false, isFailed: true } : m))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        markOutboxError(connectionId, optimisticMsg.id);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === optimisticMsg.id ? { ...m, isSending: false, isFailed: true } : m))
+        );
+      } finally {
+        setIsSending(false);
+      }
     },
     [connectionId, user]
   );
 
-  return { messages, isLoading, isSending, sendMessage };
+  const retryMessage = useCallback(
+    async (messageId: string) => {
+      if (!user) return;
+      const outbox = getOutbox(connectionId);
+      const om = outbox.find((m) => m.id === messageId);
+      if (!om) return;
+
+      // Set status to sending in UI
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, isSending: true, isFailed: false } : m))
+      );
+
+      // Broadcast immediately on retry
+      const retryOptimistic: ExtendedMessage = {
+        id: om.id,
+        connection_id: connectionId,
+        sender_id: user.id,
+        content: om.content.trim(),
+        message_type: "text",
+        image_url: null,
+        read_at: null,
+        created_at: om.created_at,
+        sender: {
+          id: user.id,
+          display_name: user.user_metadata?.full_name ?? "You",
+          avatar_url: user.user_metadata?.avatar_url ?? null,
+        },
+      };
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: retryOptimistic,
+        });
+      }
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const saved = await dbSendMessage(
+          supabase as any,
+          connectionId,
+          user.id,
+          om.content.trim(),
+          "text",
+          undefined,
+          om.id,
+          om.created_at
+        );
+        if (saved) {
+          removeFromOutbox(connectionId, om.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === om.id ? { ...saved, sender: m.sender, isSending: false, isFailed: false } : m))
+          );
+        } else {
+          markOutboxError(connectionId, om.id);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === om.id ? { ...m, isSending: false, isFailed: true } : m))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to retry message:", err);
+        markOutboxError(connectionId, om.id);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === om.id ? { ...m, isSending: false, isFailed: true } : m))
+        );
+      }
+    },
+    [connectionId, user]
+  );
+
+  return { messages, isLoading, isSending, sendMessage, retryMessage };
 }
 
 // Typing indicator via Supabase Presence (ephemeral, never stored in DB)

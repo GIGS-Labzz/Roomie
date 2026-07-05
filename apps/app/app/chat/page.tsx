@@ -39,9 +39,38 @@ function formatChatTime(isoString?: string | null): string {
   return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
 }
 
-function previewText(msg: LastMessagePreview | undefined, isOwn: boolean): string {
+interface OutboxMessage {
+  id: string;
+  connection_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  error?: boolean;
+}
+
+const getOutbox = (connectionId: string): OutboxMessage[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(`outbox:${connectionId}`);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+function previewText(
+  msg: (LastMessagePreview & { isSending?: boolean; isFailed?: boolean }) | undefined,
+  isOwn: boolean
+): string {
   if (!msg) return "Tap to start chatting";
-  const prefix = isOwn ? "You: " : "";
+  
+  let prefix = isOwn ? "You: " : "";
+  if (isOwn && msg.isSending) {
+    prefix = "🕒 You: ";
+  } else if (isOwn && msg.isFailed) {
+    prefix = "⚠️ You: ";
+  }
+
   switch (msg.message_type) {
     case "image": return `${prefix}📷 Photo`;
     case "agreement_request": return `${prefix}Roommate agreement proposal`;
@@ -117,7 +146,22 @@ export default function ChatListPage() {
   const enriched = useMemo(() => {
     return connections.map((c: Connection) => {
       const other = c.requester_id === user?.id ? c.receiver : c.requester;
-      const lastMsg = lastMessages[c.id];
+      
+      const outbox = getOutbox(c.id);
+      const pendingLast = outbox[outbox.length - 1];
+
+      const lastMsg = pendingLast
+        ? {
+            connection_id: c.id,
+            content: pendingLast.content,
+            sender_id: pendingLast.sender_id,
+            created_at: pendingLast.created_at,
+            message_type: "text" as any,
+            isSending: !pendingLast.error,
+            isFailed: !!pendingLast.error,
+          }
+        : lastMessages[c.id];
+
       const unread = unreadCounts[c.id] ?? 0;
       const isOwnLast = lastMsg?.sender_id === user?.id;
       return {
@@ -177,7 +221,7 @@ export default function ChatListPage() {
 
         {/* Warning Banner */}
         <div className="bg-red-600 text-white px-4 py-2 text-center text-xs font-semibold shadow-sm flex-shrink-0">
-          Chats May take long , Still Under Construction
+          Technical Fixes in progress
         </div>
 
         {/* ── List panel — layout ported from MessagesScreen's conversation list ── */}
