@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   GraduationCap,
   Link2,
+  Megaphone,
   LogOut,
   Menu,
   X,
@@ -23,6 +24,7 @@ const NAV = [
   { href: "/super/approvals",   label: "Approvals",      icon: ClipboardCheck },
   { href: "/super/students",    label: "Student Verify", icon: GraduationCap },
   { href: "/super/connections", label: "Connections",    icon: Link2 },
+  { href: "/super/broadcast",   label: "Broadcast",      icon: Megaphone },
 ];
 
 function Logo() {

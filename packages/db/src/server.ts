@@ -22,18 +22,11 @@ export async function createServerClient() {
   );
 }
 
-export async function createServiceClient() {
-  const cookieStore = await cookies();
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
-  return createSupabaseServerClient<Database>(
+export async function createServiceClient() {
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) { return cookieStore.get(name)?.value; },
-        set() {},
-        remove() {},
-      },
-    }
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 }

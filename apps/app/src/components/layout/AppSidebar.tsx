@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@repo/ui/logo";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
 import { useNotifications } from "@/context/NotificationContext";
+import { useProfile } from "@/hooks/useProfile";
 
 interface NavItem {
   key: string;
@@ -90,6 +91,19 @@ const NAV_ITEMS: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { unreadCount, unreadMessageCount } = useNotifications();
+  const { profile } = useProfile();
+
+  const isSupportAcct =
+    profile?.id === "a99928a0-8de7-4da0-871a-22077d13945d" ||
+    profile?.display_name?.toLowerCase() === "roomie.app" ||
+    profile?.username?.toLowerCase() === "fav_roomiee";
+
+  const filteredNavItems = NAV_ITEMS.filter((item) => {
+    if (isSupportAcct && (item.key === "housing" || item.key === "splits")) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <aside className="hidden md:flex flex-col w-64 xl:w-72 flex-shrink-0 sticky top-0 h-screen py-4 px-3 gap-1">
@@ -109,7 +123,7 @@ export function AppSidebar() {
 
       {/* Nav items */}
       <nav className="flex flex-col gap-0.5 flex-1">
-        {NAV_ITEMS.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link

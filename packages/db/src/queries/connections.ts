@@ -9,8 +9,8 @@ export async function getUserConnections(
     .from("connections")
     .select(
       `*,
-       requester:profiles!requester_id(id, display_name, avatar_url, university, city, student_verified),
-       receiver:profiles!receiver_id(id, display_name, avatar_url, university, city, student_verified)`
+       requester:profiles!requester_id(id, display_name, username, avatar_url, university, city, student_verified),
+       receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified)`
     )
     .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("updated_at", { ascending: false });
@@ -24,8 +24,8 @@ export async function getConnectionById(
     .from("connections")
     .select(
       `*,
-       requester:profiles!requester_id(id, display_name, avatar_url, university, city, student_verified),
-       receiver:profiles!receiver_id(id, display_name, avatar_url, university, city, student_verified)`
+       requester:profiles!requester_id(id, display_name, username, avatar_url, university, city, student_verified),
+       receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified)`
     )
     .eq("id", connectionId)
     .single();
