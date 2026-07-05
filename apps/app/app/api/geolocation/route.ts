@@ -38,7 +38,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Localhost/dev environment fallback
+  // Localhost/dev environment: geolocate outbound server IP for realistic local testing
+  try {
+    const res = await fetch("https://freeipapi.com/api/json");
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json({
+        ip: data.ipAddress || ip || "127.0.0.1",
+        country: data.countryName || "Localhost",
+        region: data.regionName || "Localhost",
+        city: data.cityName || "Localhost",
+      });
+    }
+  } catch {
+    // Ignore and proceed to static fallback
+  }
+
   return NextResponse.json({
     ip: ip || "127.0.0.1",
     country: "Localhost",

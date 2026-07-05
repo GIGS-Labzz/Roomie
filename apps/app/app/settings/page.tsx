@@ -10,6 +10,7 @@ import { createClient } from "@repo/db/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Database } from "@repo/db/types";
 import Link from "next/link";
+import { ALL_UNIVERSITIES, NIGERIAN_STATES } from "../onboarding/university/data";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
@@ -17,16 +18,6 @@ const NIGERIAN_CITIES = [
   "Lagos", "Abuja", "Ibadan", "Kano", "Port Harcourt", "Benin City",
   "Enugu", "Owerri", "Calabar", "Uyo", "Warri", "Ilorin", "Abeokuta",
   "Kaduna", "Zaria", "Maiduguri", "Aba", "Onitsha", "Akure", "Ado-Ekiti",
-];
-
-const NIGERIAN_UNIVERSITIES = [
-  "University of Lagos (UNILAG)", "University of Ibadan (UI)", "Obafemi Awolowo University (OAU)",
-  "University of Nigeria, Nsukka (UNN)", "Ahmadu Bello University (ABU)", "University of Benin (UNIBEN)",
-  "University of Port Harcourt (UNIPORT)", "Federal University of Technology, Akure (FUTA)",
-  "Covenant University", "Babcock University", "Lagos State University (LASU)",
-  "Nnamdi Azikiwe University (UNIZIK)", "University of Calabar (UNICAL)", "University of Uyo (UNIUYO)",
-  "Bayero University Kano (BUK)", "University of Jos (UNIJOS)", "Federal University of Technology, Owerri (FUTO)",
-  "Benue State University", "Kwara State University", "Ekiti State University",
 ];
 
 const YEAR_OPTIONS = [
@@ -95,13 +86,14 @@ export default function SettingsPage() {
   const { profile, isLoading, updateProfile } = useProfile();
  
   const [customCity, setCustomCity] = useState("");
+  const [customUniversityName, setCustomUniversityName] = useState("");
+  const [customUniversityState, setCustomUniversityState] = useState("");
   const [form, setForm] = useState<ProfileUpdate>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-
 
   // Avatar Upload State
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -114,6 +106,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!profile) return;
     const isPreset = profile.city ? NIGERIAN_CITIES.includes(profile.city) : true;
+    const isPresetUni = profile.university ? ALL_UNIVERSITIES.includes(profile.university) : true;
     setForm({
       display_name: profile.display_name,
       username: profile.username,
@@ -123,7 +116,7 @@ export default function SettingsPage() {
       city: isPreset ? profile.city : "Other",
       bio: profile.bio,
       phone: profile.phone,
-      university: profile.university,
+      university: profile.university ? (isPresetUni ? profile.university : "Other") : null,
       faculty: profile.faculty,
       course: profile.course,
       year_of_study: profile.year_of_study,
@@ -139,8 +132,11 @@ export default function SettingsPage() {
       roommate_gender_pref: profile.roommate_gender_pref,
       avatar_url: profile.avatar_url,
       cover_url: profile.cover_url,
+      state: profile.state,
     });
     setCustomCity(isPreset ? "" : (profile.city ?? ""));
+    setCustomUniversityName(isPresetUni ? "" : (profile.university ?? ""));
+    setCustomUniversityState(profile.state ?? "");
     setSelectedTags(profile.lifestyle_tags ?? []);
   }, [profile]);
 
@@ -239,13 +235,24 @@ export default function SettingsPage() {
     setCoverUploading(false);
   };
 
+  const isOtherUni = form.university === "Other";
+  const uniError = isOtherUni && (!customUniversityName.trim() || !customUniversityState);
+
   const handleSave = async () => {
-    if (budgetError || usernameError) return;
+    if (budgetError || usernameError || uniError) return;
     setSaveError(null);
     setIsSaving(true);
     try {
       const finalCity = form.city === "Other" ? customCity.trim() : form.city;
-      await updateProfile({ ...form, city: finalCity || null, lifestyle_tags: selectedTags });
+      const finalUniversity = isOtherUni ? customUniversityName.trim() : form.university;
+      const finalState = isOtherUni ? customUniversityState : null;
+      await updateProfile({
+        ...form,
+        city: finalCity || null,
+        university: finalUniversity || null,
+        state: finalState || null,
+        lifestyle_tags: selectedTags,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: any) {
@@ -294,7 +301,7 @@ export default function SettingsPage() {
             <h1 className="font-display font-bold text-slate-900 text-xl flex-1">Settings</h1>
             <button
               onClick={handleSave}
-              disabled={isSaving || !!budgetError}
+              disabled={isSaving || !!budgetError || !!uniError}
               className={`px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
                 saved
                   ? "bg-brand-100 text-brand-700"
@@ -498,14 +505,48 @@ export default function SettingsPage() {
               <select
                 className={inputCls}
                 value={(form.university as string) ?? ""}
-                onChange={(e) => set("university", e.target.value || null)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  set("university", val || null);
+                  if (val !== "Other") {
+                    setCustomUniversityName("");
+                    setCustomUniversityState("");
+                  }
+                }}
               >
                 <option value="">Select university</option>
-                {NIGERIAN_UNIVERSITIES.map((u) => (
+                {ALL_UNIVERSITIES.map((u) => (
                   <option key={u} value={u}>{u}</option>
                 ))}
+                <option value="Other">Other (not listed)</option>
               </select>
             </Field>
+
+            {form.university === "Other" && (
+              <>
+                <Field label="Specify your university">
+                  <input
+                    type="text"
+                    className={inputCls}
+                    value={customUniversityName}
+                    onChange={(e) => setCustomUniversityName(e.target.value)}
+                    placeholder="Enter your school name"
+                  />
+                </Field>
+                <Field label="Location (State)">
+                  <select
+                    className={inputCls}
+                    value={customUniversityState}
+                    onChange={(e) => setCustomUniversityState(e.target.value)}
+                  >
+                    <option value="">Select state</option>
+                    {NIGERIAN_STATES.map((state) => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </Field>
+              </>
+            )}
             <Field label="Year of study">
               <select
                 className={inputCls}
@@ -658,6 +699,22 @@ export default function SettingsPage() {
               />
             </Field>
           </FormSection>
+
+          {/* Password & Security */}
+          <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+            <Link
+              href="/settings/password"
+              className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors w-full"
+            >
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-slate-700">Update password</span>
+                <span className="text-xs text-slate-400">Set or change your account password</span>
+              </div>
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
 
           {/* App Preferences & Legal */}
           <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] overflow-hidden">

@@ -9,6 +9,7 @@ import {
   UNIVERSITIES_BY_CITY,
   ALL_UNIVERSITIES,
   getUniversityData,
+  NIGERIAN_STATES,
 } from "./data";
 
 const YEARS = [
@@ -26,6 +27,11 @@ export default function UniversityPage() {
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+
+  const [customUniversityName, setCustomUniversityName] = useState("");
+  const [customUniversityState, setCustomUniversityState] = useState("");
+  const [customFaculty, setCustomFaculty] = useState("");
+  const [customCourse, setCustomCourse] = useState("");
 
   // Load saved city from profile
   useEffect(() => {
@@ -47,12 +53,20 @@ export default function UniversityPage() {
     setSelectedUniversity(u);
     setSelectedFaculty("");
     setSelectedCourse("");
+    setCustomFaculty("");
+    setCustomCourse("");
+    if (u !== "Other (not listed)") {
+      setCustomUniversityName("");
+      setCustomUniversityState("");
+    }
   };
 
   // Reset course when faculty changes
   const handleFacultyChange = (f: string) => {
     setSelectedFaculty(f);
     setSelectedCourse("");
+    setCustomFaculty("");
+    setCustomCourse("");
   };
 
   // Universities list: city-filtered or full
@@ -65,18 +79,47 @@ export default function UniversityPage() {
   const faculties = uniData?.faculties ?? [];
   const courses = selectedFaculty ? (uniData?.coursesByFaculty[selectedFaculty] ?? []) : [];
 
-  const isValid = selectedUniversity && selectedYear;
+  const isOther = selectedUniversity === "Other (not listed)";
+  const isOtherFaculty = selectedFaculty === "Other (not listed)";
+  const isOtherCourse = selectedCourse === "Other (not listed)";
+
+  const isUniValid = isOther
+    ? customUniversityName.trim() && customUniversityState
+    : !!selectedUniversity;
+
+  const isFacultyValid = isOtherFaculty
+    ? !!customFaculty.trim()
+    : true;
+
+  const isCourseValid = (isOtherFaculty || isOtherCourse)
+    ? !!customCourse.trim()
+    : true;
+
+  const isValid = isUniValid && isFacultyValid && isCourseValid && selectedYear;
 
   const handleNext = async () => {
     if (!user || !isValid) return;
     setLoading(true);
     const supabase = createClient();
+    
+    const universityToSave = isOther ? customUniversityName.trim() : selectedUniversity;
+    const stateToSave = isOther ? customUniversityState : null;
+
+    const facultyToSave = isOtherFaculty
+      ? customFaculty.trim()
+      : (selectedFaculty || null);
+
+    const courseToSave = (isOtherFaculty || isOtherCourse)
+      ? customCourse.trim()
+      : (selectedCourse || null);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from("profiles").update({
-      university: selectedUniversity,
+      university: universityToSave,
+      state: stateToSave,
       year_of_study: Number(selectedYear),
-      faculty: selectedFaculty || null,
-      course: selectedCourse || null,
+      faculty: facultyToSave,
+      course: courseToSave,
       onboarding_step: 3,
     }).eq("id", user.id);
     router.push("/onboarding/vibe");
@@ -116,6 +159,41 @@ export default function UniversityPage() {
           </select>
         </div>
 
+        {/* Custom University Inputs */}
+        {isOther && (
+          <div className="space-y-4 pt-1">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                School Name
+              </label>
+              <input
+                type="text"
+                value={customUniversityName}
+                onChange={(e) => setCustomUniversityName(e.target.value)}
+                placeholder="Enter your school name"
+                className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Location (State)
+              </label>
+              <select
+                value={customUniversityState}
+                onChange={(e) => setCustomUniversityState(e.target.value)}
+                className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
+              >
+                <option value="">Select state</option>
+                {NIGERIAN_STATES.map((state) => (
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Year of study */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -140,7 +218,7 @@ export default function UniversityPage() {
         </div>
 
         {/* Faculty — only shown once university is selected */}
-        {selectedUniversity && faculties.length > 0 && (
+        {selectedUniversity && (
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               Faculty <span className="font-normal text-slate-400">(optional)</span>
@@ -154,12 +232,29 @@ export default function UniversityPage() {
               {faculties.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
+              <option value="Other (not listed)">Other (not listed)</option>
             </select>
           </div>
         )}
 
-        {/* Course — only shown once faculty is selected */}
-        {selectedFaculty && courses.length > 0 && (
+        {/* Custom Faculty Input */}
+        {isOtherFaculty && (
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Specify your faculty
+            </label>
+            <input
+              type="text"
+              value={customFaculty}
+              onChange={(e) => setCustomFaculty(e.target.value)}
+              placeholder="Enter your faculty name"
+              className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
+            />
+          </div>
+        )}
+
+        {/* Course — only shown once faculty is selected and is preset */}
+        {selectedFaculty && !isOtherFaculty && (
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               Course <span className="font-normal text-slate-400">(optional)</span>
@@ -173,7 +268,24 @@ export default function UniversityPage() {
               {courses.sort().map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
+              <option value="Other (not listed)">Other (not listed)</option>
             </select>
+          </div>
+        )}
+
+        {/* Custom Course Input — shown if faculty is custom, or course is selected as 'Other (not listed)' */}
+        {(isOtherFaculty || isOtherCourse) && (
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Specify your course
+            </label>
+            <input
+              type="text"
+              value={customCourse}
+              onChange={(e) => setCustomCourse(e.target.value)}
+              placeholder="Enter your course name"
+              className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500"
+            />
           </div>
         )}
       </div>

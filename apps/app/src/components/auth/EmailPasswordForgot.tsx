@@ -18,7 +18,7 @@ export function EmailPasswordForgot() {
     setError(null);
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/profile/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/settings/password`,
     });
 
     if (resetError) {
@@ -34,7 +34,7 @@ export function EmailPasswordForgot() {
   if (success) {
     return (
       <div className="space-y-4 text-center">
-        <div className="p-4 bg-brand-50 border border-brand-200 rounded-2xl text-sm text-brand-700">
+        <div className="p-4 bg-brand-50 border border-brand-200 rounded-2xl text-sm text-brand-700 animate-fadeIn">
           <p className="font-semibold mb-1">Reset email sent!</p>
           <p className="text-xs text-brand-600/90">Please check your inbox for instructions to reset your password.</p>
         </div>
@@ -51,7 +51,7 @@ export function EmailPasswordForgot() {
   return (
     <form onSubmit={handleReset} className="space-y-3">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 animate-fadeIn">
           {error}
         </div>
       )}
