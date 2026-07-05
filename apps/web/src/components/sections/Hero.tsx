@@ -11,7 +11,7 @@ const DotLottieReact = dynamic(
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://roomie-app-umber.vercel.app";
 
-const tagline = ["C", "o", "o", "n", "n", "e", "e", "c", "t"];
+const tagline = ["C", "o", "n", "n", "e", "c", "t"];
 
 export function Hero() {
   const { openWaitlist } = useWaitlist();
@@ -39,42 +39,43 @@ export function Hero() {
       <div className="relative z-10 flex flex-col lg:flex-row items-center gap-16 max-w-6xl w-full mx-auto">
         {/* Text side */}
         <div className="flex-1 text-center lg:text-left">
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-4"
-          >
-            Perfect Roomie
-          </motion.p>
-
+          {/* Main heading — Perfect Roomie */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-slate-900 mb-2"
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-slate-900 mb-4"
           >
-            Just Connect and
+            Perfect <span className="text-brand-500">Roomie</span>
           </motion.h1>
 
-          <div className="flex flex-wrap justify-center lg:justify-start mb-6">
-            {tagline.map((letter, i) => (
-              <motion.span
-                key={i}
-                initial={{ opacity: 0, y: 30, scaleY: 0.5 }}
-                animate={{ opacity: 1, y: 0, scaleY: 1 }}
-                transition={{
-                  delay: 0.35 + i * 0.045,
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 18,
-                }}
-                className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-brand-500 inline-block"
-              >
-                {letter}
-              </motion.span>
-            ))}
-          </div>
+          {/* Smaller tagline below the main heading */}
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.5 }}
+            className="text-brand-600 font-semibold text-sm sm:text-base uppercase tracking-widest mb-6 flex flex-wrap items-center justify-center lg:justify-start gap-x-1.5"
+          >
+            <span>Just Connect and</span>
+            <span className="flex">
+              {tagline.map((letter, i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 0, y: 12, scaleY: 0.5 }}
+                  animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                  transition={{
+                    delay: 0.4 + i * 0.04,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 18,
+                  }}
+                  className="inline-block"
+                >
+                  {letter}
+                </motion.span>
+              ))}
+            </span>
+          </motion.p>
 
           <motion.p
             initial={{ opacity: 0, y: 16 }}
