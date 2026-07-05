@@ -1,21 +1,88 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
+import { useWaitlist } from "@/context/waitlist";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
 
 const screens = [
   {
+    id: "feed",
+    label: "Discover Feed",
+    shortLabel: "Feed",
+    description: "Browse posts from people seeking roommates, apartments, or bills to split.",
+    mockContent: (
+      <div className="space-y-2 p-3">
+        {[
+          {
+            name: "Tobi A.",
+            username: "tobialao",
+            location: "Akoka, Lagos",
+            time: "2h ago",
+            content: "Anyone interested in splitting rent for a 2-bedroom flat in Akoka? Already found a place, just need one roommate. ₦150k each.",
+            reactions: "❤️ 12",
+            replies: "5",
+          },
+          {
+            name: "Kemi S.",
+            username: "kemisanni",
+            location: "Yaba, Lagos",
+            time: "4h ago",
+            content: "Looking for a tidy female roommate to share a self-contained apartment close to the main road. Early birds preferred! ☀️",
+            reactions: "👏 8",
+            replies: "3",
+          },
+        ].map((post, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-xl p-2.5 flex flex-col gap-1.5 shadow-sm border border-slate-100"
+          >
+            <div className="flex items-start gap-2">
+              <div className="w-7 h-7 rounded-full bg-brand-100 flex-shrink-0 flex items-center justify-center text-brand-700 font-semibold text-[10px]">
+                {post.name[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-slate-800 text-[10px] block leading-tight">
+                      {post.name}
+                    </span>
+                    <span className="text-slate-400 text-[8px] block">
+                      @{post.username} • {post.location}
+                    </span>
+                  </div>
+                  <span className="text-slate-400 text-[8px]">{post.time}</span>
+                </div>
+                <p className="text-slate-600 text-[9px] mt-1 leading-normal">
+                  {post.content}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5 text-[8px] text-slate-400 border-t border-slate-50 pt-1">
+                  <span className="flex items-center gap-0.5">
+                    {post.reactions}
+                  </span>
+                  <span>
+                    💬 {post.replies} replies
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
     id: "discover",
-    label: "Discover",
-    description: "Browse profiles filtered by university, city, and lifestyle.",
+    label: "Discover Matches",
+    shortLabel: "Discover",
+    description: "Browse profiles filtered by location, budget, and lifestyle.",
     mockContent: (
       <div className="space-y-3 p-4">
         {[
-          { name: "Amara O.", uni: "UNILAG", budget: "₦80k–₦120k", match: 92, verified: true },
-          { name: "Fatimah K.", uni: "UNILAG", budget: "₦60k–₦100k", match: 88, verified: true },
-          { name: "Emeka N.", uni: "UniAbuja", budget: "₦50k–₦80k", match: 74, verified: false },
+          { name: "Amara O.", location: "Yaba, Lagos", budget: "₦80k–₦120k", match: 92, verified: true },
+          { name: "Fatimah K.", location: "Surulere, Lagos", budget: "₦60k–₦100k", match: 88, verified: true },
+          { name: "Emeka N.", location: "Garki, Abuja", budget: "₦50k–₦80k", match: 74, verified: false },
         ].map((profile) => (
           <div
             key={profile.name}
@@ -35,7 +102,7 @@ const screens = [
                   </div>
                 )}
               </div>
-              <p className="text-slate-400 text-[10px]">{profile.uni}</p>
+              <p className="text-slate-400 text-[10px]">{profile.location}</p>
               <p className="text-slate-500 text-[10px]">{profile.budget}/mo</p>
             </div>
             <div className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">
@@ -48,14 +115,15 @@ const screens = [
   },
   {
     id: "chat",
-    label: "Chat",
+    label: "Direct Chat",
+    shortLabel: "Chat",
     description: "Real-time messaging with your match — unlocked for free.",
     mockContent: (
       <div className="p-4 flex flex-col gap-3">
         <div className="flex gap-2">
           <div className="w-6 h-6 rounded-full bg-brand-200 flex-shrink-0" />
           <div className="bg-sage-surface rounded-2xl rounded-tl-none px-3 py-2 max-w-[80%]">
-            <p className="text-xs text-slate-700">Hey! Saw your profile, I&apos;m also near UNILAG</p>
+            <p className="text-xs text-slate-700">Hey! Saw your profile, I&apos;m also looking near Yaba</p>
           </div>
         </div>
         <div className="flex gap-2 justify-end">
@@ -82,6 +150,7 @@ const screens = [
   {
     id: "splits",
     label: "Bill Splits",
+    shortLabel: "Splits",
     description: "Track shared expenses and mark them as paid.",
     mockContent: (
       <div className="p-4 space-y-3">
@@ -119,8 +188,34 @@ const screens = [
 
 export function AppPreview() {
   const ref = useRef(null);
+  const { openWaitlist } = useWaitlist();
   const isInView = useInView(ref, { once: true, margin: "-80px" });
   const [activeScreen, setActiveScreen] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    if (isInView && !isPaused) {
+      timerRef.current = setInterval(() => {
+        setActiveScreen((prev) => (prev + 1) % screens.length);
+      }, 4500);
+    }
+  }, [isInView, isPaused]);
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [resetTimer]);
+
+  const handleSelectScreen = (index: number) => {
+    setActiveScreen(index);
+    resetTimer();
+  };
 
   return (
     <section ref={ref} className="py-24 px-6 bg-white overflow-hidden">
@@ -132,7 +227,7 @@ export function AppPreview() {
           className="text-center mb-16"
         >
           <h2 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900">
-            Built for Nigerian students
+            Built for Nigerians
           </h2>
           <p className="text-slate-500 mt-4 text-lg max-w-md mx-auto">
             A clean, fast PWA that works even without internet. Install it like
@@ -147,11 +242,15 @@ export function AppPreview() {
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ delay: 0.2, duration: 0.5 }}
             className="flex lg:flex-col gap-3 lg:gap-4 flex-shrink-0"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
           >
             {screens.map((screen, i) => (
               <button
                 key={screen.id}
-                onClick={() => setActiveScreen(i)}
+                onClick={() => handleSelectScreen(i)}
                 className={`px-5 py-3 rounded-2xl text-left transition-all duration-200 ${
                   activeScreen === i
                     ? "bg-brand-500 text-white shadow-brutal"
@@ -169,12 +268,12 @@ export function AppPreview() {
               </button>
             ))}
 
-            <a
-              href={APP_URL}
+            <button
+              onClick={openWaitlist}
               className="hidden lg:inline-flex items-center justify-center mt-4 px-6 py-3 bg-peach-200 hover:bg-peach-300 text-slate-900 font-semibold rounded-2xl transition-colors text-sm"
             >
               Try it now
-            </a>
+            </button>
           </motion.div>
 
           {/* Phone mockup */}
@@ -183,6 +282,10 @@ export function AppPreview() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.3, duration: 0.6 }}
             className="flex-1 flex justify-center"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
           >
             <div
               className="relative w-64 bg-slate-900 rounded-[2.5rem] shadow-2xl border-4 border-slate-800 overflow-hidden"
@@ -201,7 +304,7 @@ export function AppPreview() {
               <div className="bg-white pt-8 pb-2 px-4 border-b border-slate-100">
                 <div className="flex items-center justify-between">
                   <p className="font-display font-semibold text-sm text-slate-900">
-                    {screens[activeScreen]?.label ?? ""}
+                    {screens[activeScreen]?.shortLabel ?? screens[activeScreen]?.label ?? ""}
                   </p>
                   <div className="w-6 h-6 rounded-full bg-brand-100" />
                 </div>
@@ -224,10 +327,10 @@ export function AppPreview() {
 
               {/* Bottom nav */}
               <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around py-2 px-2">
-                {["Discover", "Chat", "Splits"].map((tab, i) => (
+                {screens.map((screen, i) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveScreen(i)}
+                    key={screen.id}
+                    onClick={() => handleSelectScreen(i)}
                     className={`text-[9px] flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg ${
                       activeScreen === i
                         ? "text-brand-600 font-semibold"
@@ -239,7 +342,7 @@ export function AppPreview() {
                         activeScreen === i ? "bg-brand-500" : "bg-transparent"
                       }`}
                     />
-                    {tab}
+                    {screen.shortLabel ?? screen.label}
                   </button>
                 ))}
               </div>

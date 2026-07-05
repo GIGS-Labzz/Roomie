@@ -25,9 +25,9 @@ type State = "form" | "loading" | "success" | "error";
 
 const fields = [
   { name: "full_name",   label: "Full name",       type: "text",  placeholder: "Amara Okafor"         },
-  { name: "email",       label: "Email address",   type: "email", placeholder: "amara@unilag.edu.ng"  },
+  { name: "email",       label: "Email address",   type: "email", placeholder: "amara@gmail.com"      },
   { name: "phone",       label: "Phone number",    type: "tel",   placeholder: "+234 801 234 5678"    },
-  { name: "university",  label: "University",      type: "text",  placeholder: "University of Lagos"  },
+  { name: "university",  label: "Workplace or School (Optional)", type: "text", placeholder: "e.g., UNILAG, Chevron, Freelance" },
   { name: "city",        label: "City",            type: "text",  placeholder: "Lagos"                },
 ] as const;
 
@@ -134,7 +134,7 @@ export function WaitlistModal({ open, onClose }: Props) {
                         Join the waitlist
                       </h2>
                       <p className="text-slate-500 text-sm">
-                        Be among the first students to try Roomie. We'll add you to our WhatsApp group for early access.
+                        Be among the first to try Roomie. We'll add you to our WhatsApp group for early access.
                       </p>
                     </div>
 
@@ -147,7 +147,7 @@ export function WaitlistModal({ open, onClose }: Props) {
                           <input
                             type={field.type}
                             placeholder={field.placeholder}
-                            required
+                            required={field.name !== "university"}
                             value={values[field.name]}
                             onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
                             disabled={state === "loading"}

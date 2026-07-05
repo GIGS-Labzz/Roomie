@@ -11,7 +11,7 @@ const stats = [
   {
     icon: Users,
     value: "500+",
-    label: "students connected",
+    label: "roommates connected",
   },
   {
     icon: MapPin,
@@ -52,7 +52,7 @@ export function ForProviders() {
               transition={{ duration: 0.5 }}
               className="font-display font-semibold text-4xl sm:text-5xl leading-tight text-white mb-6"
             >
-              Partner with Nigeria&apos;s leading student roommate service
+              Partner with Nigeria&apos;s leading roommate service
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 16 }}
@@ -60,7 +60,7 @@ export function ForProviders() {
               transition={{ delay: 0.15, duration: 0.5 }}
               className="text-slate-400 text-lg leading-relaxed mb-8"
             >
-              Unlock access to verified student groups searching for rooms.
+              Unlock access to verified roommate groups searching for rooms.
               Integrate your housing platforms or list available properties to
               fill rooms fast.
             </motion.p>

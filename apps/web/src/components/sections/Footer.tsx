@@ -18,7 +18,7 @@ export function Footer() {
               <Logo href="/" size="md" variant="light" />
             </div>
             <p className="text-sm leading-relaxed max-w-xs">
-              Find your perfect student roommate. Connect and Cooonnecttt.
+              Perfect Roomie. Just Connect and Coonneect.
             </p>
           </div>
 
@@ -92,7 +92,7 @@ export function Footer() {
           <p>
             &copy; 2026 Roomie &bull; A{" "}
             <a
-              href="https://gigsrentals.com"
+              href="https://go-finder-dashboard.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-300 hover:text-white transition-colors"
@@ -101,7 +101,7 @@ export function Footer() {
             </a>{" "}
             Product
           </p>
-          <p>Made for Nigerian students</p>
+          <p>Made in Nigeria</p>
         </div>
       </div>
     </footer>

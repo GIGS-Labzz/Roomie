@@ -9,7 +9,7 @@ const steps = [
     number: "01",
     title: "Create your profile",
     description:
-      "Sign in with Google in one tap. Fill in your lifestyle, budget, and university. Done in under 3 minutes.",
+      "Sign in with Google in one tap. Fill in your lifestyle, budget, and location. Done in under 3 minutes.",
     animation:
       "https://lottie.host/b7e18fcd-5f37-4ae3-9eb0-30c46900d522/yEsNQH5aJZ.lottie",
     color: "bg-brand-100",
@@ -18,7 +18,7 @@ const steps = [
     number: "02",
     title: "Browse and connect",
     description:
-      "Discover profiles filtered by university, city, budget, and lifestyle. Tap Connect — it's free. Chat opens immediately.",
+      "Discover profiles filtered by location, budget, and lifestyle. Tap Connect — it's free. Chat opens immediately.",
     animation:
       "https://lottie.host/5e52dae9-1797-468f-a621-adbbcb1d33ba/Uf3UO6x3RW.lottie",
     color: "bg-peach-100",
@@ -27,7 +27,7 @@ const steps = [
     number: "03",
     title: "Move in together",
     description:
-      "Propose a Roommate Agreement in the chat. Pay ₦2,000 once to unlock curated housing providers near your campus.",
+      "Propose a Roommate Agreement in the chat. Pay ₦2,000 once to unlock curated housing providers in your preferred area.",
     animation:
       "https://lottie.host/aee91568-2dd1-4900-82aa-93af486605b1/I4cpTPzziC.lottie",
     color: "bg-sage-surface",

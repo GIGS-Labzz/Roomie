@@ -38,6 +38,18 @@ export function PlatformCard({ platform, connectionId }: PlatformCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="truncate text-base font-bold text-slate-900">{platform.name}</h2>
+            {/* Verified Badge */}
+            <div className="group relative flex items-center">
+              <span className="inline-flex items-center justify-center rounded-full bg-emerald-100 p-0.5 text-emerald-600 cursor-help" aria-label="Verified provider by Roomie">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <div className="absolute bottom-full left-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-lg bg-slate-950 px-2.5 py-1.5 text-center text-[11px] font-medium text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 pointer-events-none shadow-md">
+                Verified provider by Roomie
+                <div className="absolute top-full left-1/2 -mt-1 h-1.5 w-1.5 -translate-x-1/2 rotate-45 bg-slate-950"></div>
+              </div>
+            </div>
             {platform.is_featured && (
               <span className="rounded-full bg-peach-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
                 Featured

@@ -7,6 +7,7 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import {
   LayoutDashboard,
   Building2,
+  PlusCircle,
   ClipboardCheck,
   GraduationCap,
   Link2,
@@ -17,7 +18,8 @@ import {
 
 const NAV = [
   { href: "/super",             label: "Overview",       icon: LayoutDashboard, exact: true },
-  { href: "/super/providers",   label: "Providers",      icon: Building2 },
+  { href: "/super/providers",   label: "Providers",      icon: Building2, exact: true },
+  { href: "/super/providers/new", label: "Add Provider",   icon: PlusCircle },
   { href: "/super/approvals",   label: "Approvals",      icon: ClipboardCheck },
   { href: "/super/students",    label: "Student Verify", icon: GraduationCap },
   { href: "/super/connections", label: "Connections",    icon: Link2 },

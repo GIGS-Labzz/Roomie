@@ -11,7 +11,7 @@ const DotLottieReact = dynamic(
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://roomie-app-umber.vercel.app";
 
-const tagline = ["C", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t"];
+const tagline = ["C", "o", "o", "n", "n", "e", "e", "c", "t"];
 
 export function Hero() {
   const { openWaitlist } = useWaitlist();
@@ -45,7 +45,7 @@ export function Hero() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-brand-600 font-semibold text-sm uppercase tracking-widest mb-4"
           >
-            Student Roommate Matching
+            Perfect Roomie
           </motion.p>
 
           <motion.h1
@@ -54,7 +54,7 @@ export function Hero() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl leading-tight text-slate-900 mb-2"
           >
-            Connect and
+            Just Connect and
           </motion.h1>
 
           <div className="flex flex-wrap justify-center lg:justify-start mb-6">
@@ -82,7 +82,7 @@ export function Hero() {
             transition={{ delay: 0.9, duration: 0.5 }}
             className="text-slate-600 text-lg sm:text-xl max-w-md mx-auto lg:mx-0 mb-10"
           >
-            Find your perfect student roommate. Pay once. Move in together.
+            Find your perfect roommate. Pay once. Move in together.
           </motion.p>
 
           <motion.div
@@ -120,7 +120,6 @@ export function Hero() {
           />
         </motion.div>
       </div>
-
-  </section>
+    </section>
   );
 }

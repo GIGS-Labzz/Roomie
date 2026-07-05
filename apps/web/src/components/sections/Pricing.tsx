@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { useWaitlist } from "@/context/waitlist";
 
 const included = [
-  "Browse all student profiles for free",
+  "Browse all profiles for free",
   "Send a connection request — free",
   "Chat with your match — free",
   "Propose a Roommate Agreement — free",

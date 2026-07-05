@@ -14,9 +14,9 @@ import {
 const features = [
   {
     icon: ShieldCheck,
-    title: "Verified student profiles",
+    title: "Verified profiles",
     description:
-      "Upload your student ID and earn a Verified badge. Filter for verified-only profiles when browsing.",
+      "Upload your ID and earn a Verified badge. Filter for verified-only profiles when browsing.",
     color: "text-brand-500",
     bg: "bg-brand-50",
   },
@@ -40,7 +40,7 @@ const features = [
     icon: Building2,
     title: "Curated housing nearby",
     description:
-      "Unlock a shortlist of housing providers near your campus after paying the one-time ₦2,000 fee.",
+      "Unlock a shortlist of housing providers in your preferred area after paying the one-time ₦2,000 fee.",
     color: "text-peach-500",
     bg: "bg-peach-50",
   },

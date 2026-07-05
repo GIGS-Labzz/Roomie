@@ -4,11 +4,11 @@ import { WaitlistProvider } from "@/context/waitlist";
 import { CookieBanner } from "@/components/sections/CookieBanner";
 
 export const metadata: Metadata = {
-  title: "Roomie — Connect and Cooonnecttt",
-  description: "Find your perfect student roommate. Pay once. Move in together.",
+  title: "Roomie — Perfect Roomie",
+  description: "Find your perfect roommate. Pay once. Move in together.",
   openGraph: {
     title: "Roomie",
-    description: "Find your perfect student roommate.",
+    description: "Find your perfect roommate.",
     type: "website",
   },
 };

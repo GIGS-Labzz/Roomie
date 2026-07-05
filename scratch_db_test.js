@@ -13,19 +13,18 @@ if (!supabaseUrl || !serviceKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
-  db: { schema: 'auth' }
+  db: { schema: 'public' }
 });
 
 async function run() {
   const { data, error } = await supabaseAdmin
-    .from('users')
-    .select('id, email, encrypted_password')
-    .limit(1);
+    .from('platform_clicks')
+    .select('*');
 
   if (error) {
-    console.error("Error querying auth.users:", error);
+    console.error("Error querying platform_clicks:", error);
   } else {
-    console.log("Success! Users fetched:", data);
+    console.log("Success! platform_clicks fetched:", data);
   }
 }
 

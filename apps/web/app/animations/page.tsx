@@ -58,7 +58,7 @@ function LottieCard({ item }: { item: typeof lottieItems[0] }) {
 
 // ─── Hero letter spring ───────────────────────────────────────────────────────
 
-const tagline = ["C", "o", "o", "o", "o", "n", "n", "e", "c", "t", "t", "t", "t"];
+const tagline = ["C", "o", "o", "n", "n", "e", "e", "c", "t"];
 
 function HeroLetterDemo() {
   const [key, setKey] = useState(0);
@@ -86,7 +86,7 @@ function HeroLetterDemo() {
           transition={{ delay: 0.7, duration: 0.5 }}
           className="text-slate-600 text-sm"
         >
-          Find your perfect student roommate. Pay once. Move in together.
+          Find your perfect roommate. Pay once. Move in together.
         </motion.p>
         <motion.div
           key={`btn-${key}`}
@@ -197,7 +197,7 @@ function StepCardsDemo() {
 // ─── Pricing list slide-in ────────────────────────────────────────────────────
 
 const pricingItems = [
-  "Browse all student profiles for free",
+  "Browse all profiles for free",
   "Send a connection request — free",
   "Chat with your match — free",
   "Propose a Roommate Agreement — free",
@@ -251,7 +251,7 @@ function PricingListDemo() {
 // ─── ForProviders stats stagger ───────────────────────────────────────────────
 
 const statsData = [
-  { value: "500+", label: "students connected" },
+  { value: "500+", label: "roommates connected" },
   { value: "12", label: "cities covered" },
   { value: "3 min", label: "avg. connection time" },
 ];
@@ -268,7 +268,7 @@ function StatsDemo() {
         transition={{ duration: 0.5 }}
         className="mb-5"
       >
-        <p className="font-display font-semibold text-xl text-slate-900">Reach students who are ALREADY ready to rent.</p>
+        <p className="font-display font-semibold text-xl text-slate-900">Reach roommates who are ALREADY ready to rent.</p>
       </motion.div>
       <div className="grid grid-cols-3 gap-3 mb-4">
         {statsData.map((s, i) => (

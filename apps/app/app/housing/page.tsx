@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@repo/db/server";
-import { getRelevantPlatforms } from "@repo/db/queries/housing";
+import { getRelevantPlatforms, type HousingPlatform } from "@repo/db/queries/housing";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { PlatformCard } from "@/components/housing/PlatformCard";
 
@@ -48,12 +48,32 @@ export default async function HousingPage() {
     .single();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const platforms = confirmedAgreement
-    ? await getRelevantPlatforms(supabase as any, {
-        city: profile?.city,
-        university: profile?.university,
-      })
-    : [];
+  const { data: allPlatforms } = confirmedAgreement
+    ? await (supabase as any)
+        .from("housing_platforms")
+        .select("*")
+        .eq("status", "ACTIVE")
+        .order("is_featured", { ascending: false })
+        .order("total_referrals", { ascending: false })
+    : { data: [] };
+
+  const platforms = (allPlatforms ?? []) as HousingPlatform[];
+
+  const city = profile?.city?.trim().toLowerCase();
+  const university = profile?.university?.trim().toLowerCase();
+
+  const matchedPlatforms = platforms.filter((platform) => {
+    const cityMatch = city
+      ? platform.cities.some((item) => item.toLowerCase() === city)
+      : false;
+    const campusMatch = university
+      ? (platform.campus_tags ?? []).some((item) => university.includes(item.toLowerCase()))
+      : false;
+
+    return cityMatch || campusMatch;
+  });
+
+  const otherPlatforms = platforms.filter((platform) => !matchedPlatforms.includes(platform));
 
   const activeConnection = connections?.[0];
 
@@ -87,15 +107,50 @@ export default async function HousingPage() {
             action="Open chat"
           />
         ) : (
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {platforms.map((platform) => (
-              <PlatformCard
-                key={platform.id}
-                platform={platform}
-                connectionId={confirmedAgreement.connection_id}
-              />
-            ))}
-          </section>
+          <div className="space-y-8">
+            {/* Matched Platforms Section */}
+            {matchedPlatforms.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" />
+                  Curated for your campus & location
+                </h2>
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {matchedPlatforms.map((platform: HousingPlatform) => (
+                    <PlatformCard
+                      key={platform.id}
+                      platform={platform}
+                      connectionId={confirmedAgreement.connection_id}
+                    />
+                  ))}
+                </section>
+              </div>
+            )}
+
+            {/* Other Verified Platforms Section */}
+            {otherPlatforms.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-slate-800 pt-2">
+                  {matchedPlatforms.length > 0 ? "Other verified housing" : "Verified housing providers"}
+                </h2>
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {otherPlatforms.map((platform: HousingPlatform) => (
+                    <PlatformCard
+                      key={platform.id}
+                      platform={platform}
+                      connectionId={confirmedAgreement.connection_id}
+                    />
+                  ))}
+                </section>
+              </div>
+            )}
+
+            {platforms.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 text-slate-400 text-sm">
+                No housing platforms registered yet.
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>
