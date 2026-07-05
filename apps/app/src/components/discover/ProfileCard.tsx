@@ -149,7 +149,7 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <Link href={`/discover/${profile.id}`}>
-              <h3 className="font-display font-bold text-slate-900 text-base leading-tight hover:text-brand-600 transition-colors truncate">
+              <h3 className="font-display font-bold text-slate-900 text-base leading-tight hover:text-brand-600 transition-colors break-words whitespace-normal">
                 {profile.display_name}
               </h3>
             </Link>
