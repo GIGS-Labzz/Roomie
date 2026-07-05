@@ -141,12 +141,12 @@ export default function ChatThreadPage() {
   if (!user) return null;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-sage-surface">
+    <div className="flex h-screen overflow-hidden bg-sage-surface">
       {/* Desktop sidebar */}
       <AppSidebar />
 
-      <div className="flex-1 flex justify-center min-w-0">
-        <div className="flex flex-col w-full max-w-3xl h-full min-h-0">
+      <div className="flex-1 flex justify-center min-w-0 overflow-hidden">
+        <div className="flex flex-col w-full max-w-3xl h-full min-h-0 overflow-hidden">
 
           {/* ── Header (WhatsApp-style: brand green background) ── */}
           <header className="flex-shrink-0 bg-brand-500 px-3 py-2.5 flex items-center gap-2 shadow-md">
