@@ -30,12 +30,20 @@ export default function VerifyPage() {
     // Auto-connect to official roommate support account
     const officialId = "a99928a0-8de7-4da0-871a-22077d13945d";
     try {
-      await (supabase as any).from("connections").insert({
+      const { data: conn } = await (supabase as any).from("connections").insert({
         requester_id: officialId,
         receiver_id: user.id,
         status: "ACTIVE",
         connected_at: new Date().toISOString(),
-      });
+      }).select().single();
+
+      if (conn) {
+        await (supabase as any).from("messages").insert({
+          connection_id: conn.id,
+          sender_id: officialId,
+          content: "Welcome to Roomie 😊 , this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
+        });
+      }
     } catch (err) {
       console.error("Auto-connect to support failed:", err);
     }
@@ -94,12 +102,20 @@ export default function VerifyPage() {
     // Auto-connect to official roommate support account
     const officialId = "a99928a0-8de7-4da0-871a-22077d13945d";
     try {
-      await (supabase as any).from("connections").insert({
+      const { data: conn } = await (supabase as any).from("connections").insert({
         requester_id: officialId,
         receiver_id: user.id,
         status: "ACTIVE",
         connected_at: new Date().toISOString(),
-      });
+      }).select().single();
+
+      if (conn) {
+        await (supabase as any).from("messages").insert({
+          connection_id: conn.id,
+          sender_id: officialId,
+          content: "Welcome to Roomie 😊 , this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
+        });
+      }
     } catch (err) {
       console.error("Auto-connect to support failed:", err);
     }

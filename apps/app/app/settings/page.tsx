@@ -411,6 +411,15 @@ export default function SettingsPage() {
                 />
               </div>
             </Field>
+            <Field label="Email Address">
+              <input
+                type="email"
+                className={`${inputCls} bg-slate-50 text-slate-500 cursor-not-allowed`}
+                value={user?.email ?? ""}
+                disabled
+                readOnly
+              />
+            </Field>
             <Field label="Birthday">
               <input
                 type="date"
