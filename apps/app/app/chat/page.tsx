@@ -175,6 +175,11 @@ export default function ChatListPage() {
           </div>
         </header>
 
+        {/* Warning Banner */}
+        <div className="bg-red-600 text-white px-4 py-2 text-center text-xs font-semibold shadow-sm flex-shrink-0">
+          Chats May take long , Still Under Construction
+        </div>
+
         {/* ── List panel — layout ported from MessagesScreen's conversation list ── */}
         <main className="flex-1 max-w-2xl w-full mx-auto pb-28 md:pb-6">
           <div className="px-4 pt-4">

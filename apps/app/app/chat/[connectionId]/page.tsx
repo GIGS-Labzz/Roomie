@@ -191,6 +191,11 @@ export default function ChatThreadPage() {
             </Link>
           </header>
 
+          {/* Warning Banner */}
+          <div className="bg-red-600 text-white px-4 py-2 text-center text-xs font-medium shadow-sm flex-shrink-0 leading-snug">
+            Please endeavour to wait till message is deliverred before exiting , it might take max 10 secs, Bear with us , we are working on the lag
+          </div>
+
           {/* ── Pinned bill split reminder ── */}
           {user && (
             <BillSplitPinnedBanner connectionId={connectionId} currentUserId={user.id} />
