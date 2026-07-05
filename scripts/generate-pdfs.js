@@ -157,7 +157,7 @@ const TERMS_SECTIONS = [
   },
   {
     title: '2. The Roomie Platform Service Description',
-    body: 'Roomie provides a student roommate-matching and housing referral application designed to facilitate connections between students seeking shared living accommodations, primarily within Nigeria. We act solely as a technology provider that provides (a) compatibility profiling to facilitate peer introductions and (b) curated listing database access for housing referrals. You acknowledge and agree that GIGSRentals is NOT a real estate agent, housing broker, property manager, landlord, or guarantor of any accommodation. We do not own, manage, lease, inspect, or endorse any properties listed on the platform, nor do we inspect or verify the character, background, or physical properties of the users.'
+    body: 'Roomie provides a student roommate-matching and housing referral application designed to facilitate connections between students seeking shared living accommodations, primarily within Nigeria. We act solely as a technology provider that provides (a) compatibility profiling to facilitate peer introductions and (b) curated listing database access for housing referrals. To assist with platform onboarding, direct support, and security alerts, all user accounts are automatically connected to the official support account (Roomie.app) upon registration. This connection is default and non-removable. You acknowledge and agree that GIGSRentals is NOT a real estate agent, housing broker, property manager, landlord, or guarantor of any accommodation. We do not own, manage, lease, inspect, or endorse any properties listed on the platform, nor do we inspect or verify the character, background, or physical properties of the users.'
   },
   {
     title: '3. Eligibility and User Verification',
@@ -244,7 +244,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     title: '4. How We Use Your Personal Data',
-    body: 'We process your personal information to deliver a secure and optimized roommate-matching experience, specifically to: (a) register and maintain your secure user profile; (b) compute compatibility scores and display profiles to matching candidates; (c) process transaction fees and grant database permissions; (d) send you notifications regarding connection requests or platform updates; (e) monitor, detect, and prevent fraudulent listings, scams, and policy violations; (f) conduct server diagnostic checks and optimize layout displays; and (g) fulfill mandatory tax and regulatory filings under Nigerian law.'
+    body: 'We process your personal information to deliver a secure and optimized roommate-matching experience, specifically to: (a) register and maintain your secure user profile; (b) compute compatibility scores and display profiles to matching candidates; (c) process transaction fees and grant database permissions; (d) send you notifications regarding connection requests or platform updates; (e) monitor, detect, and prevent fraudulent listings, scams, and policy violations; (f) conduct server diagnostic checks and optimize layout displays; (g) automatically connect your account to our official support account (Roomie.app) upon registration for direct customer support, system notifications, and platform onboarding; and (h) fulfill mandatory tax and regulatory filings under Nigerian law.'
   },
   {
     title: '5. Information Sharing and Disclosure',

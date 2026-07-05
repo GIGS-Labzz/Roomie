@@ -238,6 +238,7 @@ export default function ProfileDetailPage() {
     );
   }
 
+  const isRoomieApp = profile.username?.toLowerCase() === "roomie.app" || profile.display_name?.toLowerCase() === "roomie.app";
   const compatScore = myProfile ? calculateCompatibility(myProfile, profile) : 0;
   const tags = profile.lifestyle_tags ?? [];
   const handle = profile.username ? `@${profile.username}` : (profile.display_name ? `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}` : "@user");
@@ -260,9 +261,11 @@ export default function ProfileDetailPage() {
             <h1 className="font-display font-black text-slate-900 text-base truncate">
               {profile.display_name}
             </h1>
-            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{compatScore}% Compatible</p>
+            {!isRoomieApp && (
+              <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{compatScore}% Compatible</p>
+            )}
           </div>
-          <CompatibilityScore score={compatScore} />
+          {!isRoomieApp && <CompatibilityScore score={compatScore} />}
         </div>
       </header>
 

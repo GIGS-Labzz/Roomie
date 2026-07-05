@@ -86,6 +86,8 @@ export async function getActiveConnections(
     .select(`
       id,
       connected_at,
+      requester_id,
+      receiver_id,
       requester:profiles!requester_id(id, display_name, username, avatar_url, university, city, student_verified, bio),
       receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified, bio)
     `)
@@ -102,6 +104,8 @@ export async function getConfirmedRoomies(
     .select(`
       id,
       accepted_at,
+      initiator_id,
+      acceptor_id,
       initiator:profiles!initiator_id(id, display_name, avatar_url, university, city, student_verified, bio),
       acceptor:profiles!acceptor_id(id, display_name, avatar_url, university, city, student_verified, bio)
     `)

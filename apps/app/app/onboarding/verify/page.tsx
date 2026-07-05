@@ -26,7 +26,21 @@ export default function VerifyPage() {
       onboarding_step: 6,
       onboarding_complete: true,
     }).eq("id", user.id);
-    router.push("/discover");
+
+    // Auto-connect to official roommate support account
+    const officialId = "a99928a0-8de7-4da0-871a-22077d13945d";
+    try {
+      await (supabase as any).from("connections").insert({
+        requester_id: officialId,
+        receiver_id: user.id,
+        status: "ACTIVE",
+        connected_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Auto-connect to support failed:", err);
+    }
+
+    router.push("/onboarding/success");
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: "front" | "back") => {
@@ -76,7 +90,21 @@ export default function VerifyPage() {
       onboarding_step: 6,
       onboarding_complete: true,
     }).eq("id", user.id);
-    router.push("/discover");
+
+    // Auto-connect to official roommate support account
+    const officialId = "a99928a0-8de7-4da0-871a-22077d13945d";
+    try {
+      await (supabase as any).from("connections").insert({
+        requester_id: officialId,
+        receiver_id: user.id,
+        status: "ACTIVE",
+        connected_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Auto-connect to support failed:", err);
+    }
+
+    router.push("/onboarding/success");
   };
 
   const bothUploaded = frontState === "done" && backState === "done";

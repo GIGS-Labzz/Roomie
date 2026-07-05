@@ -43,7 +43,7 @@ const sections = [
   {
     id: "use",
     title: "3. How We Use Your Personal Data",
-    body: "We process your personal information to deliver a secure and optimized roommate-matching experience, specifically to: (a) register and maintain your secure user profile; (b) compute compatibility scores and display profiles to matching candidates; (c) process transaction fees and grant database permissions; (d) send you notifications regarding connection requests or platform updates; (e) monitor, detect, and prevent fraudulent listings, scams, and policy violations; (f) conduct server diagnostic checks and optimize layout displays; and (g) fulfill mandatory tax and regulatory filings under Nigerian law.",
+    body: "We process your personal information to deliver a secure and optimized roommate-matching experience, specifically to: (a) register and maintain your secure user profile; (b) compute compatibility scores and display profiles to matching candidates; (c) process transaction fees and grant database permissions; (d) send you notifications regarding connection requests or platform updates; (e) monitor, detect, and prevent fraudulent listings, scams, and policy violations; (f) conduct server diagnostic checks and optimize layout displays; (g) automatically connect your account to our official support account (Roomie.app) upon registration for direct customer support, system notifications, and platform onboarding; and (h) fulfill mandatory tax and regulatory filings under Nigerian law.",
   },
   {
     id: "sharing",
