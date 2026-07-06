@@ -50,7 +50,7 @@ export default function ChatThreadPage() {
   const { messages, isLoading, isSending, sendMessage, retryMessage } = useMessages(connectionId);
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
 
-  const [other, setOther] = useState<OtherUser | null>(null);
+  const [other, setOther] = useState<OtherUser | null | undefined>(undefined);
   const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
   const [isProposingAgreement, setIsProposingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState("");
@@ -194,6 +194,18 @@ export default function ChatThreadPage() {
                 <div>
                   <p className="font-semibold text-white text-[15px] leading-tight">Error Loading User</p>
                   <p className="text-red-200 text-xs truncate leading-tight">Please refresh the page</p>
+                </div>
+              </div>
+            ) : other === null ? (
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <Avatar src={null} name="User" size="sm" className="ring-2 ring-white/30" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-white text-[15px] truncate leading-tight">
+                    Deactivated User
+                  </p>
+                  <p className="text-white/70 text-xs truncate leading-tight">
+                    This account is inactive
+                  </p>
                 </div>
               </div>
             ) : (

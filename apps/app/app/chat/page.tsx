@@ -292,16 +292,25 @@ export default function ChatListPage() {
                 {filteredConnections.map(({ connection: conn, other, unread, preview, time }) => (
                   <li key={conn.id}>
                     <div className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
-                      <Link
-                        href={`/discover/${other?.id}`}
-                        className="flex-shrink-0 mr-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="relative">
-                          <Avatar src={other?.avatar_url} name={other?.display_name} size="lg" />
-                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-brand-400 rounded-full border-2 border-white" />
+                      {other ? (
+                        <Link
+                          href={`/discover/${other.id}`}
+                          className="flex-shrink-0 mr-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="relative">
+                            <Avatar src={other.avatar_url} name={other.display_name} size="lg" />
+                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-brand-400 rounded-full border-2 border-white" />
+                          </div>
+                        </Link>
+                      ) : (
+                        <div className="flex-shrink-0 mr-3">
+                          <div className="relative">
+                            <Avatar src={null} name="Roommate" size="lg" />
+                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-slate-300 rounded-full border-2 border-white" />
+                          </div>
                         </div>
-                      </Link>
+                      )}
 
                       <Link href={`/chat/${conn.id}`} className="flex-1 min-w-0 flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">

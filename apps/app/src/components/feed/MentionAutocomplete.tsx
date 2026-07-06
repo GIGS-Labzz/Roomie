@@ -34,8 +34,10 @@ export function MentionAutocomplete({ userId, query, onSelect }: MentionAutocomp
           const profiles = data.map((c: any) =>
             c.requester.id === userId ? c.receiver : c.requester
           ) as Profile[];
-          // Filter out profiles without a username
-          const validProfiles = profiles.filter((p) => !!p.username);
+          // Filter out null profiles first, then filter out profiles without a username
+          const validProfiles = profiles
+            .filter((p): p is Profile => p !== null && p !== undefined)
+            .filter((p) => !!p.username);
           setConnections(validProfiles);
         }
       } catch (err) {

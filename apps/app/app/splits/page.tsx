@@ -18,7 +18,7 @@ type Connection = any;
 
 interface SplitSummary {
   connectionId: string;
-  otherUser: { id: string; display_name: string; avatar_url: string | null };
+  otherUser: { id: string; display_name: string; avatar_url: string | null } | null;
   totalActive: number;
   totalSettled: number;
   unpaidAmount: number;
@@ -132,10 +132,10 @@ export default function SplitsIndexPage() {
                   href={`/splits/${s.connectionId}`}
                   className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
                 >
-                  <Avatar src={s.otherUser.avatar_url} name={s.otherUser.display_name} size="lg" />
+                  <Avatar src={s.otherUser?.avatar_url} name={s.otherUser?.display_name ?? "Deactivated User"} size="lg" />
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 text-[15px] truncate">{s.otherUser.display_name}</p>
+                    <p className="font-semibold text-slate-900 text-[15px] truncate">{s.otherUser?.display_name ?? "Deactivated User"}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {s.totalActive > 0 ? `${s.totalActive} active` : "No active splits"}
                       {s.totalSettled > 0 ? ` · ${s.totalSettled} settled` : ""}
