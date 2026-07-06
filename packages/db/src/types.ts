@@ -808,6 +808,7 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
           is_active: boolean | null
+          is_barred: boolean | null
           last_seen_at: string | null
           lifestyle_tags: string[] | null
           max_budget: number | null
@@ -854,6 +855,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id: string
           is_active?: boolean | null
+          is_barred?: boolean | null
           last_seen_at?: string | null
           lifestyle_tags?: string[] | null
           max_budget?: number | null
@@ -900,6 +902,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
           is_active?: boolean | null
+          is_barred?: boolean | null
           last_seen_at?: string | null
           lifestyle_tags?: string[] | null
           max_budget?: number | null

@@ -40,7 +40,7 @@ export default function StudentsPage() {
     try {
       const { error: updateError } = await (supabase as any)
         .from("profiles")
-        .update({ is_active: false, verification_status: "REJECTED" })
+        .update({ is_active: false, is_barred: true, verification_status: "REJECTED" })
         .in("id", selectedUserIds);
 
       if (updateError) throw updateError;
@@ -48,13 +48,13 @@ export default function StudentsPage() {
       // Update local state in modal
       setAllUsers((prev) =>
         prev.map((u) =>
-          selectedUserIds.includes(u.id) ? { ...u, is_active: false, verification_status: "REJECTED" } : u
+          selectedUserIds.includes(u.id) ? { ...u, is_active: false, is_barred: true, verification_status: "REJECTED" } : u
         )
       );
       // Update local state on main list
       setStudents((prev) =>
         prev.map((u) =>
-          selectedUserIds.includes(u.id) ? { ...u, is_active: false, verification_status: "REJECTED" } : u
+          selectedUserIds.includes(u.id) ? { ...u, is_active: false, is_barred: true, verification_status: "REJECTED" } : u
         )
       );
 
@@ -100,7 +100,7 @@ export default function StudentsPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
       .from("profiles")
-      .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at")
+      .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at, is_active, is_barred")
       .eq("onboarding_complete", true)  // exclude housing providers / admin accounts
       .order("created_at", { ascending: false })
       .limit(100);
@@ -121,7 +121,7 @@ export default function StudentsPage() {
     try {
       const { data, error: loadError } = await (supabase as any)
         .from("profiles")
-        .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at")
+        .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at, is_active, is_barred")
         .eq("onboarding_complete", true)
         .order("created_at", { ascending: false });
 
@@ -602,6 +602,7 @@ export default function StudentsPage() {
                             { label: "Location", key: "city" },
                             { label: "Join Date", key: "joinDate" },
                             { label: "Verification", key: "verification_status" },
+                            { label: "Barred", key: "is_barred" },
                           ].map((col) => (
                             <th
                               key={col.key}
@@ -692,6 +693,19 @@ export default function StudentsPage() {
                               <span className={`text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-lg ${STATUS_STYLE[user.verification_status] ?? "bg-slate-100 text-slate-500"}`}>
                                 {user.verification_status || "UNVERIFIED"}
                               </span>
+                            </td>
+
+                            {/* Barred Status */}
+                            <td className="px-6 py-3.5 whitespace-nowrap text-sm">
+                              {user.is_barred ? (
+                                <span className="px-2.5 py-1 text-[10px] font-semibold bg-red-100 text-red-700 rounded-lg uppercase tracking-wider animate-pulse">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-lg uppercase tracking-wider">
+                                  No
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}

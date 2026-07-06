@@ -93,14 +93,28 @@ export default function AppealPage() {
 
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await (supabase as any)
-        .from("user_appeals")
-        .insert({
-          user_id: user.id,
-          message: message.trim(),
-          document_url: path,
-          status: "PENDING"
-        });
+      let dbError;
+      if (pendingAppeal) {
+        const { error } = await (supabase as any)
+          .from("user_appeals")
+          .update({
+            message: message.trim(),
+            document_url: path,
+            created_at: new Date().toISOString()
+          })
+          .eq("id", pendingAppeal.id);
+        dbError = error;
+      } else {
+        const { error } = await (supabase as any)
+          .from("user_appeals")
+          .insert({
+            user_id: user.id,
+            message: message.trim(),
+            document_url: path,
+            status: "PENDING"
+          });
+        dbError = error;
+      }
 
       if (dbError) throw dbError;
 
@@ -143,7 +157,7 @@ export default function AppealPage() {
           </button>
         </div>
 
-        {pendingAppeal ? (
+        {pendingAppeal && pendingAppeal.document_url !== "Awaiting upload" ? (
           <div className="bg-brand-50/50 border border-brand-100 rounded-2xl p-5 text-center flex flex-col items-center gap-3">
             <svg className="w-10 h-10 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
