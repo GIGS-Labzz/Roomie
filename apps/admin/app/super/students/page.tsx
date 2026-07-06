@@ -121,8 +121,7 @@ export default function StudentsPage() {
     try {
       const { data, error: loadError } = await (supabase as any)
         .from("profiles")
-        .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at, is_active, is_barred")
-        .eq("onboarding_complete", true)
+        .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at, is_active, is_barred, onboarding_complete")
         .order("created_at", { ascending: false });
 
       if (loadError) throw loadError;
@@ -185,6 +184,9 @@ export default function StudentsPage() {
         } else if (key === "joinDate") {
           valA = a.created_at ? new Date(a.created_at).getTime() : 0;
           valB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        } else if (key === "onboarding_complete") {
+          valA = a.onboarding_complete ? 1 : 0;
+          valB = b.onboarding_complete ? 1 : 0;
         } else {
           valA = (a[key] || "").toString().toLowerCase();
           valB = (b[key] || "").toString().toLowerCase();
@@ -211,6 +213,7 @@ export default function StudentsPage() {
         "School": [u.university, u.faculty, u.course].filter(Boolean).join(" · ") || "N/A",
         "Location": u.city || "N/A",
         "Join Date": u.created_at ? new Date(u.created_at).toLocaleString() : "N/A",
+        "Onboarded": u.onboarding_complete ? "Yes" : "No",
         "Verification Status": u.verification_status || "UNVERIFIED"
       }));
 
@@ -225,6 +228,7 @@ export default function StudentsPage() {
         { wch: 35 }, // School
         { wch: 20 }, // Location
         { wch: 25 }, // Join Date
+        { wch: 12 }, // Onboarded
         { wch: 20 }, // Verification Status
       ];
       ws["!cols"] = colWidths;
@@ -256,13 +260,14 @@ export default function StudentsPage() {
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 26);
       doc.text(`Total Records: ${filteredAndSortedUsers.length}`, 14, 31);
       
-      const tableHeaders = ["Full Name", "Username", "School", "Location", "Join Date", "Verification Status"];
+      const tableHeaders = ["Full Name", "Username", "School", "Location", "Join Date", "Onboarded", "Verification Status"];
       const tableRows = filteredAndSortedUsers.map(u => [
         u.display_name || "Unnamed",
         u.username ? `@${u.username}` : "Not set",
         [u.university, u.faculty, u.course].filter(Boolean).join(" · ") || "N/A",
         u.city || "N/A",
         u.created_at ? new Date(u.created_at).toLocaleString() : "N/A",
+        u.onboarding_complete ? "Yes" : "No",
         u.verification_status || "UNVERIFIED"
       ]);
 
@@ -487,7 +492,7 @@ export default function StudentsPage() {
                       <Table className="w-5 h-5 text-brand-500" />
                       All Users Database
                     </h2>
-                    <p className="text-xs text-slate-500 mt-1">Search, sort, and export onboarding-complete user profiles.</p>
+                    <p className="text-xs text-slate-500 mt-1">Search, sort, and export all student profiles.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
@@ -601,6 +606,7 @@ export default function StudentsPage() {
                             { label: "School", key: "school" },
                             { label: "Location", key: "city" },
                             { label: "Join Date", key: "joinDate" },
+                            { label: "Onboarded", key: "onboarding_complete" },
                             { label: "Verification", key: "verification_status" },
                             { label: "Barred", key: "is_barred" },
                           ].map((col) => (
@@ -685,6 +691,19 @@ export default function StudentsPage() {
                                 </div>
                               ) : (
                                 <span className="text-slate-400 text-xs italic">N/A</span>
+                              )}
+                            </td>
+
+                            {/* Onboarded Status */}
+                            <td className="px-6 py-3.5 whitespace-nowrap text-sm">
+                              {user.onboarding_complete ? (
+                                <span className="px-2.5 py-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 rounded-lg uppercase tracking-wider">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-lg uppercase tracking-wider">
+                                  No
+                                </span>
                               )}
                             </td>
 

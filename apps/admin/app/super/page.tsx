@@ -101,7 +101,7 @@ export default function SuperHome() {
       setLoading(true);
       const [profilesRes, platformsRes, connectionsRes, installsRes] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from("profiles").select("id, verification_status, created_at"),
+        (supabase as any).from("profiles").select("id, verification_status, created_at, onboarding_complete"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("housing_platforms").select("id, status"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,7 +110,7 @@ export default function SuperHome() {
         (supabase as any).from("pwa_installs").select("id, installed_at, platform, device_name, browser_name, ip_address, country, region, city").order("installed_at", { ascending: false }),
       ]);
  
-      const profiles: { verification_status: string; created_at: string }[] = profilesRes.data ?? [];
+      const profiles: { verification_status: string; created_at: string; onboarding_complete: boolean | null }[] = profilesRes.data ?? [];
       const platforms: { status: string }[] = platformsRes.data ?? [];
       const connections: { status: string; amount_paid: number; created_at: string }[] = connectionsRes.data ?? [];
       const installs: {
@@ -155,7 +155,7 @@ export default function SuperHome() {
       setData({
         totalStudents:    profiles.length,
         verifiedStudents: profiles.filter((p) => p.verification_status === "VERIFIED").length,
-        pendingStudents:  profiles.filter((p) => ["PENDING", "UNVERIFIED"].includes(p.verification_status)).length,
+        pendingStudents:  profiles.filter((p) => p.onboarding_complete === true && ["PENDING", "UNVERIFIED"].includes(p.verification_status)).length,
         totalProviders:   platforms.length,
         activeProviders:  platforms.filter((p) => p.status === "ACTIVE").length,
         pendingProviders: platforms.filter((p) => p.status === "PENDING_REVIEW").length,
