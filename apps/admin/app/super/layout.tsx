@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  ShieldAlert,
 } from "lucide-react";
 
 const NAV = [
@@ -23,6 +24,7 @@ const NAV = [
   { href: "/super/providers/new", label: "Add Provider",   icon: PlusCircle },
   { href: "/super/approvals",   label: "Approvals",      icon: ClipboardCheck },
   { href: "/super/students",    label: "Student Verify", icon: GraduationCap },
+  { href: "/super/appeal",      label: "Appeals & Flags",icon: ShieldAlert },
   { href: "/super/connections", label: "Connections",    icon: Link2 },
   { href: "/super/broadcast",   label: "Broadcast",      icon: Megaphone },
 ];

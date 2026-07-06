@@ -4,6 +4,9 @@
   - `[x]` Create SQL migration file `0017_add_username.sql`
   - `[x]` Modify `apps/api/prisma/schema.prisma` to include `username` and `birthday_public`
   - `[x]` Modify `packages/db/src/types.ts` to include `username` and `birthday_public` type definitions
+- `[x]` Admin Student Export & View
+  - `[x]` Install dependencies `xlsx`, `jspdf`, and `jspdf-autotable` in the `admin` app
+  - `[x]` Modify `apps/admin/app/super/students/page.tsx` to include `username` and `birthday_public` type definitions
 - `[x]` Discover & Profile Inline Connect
   - `[x]` Bind inline `handleConnect` to `ProfileCard` Connect button (creates connection row directly)
   - `[x]` Bind inline `handleConnectDetail` to Discover Detail profile Connect button

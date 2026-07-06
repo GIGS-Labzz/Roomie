@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { BarredCheck } from "@/components/auth/BarredCheck";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { PwaInstallTracker } from "@/components/pwa/PwaInstallTracker";
@@ -42,10 +43,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-sage-surface">
         <AuthProvider>
           <NotificationProvider>
-            {children}
-            <InstallPrompt />
-            <PwaInstallTracker />
-            <CookieBanner />
+            <BarredCheck>
+              {children}
+              <InstallPrompt />
+              <PwaInstallTracker />
+              <CookieBanner />
+            </BarredCheck>
           </NotificationProvider>
         </AuthProvider>
         <ServiceWorkerRegister />

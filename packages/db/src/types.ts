@@ -52,6 +52,80 @@ export type Database = {
         }
         Relationships: []
       }
+      user_reports: {
+        Row: {
+          id: string
+          reporter_id: string
+          reported_id: string
+          reason: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          reporter_id: string
+          reported_id: string
+          reason: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          reporter_id?: string
+          reported_id?: string
+          reason?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_appeals: {
+        Row: {
+          id: string
+          user_id: string
+          status: "PENDING" | "APPROVED" | "REJECTED"
+          document_url: string
+          message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: "PENDING" | "APPROVED" | "REJECTED"
+          document_url: string
+          message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: "PENDING" | "APPROVED" | "REJECTED"
+          document_url?: string
+          message?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_appeals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       bill_split_items: {
         Row: {
           amount: number

@@ -111,6 +111,42 @@ export default function ProfileDetailPage() {
   const [connectStatus, setConnectStatus] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
+  // Report States
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
+  const handleReport = async () => {
+    if (!user || !profile || !reportReason.trim()) return;
+    setReportSubmitting(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("user_reports")
+        .insert({
+          reporter_id: user.id,
+          reported_id: profile.id,
+          reason: reportReason.trim()
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          alert("You have already reported this user.");
+        } else {
+          throw error;
+        }
+      } else {
+        alert("Thank you. The report has been submitted to the admin team for review.");
+      }
+      setShowReportModal(false);
+      setReportReason("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit report. Please try again.");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
@@ -291,6 +327,17 @@ export default function ProfileDetailPage() {
 
         {/* Action Row next to avatar (Connect / Message Buttons) */}
         <div className="flex justify-end p-3 h-14 items-center gap-2">
+          {user && profile && user.id !== profile.id && (
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+              title="Report Profile"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              </svg>
+            </button>
+          )}
           {connectStatus === "ACTIVE" ? (
             <Link href={`/chat/${existingConnection?.id || ""}`}>
               <Button variant="primary" size="sm" className="rounded-full font-bold px-5">
@@ -654,6 +701,67 @@ export default function ProfileDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
+            <h3 className="font-display font-black text-slate-900 text-lg">Report Profile</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Help us keep Roomie safe. Why are you reporting <strong>{profile?.display_name || "this user"}</strong>?
+            </p>
+            
+            <div className="space-y-2 mt-4">
+              {[
+                "Harassment or abuse",
+                "Spam or fake account",
+                "Inappropriate lifestyle tags or content",
+                "Scam or suspicious behavior",
+                "Other"
+              ].map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => setReportReason(reason)}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                    reportReason.startsWith(reason) || (reason === "Other" && reportReason.startsWith("Other:"))
+                      ? "bg-brand-50 border-brand-500 text-brand-700 ring-2 ring-brand-500/10" 
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+
+            {reportReason.startsWith("Other") && (
+              <textarea
+                placeholder="Please describe the issue in detail..."
+                value={reportReason.startsWith("Other:") ? reportReason.replace("Other: ", "") : ""}
+                onChange={(e) => setReportReason(`Other: ${e.target.value}`)}
+                className="w-full mt-3 p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-900"
+                rows={3}
+              />
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                disabled={reportSubmitting}
+                onClick={() => { setShowReportModal(false); setReportReason(""); }}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={reportSubmitting || !reportReason.trim()}
+                onClick={() => void handleReport()}
+                className="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
+              >
+                {reportSubmitting ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
