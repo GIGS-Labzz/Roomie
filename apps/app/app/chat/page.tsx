@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@repo/db/client";
@@ -22,6 +22,15 @@ type Connection = any;
 type Filter = "ALL" | "UNREAD";
 
 const supabase = createClient();
+
+const isSupportUser = (other: any) => {
+  if (!other) return false;
+  return (
+    other.id === "a99928a0-8de7-4da0-871a-22077d13945d" ||
+    other.display_name?.toLowerCase() === "roomie.app" ||
+    other.username?.toLowerCase() === "fav_roomiee"
+  );
+};
 
 function formatChatTime(isoString?: string | null): string {
   if (!isoString) return "";
@@ -95,6 +104,126 @@ export default function ChatListPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
   const [query, setQuery] = useState("");
 
+  const [selectedConnection, setSelectedConnection] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressRef = useRef(false);
+
+  const handlePressStart = (conn: any, other: any) => {
+    isLongPressRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setSelectedConnection({ connection: conn, other });
+    }, 600);
+  };
+
+  const handlePressEnd = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, conn: any, other: any) => {
+    e.preventDefault();
+    setSelectedConnection({ connection: conn, other });
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const deleteConnection = async (connId: string) => {
+    setIsDeleting(true);
+    const { error } = await supabase.from("connections").delete().eq("id", connId);
+    if (error) {
+      console.error("Failed to delete connection:", error);
+      alert("Failed to delete chat connection: " + error.message);
+    } else {
+      setConnections((prev) => prev.filter((c) => c.id !== connId));
+    }
+    setIsDeleting(false);
+    setSelectedConnection(null);
+  };
+
+  const exportChatMessages = async (connId: string, otherName: string) => {
+    setIsExporting(true);
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select(`
+          created_at,
+          content,
+          message_type,
+          sender_id
+        `)
+        .eq("connection_id", connId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const msgs = data as any[] | null;
+      const clearTime = localStorage.getItem(`clear_timestamp:${connId}`);
+      const filteredMsgs = (msgs ?? []).filter((m) => {
+        if (clearTime && new Date(m.created_at) <= new Date(clearTime)) return false;
+        if (m.message_type === "system" && (m.content.startsWith("system:pin:") || m.content.startsWith("system:unpin:"))) {
+          return false;
+        }
+        return true;
+      });
+
+      let exportText = `Chat Export with ${otherName}\nExported on ${new Date().toLocaleString("en-NG")}\n`;
+      exportText += `----------------------------------------\n\n`;
+
+      if (filteredMsgs.length === 0) {
+        exportText += "No messages in this chat conversation.\n";
+      } else {
+        for (const m of filteredMsgs) {
+          const time = new Date(m.created_at).toLocaleString("en-NG", {
+            dateStyle: "short",
+            timeStyle: "short",
+          });
+          const isOwn = m.sender_id === user?.id;
+          const senderLabel = isOwn ? "You" : otherName;
+          let body = m.content;
+
+          if (m.message_type === "image") {
+            body = "[Shared Photo]";
+          } else if (m.message_type === "agreement_request") {
+            body = "[Roommate Agreement Proposal]";
+          } else if (m.message_type === "agreement_confirmed") {
+            body = "[Agreement Confirmed]";
+          } else if (m.message_type === "agreement_declined") {
+            body = "[Agreement Declined]";
+          }
+
+          exportText += `[${time}] ${senderLabel}: ${body}\n`;
+        }
+      }
+
+      exportText += `\n----------------------------------------\nEnd of export.`;
+
+      const blob = new Blob([exportText], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `chat_export_${otherName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export chat:", err);
+      alert("Failed to export chat conversation.");
+    } finally {
+      setIsExporting(false);
+      setSelectedConnection(null);
+    }
+  };
+
   useEffect(() => {
     if (!user?.id) return;
     let isMounted = true;
@@ -150,7 +279,7 @@ export default function ChatListPage() {
       const outbox = getOutbox(c.id);
       const pendingLast = outbox[outbox.length - 1];
 
-      const lastMsg = pendingLast
+      let lastMsg: any = pendingLast
         ? {
             connection_id: c.id,
             content: pendingLast.content,
@@ -162,7 +291,15 @@ export default function ChatListPage() {
           }
         : lastMessages[c.id];
 
-      const unread = unreadCounts[c.id] ?? 0;
+      let clearTime: string | null = null;
+      if (typeof window !== "undefined") {
+        clearTime = localStorage.getItem(`clear_timestamp:${c.id}`);
+        if (clearTime && lastMsg && new Date(lastMsg.created_at) <= new Date(clearTime)) {
+          lastMsg = undefined;
+        }
+      }
+
+      const unread = clearTime ? 0 : (unreadCounts[c.id] ?? 0);
       const isOwnLast = lastMsg?.sender_id === user?.id;
       return {
         connection: c,
@@ -290,12 +427,24 @@ export default function ChatListPage() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {filteredConnections.map(({ connection: conn, other, unread, preview, time }) => (
-                  <li key={conn.id}>
+                  <li
+                    key={conn.id}
+                    onTouchStart={() => !isSupportUser(other) && handlePressStart(conn, other)}
+                    onTouchEnd={handlePressEnd}
+                    onMouseDown={() => !isSupportUser(other) && handlePressStart(conn, other)}
+                    onMouseUp={handlePressEnd}
+                    onMouseLeave={handlePressEnd}
+                    onContextMenu={(e) => {
+                      if (isSupportUser(other)) return;
+                      handleContextMenu(e, conn, other);
+                    }}
+                    className="select-none relative"
+                  >
                     <div className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
                       {other ? (
                         <Link
                           href={`/discover/${other.id}`}
-                          className="flex-shrink-0 mr-3"
+                          className="flex-shrink-0 mr-3 z-10"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="relative">
@@ -312,7 +461,11 @@ export default function ChatListPage() {
                         </div>
                       )}
 
-                      <Link href={`/chat/${conn.id}`} className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                      <Link
+                        href={`/chat/${conn.id}`}
+                        onClick={handleClick}
+                        className="flex-1 min-w-0 flex items-center justify-between gap-2 cursor-pointer"
+                      >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -321,7 +474,7 @@ export default function ChatListPage() {
                               </span>
                               {other?.student_verified && (
                                 <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                               )}
                             </div>
@@ -341,6 +494,22 @@ export default function ChatListPage() {
                           </div>
                         </div>
                       </Link>
+
+                      {!isSupportUser(other) && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedConnection({ connection: conn, other });
+                          }}
+                          className="hidden md:flex p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all shrink-0 ml-2 z-10 cursor-pointer animate-in fade-in duration-200"
+                          title="Chat options"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -351,6 +520,75 @@ export default function ChatListPage() {
       </div>
 
       <BottomTabNav hidden={false} items={navItems} />
+
+      {/* Connection Actions Modal */}
+      {selectedConnection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4 text-slate-800 animate-in fade-in zoom-in duration-200">
+            <div className="border-b pb-2">
+              <h3 className="font-display font-bold text-lg text-slate-900">
+                {selectedConnection.other?.display_name ?? "Chat"} Options
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">Select an action for this conversation</p>
+            </div>
+
+            <div className="space-y-2">
+              {/* Export Chat */}
+              <button
+                onClick={() => exportChatMessages(selectedConnection.connection.id, selectedConnection.other?.display_name ?? "Roommate")}
+                disabled={isExporting}
+                className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-2xl transition-colors text-left flex items-center gap-3 disabled:opacity-50 cursor-pointer"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {isExporting ? "Exporting..." : "Export Conversation (.txt)"}
+              </button>
+
+              {/* Clear Chat */}
+              <button
+                onClick={() => {
+                  if (confirm(`Are you sure you want to clear all messages in the chat with ${selectedConnection.other?.display_name ?? "this user"}?`)) {
+                    const connId = selectedConnection.connection.id;
+                    localStorage.setItem(`clear_timestamp:${connId}`, new Date().toISOString());
+                    setConnections((prev) => [...prev]);
+                    setSelectedConnection(null);
+                  }
+                }}
+                className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-2xl transition-colors text-left flex items-center gap-3 cursor-pointer"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear Chat History
+              </button>
+
+              {/* Delete Chat */}
+              <button
+                onClick={() => {
+                  if (confirm(`Are you sure you want to completely delete the connection with ${selectedConnection.other?.display_name ?? "this user"}? This will delete the chat and roommate agreement completely.`)) {
+                    deleteConnection(selectedConnection.connection.id);
+                  }
+                }}
+                disabled={isDeleting}
+                className="w-full py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-2xl transition-colors text-left flex items-center gap-3 disabled:opacity-50 cursor-pointer"
+              >
+                <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {isDeleting ? "Deleting..." : "Delete Chat Connection"}
+              </button>
+            </div>
+
+            <button
+              onClick={() => setSelectedConnection(null)}
+              className="w-full py-2.5 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

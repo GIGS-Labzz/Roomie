@@ -36,6 +36,13 @@ interface Overview {
     region: string | null;
     city: string | null;
   }[];
+  recentUsers: {
+    id: string;
+    created_at: string;
+    display_name: string | null;
+    university: string | null;
+    city: string | null;
+  }[];
 }
  
 const BRAND = "#8AAF6E";
@@ -99,7 +106,7 @@ export default function SuperHome() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [profilesRes, platformsRes, connectionsRes, installsRes] = await Promise.all([
+      const [profilesRes, platformsRes, connectionsRes, installsRes, recentUsersRes] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("profiles").select("id, verification_status, created_at, onboarding_complete"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,6 +115,8 @@ export default function SuperHome() {
         (supabase as any).from("connections").select("id, status, amount_paid, created_at"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from("pwa_installs").select("id, installed_at, platform, device_name, browser_name, ip_address, country, region, city").order("installed_at", { ascending: false }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("profiles").select("id, created_at, display_name, university, city").order("created_at", { ascending: false }).limit(10),
       ]);
  
       const profiles: { verification_status: string; created_at: string; onboarding_complete: boolean | null }[] = profilesRes.data ?? [];
@@ -124,6 +133,13 @@ export default function SuperHome() {
         region: string | null;
         city: string | null;
       }[] = installsRes.data ?? [];
+      const recentUsers: {
+        id: string;
+        created_at: string;
+        display_name: string | null;
+        university: string | null;
+        city: string | null;
+      }[] = recentUsersRes.data ?? [];
  
       // Build last-30-day buckets
       const since = new Date();
@@ -169,11 +185,92 @@ export default function SuperHome() {
         usersByDay:       Object.entries(userByDay).map(([date, count]) => ({ date, count })),
         installsByDay:    Object.entries(installByDay).map(([date, count]) => ({ date, count })),
         recentInstalls:   installs.slice(0, 10),
+        recentUsers:      recentUsers,
       });
-
+ 
       setLoading(false);
     };
     void load();
+
+    // Subscribe to realtime updates for PWA installs
+    const installsChannel = supabase
+      .channel("pwa_installs_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "pwa_installs" },
+        (payload) => {
+          const newInstall = payload.new as any;
+          setData((prev) => {
+            if (!prev) return null;
+            if (prev.recentInstalls.some((i) => i.id === newInstall.id)) return prev;
+            return {
+              ...prev,
+              totalInstalls: prev.totalInstalls + 1,
+              recentInstalls: [newInstall, ...prev.recentInstalls].slice(0, 10),
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to realtime updates for user signups (profiles)
+    const usersChannel = supabase
+      .channel("profiles_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "profiles" },
+        (payload) => {
+          const newUser = payload.new as any;
+          setData((prev) => {
+            if (!prev) return null;
+            if (prev.recentUsers?.some((u) => u.id === newUser.id)) return prev;
+            return {
+              ...prev,
+              totalStudents: prev.totalStudents + 1,
+              recentUsers: [
+                {
+                  id: newUser.id,
+                  created_at: newUser.created_at,
+                  display_name: newUser.display_name,
+                  university: newUser.university,
+                  city: newUser.city,
+                },
+                ...(prev.recentUsers || []),
+              ].slice(0, 10),
+            };
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles" },
+        (payload) => {
+          const updatedUser = payload.new as any;
+          setData((prev) => {
+            if (!prev) return null;
+            if (!prev.recentUsers?.some((u) => u.id === updatedUser.id)) return prev;
+            return {
+              ...prev,
+              recentUsers: prev.recentUsers.map((u) =>
+                u.id === updatedUser.id
+                  ? {
+                      ...u,
+                      display_name: updatedUser.display_name,
+                      university: updatedUser.university,
+                      city: updatedUser.city,
+                    }
+                  : u
+              ),
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(installsChannel);
+      void supabase.removeChannel(usersChannel);
+    };
   }, []);
 
   if (loading) {
@@ -328,45 +425,85 @@ export default function SuperHome() {
         </div>
       </div>
  
-      {/* Recent Installs */}
-      <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="font-display font-semibold text-slate-900 text-base">Recent Installations</h2>
-        <p className="text-xs text-slate-400 mt-0.5 mb-4">Latest devices that installed the PWA</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-slate-500">
-            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-              <tr>
-                <th className="px-4 py-3">Platform</th>
-                <th className="px-4 py-3">Device / Model</th>
-                <th className="px-4 py-3">Browser</th>
-                <th className="px-4 py-3">Location</th>
-                <th className="px-4 py-3">Installed At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.recentInstalls?.map((inst) => (
-                <tr key={inst.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                  <td className="px-4 py-3 font-semibold text-slate-950">{inst.platform}</td>
-                  <td className="px-4 py-3 text-slate-700">{inst.device_name || "Unknown Device"}</td>
-                  <td className="px-4 py-3 text-slate-600">{inst.browser_name || "Unknown Browser"}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">
-                    <div>{formatLocation(inst)}</div>
-                    {inst.ip_address && <div className="text-[10px] text-slate-400">{inst.ip_address}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">
-                    {new Date(inst.installed_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-              {(!data?.recentInstalls || data.recentInstalls.length === 0) && (
+      {/* Live Activity Streams */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Recent Installs */}
+        <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5 lg:col-span-7 order-2 lg:order-1">
+          <h2 className="font-display font-semibold text-slate-900 text-base">Recent Installations</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-4">Latest devices that installed the PWA</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left text-slate-500">
+              <thead className="text-xs text-slate-700 uppercase bg-slate-50">
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
-                    No PWA installations recorded yet.
-                  </td>
+                  <th className="px-4 py-3">Platform</th>
+                  <th className="px-4 py-3">Device / Model</th>
+                  <th className="px-4 py-3">Browser</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Installed At</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data?.recentInstalls?.map((inst) => (
+                  <tr key={inst.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-semibold text-slate-950">{inst.platform}</td>
+                    <td className="px-4 py-3 text-slate-700">{inst.device_name || "Unknown Device"}</td>
+                    <td className="px-4 py-3 text-slate-600">{inst.browser_name || "Unknown Browser"}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">
+                      <div>{formatLocation(inst)}</div>
+                      {inst.ip_address && <div className="text-[10px] text-slate-400">{inst.ip_address}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">
+                      {new Date(inst.installed_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                {(!data?.recentInstalls || data.recentInstalls.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                      No PWA installations recorded yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Streaming Users */}
+        <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-5 lg:col-span-5 order-1 lg:order-2">
+          <h2 className="font-display font-semibold text-slate-900 text-base">New Users Joining</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-4">Latest students registering on the platform</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left text-slate-500">
+              <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Institution</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Joined At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.recentUsers?.map((user) => (
+                  <tr key={user.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-semibold text-slate-950">{user.display_name || "New User"}</td>
+                    <td className="px-4 py-3 text-slate-700">{user.university || "Onboarding..."}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{user.city || "Not set"}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">
+                      {new Date(user.created_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                {(!data?.recentUsers || data.recentUsers.length === 0) && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                      No signups recorded yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

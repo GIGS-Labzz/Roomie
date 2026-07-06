@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { createClient } from "@repo/db/client";
 import { getMessages, sendMessage as dbSendMessage, markMessagesRead } from "@repo/db/queries/messages";
 import type { Message } from "@repo/db/queries/messages";
@@ -79,6 +79,36 @@ export function useMessages(connectionId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
+  const [deletedForMeIds, setDeletedForMeIds] = useState<Set<string>>(new Set());
+  const [clearTimestamp, setClearTimestamp] = useState<string | null>(null);
+
+  // Load local settings on connection change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const starred = localStorage.getItem(`starred:${connectionId}`);
+    if (starred) {
+      try {
+        setStarredIds(new Set(JSON.parse(starred)));
+      } catch {}
+    } else {
+      setStarredIds(new Set());
+    }
+
+    const deleted = localStorage.getItem(`deleted_for_me:${connectionId}`);
+    if (deleted) {
+      try {
+        setDeletedForMeIds(new Set(JSON.parse(deleted)));
+      } catch {}
+    } else {
+      setDeletedForMeIds(new Set());
+    }
+
+    const clearTime = localStorage.getItem(`clear_timestamp:${connectionId}`);
+    setClearTimestamp(clearTime || null);
+  }, [connectionId]);
 
   const retryOutbox = useCallback(async (outboxList: OutboxMessage[]) => {
     if (!user) return;
@@ -241,51 +271,58 @@ export function useMessages(connectionId: string) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
           filter: `connection_id=eq.${connectionId}`,
         },
         (payload) => {
-          const senderId = payload.new.sender_id;
-          let sender = senderProfileCache.get(senderId);
-          const newMsg: Message = {
-            ...(payload.new as Message),
-            sender: sender ?? undefined,
-          };
+          if (payload.eventType === "INSERT") {
+            const senderId = payload.new.sender_id;
+            let sender = senderProfileCache.get(senderId);
+            const newMsg: Message = {
+              ...(payload.new as Message),
+              sender: sender ?? undefined,
+            };
 
-          setMessages((prev) => {
-            // Deduplicate (optimistic update or broadcast update may already have added it)
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
 
-          if (!sender) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            void (supabase as any)
-              .from("profiles")
-              .select("id, display_name, avatar_url")
-              .eq("id", senderId)
-              .single()
-              .then(({ data }: any) => {
-                if (data) {
-                  senderProfileCache.set(senderId, data);
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === newMsg.id ? { ...m, sender: data } : m
-                    )
-                  );
-                }
-              });
-          }
+            if (!sender) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              void (supabase as any)
+                .from("profiles")
+                .select("id, display_name, avatar_url")
+                .eq("id", senderId)
+                .single()
+                .then(({ data }: any) => {
+                  if (data) {
+                    senderProfileCache.set(senderId, data);
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === newMsg.id ? { ...m, sender: data } : m
+                      )
+                    );
+                  }
+                });
+            }
 
-          // Mark as read immediately if it's from the other user
-          if (user && payload.new.sender_id !== user.id) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            void (supabase as any)
-              .from("messages")
-              .update({ read_at: new Date().toISOString() })
-              .eq("id", newMsg.id);
+            // Mark as read immediately if it's from the other user
+            if (user && payload.new.sender_id !== user.id) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              void (supabase as any)
+                .from("messages")
+                .update({ read_at: new Date().toISOString() })
+                .eq("id", newMsg.id);
+            }
+          } else if (payload.eventType === "UPDATE") {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m))
+            );
+          } else if (payload.eventType === "DELETE") {
+            setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
           }
         }
       )
@@ -352,7 +389,10 @@ export function useMessages(connectionId: string) {
   }, [connectionId]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (
+      content: string,
+      messageType: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined" | "bill_split" = "text"
+    ) => {
       if (!user || !content.trim()) return;
       setIsSending(true);
 
@@ -364,7 +404,7 @@ export function useMessages(connectionId: string) {
         connection_id: connectionId,
         sender_id: user.id,
         content: content.trim(),
-        message_type: "text",
+        message_type: messageType,
         image_url: null,
         read_at: null,
         created_at: new Date().toISOString(),
@@ -386,15 +426,18 @@ export function useMessages(connectionId: string) {
         });
       }
 
-      // Save to outbox
-      const outboxMsg: OutboxMessage = {
-        id: optimisticMsg.id,
-        connection_id: connectionId,
-        sender_id: user.id,
-        content: optimisticMsg.content,
-        created_at: optimisticMsg.created_at,
-      };
-      addToOutbox(connectionId, outboxMsg);
+      // Save to outbox (only if it's text/image message)
+      const isOutboxable = messageType === "text" || messageType === "image";
+      if (isOutboxable) {
+        const outboxMsg: OutboxMessage = {
+          id: optimisticMsg.id,
+          connection_id: connectionId,
+          sender_id: user.id,
+          content: optimisticMsg.content,
+          created_at: optimisticMsg.created_at,
+        };
+        addToOutbox(connectionId, outboxMsg);
+      }
 
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -403,38 +446,46 @@ export function useMessages(connectionId: string) {
           connectionId,
           user.id,
           content.trim(),
-          "text",
+          messageType,
           undefined,
           messageId,
           optimisticMsg.created_at
         );
 
         if (saved) {
-          removeFromOutbox(connectionId, optimisticMsg.id);
+          if (isOutboxable) {
+            removeFromOutbox(connectionId, optimisticMsg.id);
+          }
 
           // Replace the optimistic message with the real database properties, set isSending to false
           setMessages((prev) =>
             prev.map((m) => (m.id === optimisticMsg.id ? { ...saved, sender: optimisticMsg.sender, isSending: false } : m))
           );
 
-          // Trigger push notification to recipient
-          void fetch("/api/push/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              connectionId,
-              body: content.trim(),
-            }),
-          }).catch((err) => console.error("Failed to send chat push notification:", err));
+          // Trigger push notification to recipient (only for non-system messages)
+          if (isOutboxable) {
+            void fetch("/api/push/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                connectionId,
+                body: content.trim(),
+              }),
+            }).catch((err) => console.error("Failed to send chat push notification:", err));
+          }
         } else {
-          markOutboxError(connectionId, optimisticMsg.id);
+          if (isOutboxable) {
+            markOutboxError(connectionId, optimisticMsg.id);
+          }
           setMessages((prev) =>
             prev.map((m) => (m.id === optimisticMsg.id ? { ...m, isSending: false, isFailed: true } : m))
           );
         }
       } catch (err) {
         console.error("Failed to send message:", err);
-        markOutboxError(connectionId, optimisticMsg.id);
+        if (isOutboxable) {
+          markOutboxError(connectionId, optimisticMsg.id);
+        }
         setMessages((prev) =>
           prev.map((m) => (m.id === optimisticMsg.id ? { ...m, isSending: false, isFailed: true } : m))
         );
@@ -515,7 +566,103 @@ export function useMessages(connectionId: string) {
     [connectionId, user]
   );
 
-  return { messages, isLoading, isSending, sendMessage, retryMessage };
+  const toggleStarMessage = useCallback((messageId: string) => {
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      localStorage.setItem(`starred:${connectionId}`, JSON.stringify(Array.from(next)));
+      return next;
+    });
+  }, [connectionId]);
+
+  const deleteMessageForMe = useCallback((messageId: string) => {
+    setDeletedForMeIds((prev) => {
+      const next = new Set(prev);
+      next.add(messageId);
+      localStorage.setItem(`deleted_for_me:${connectionId}`, JSON.stringify(Array.from(next)));
+      return next;
+    });
+  }, [connectionId]);
+
+  const deleteMessageForEveryone = useCallback(async (messageId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("messages").delete().eq("id", messageId);
+    if (error) {
+      console.error("Failed to delete message:", error);
+      throw error;
+    }
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
+
+  const pinnedMessageId = useMemo(() => {
+    let currentPinned: string | null = null;
+    for (const m of messages) {
+      if (m.message_type === "system") {
+        if (m.content.startsWith("system:pin:")) {
+          const parts = m.content.split(":");
+          currentPinned = parts[2];
+        } else if (m.content.startsWith("system:unpin:")) {
+          const parts = m.content.split(":");
+          const unpinId = parts[2];
+          if (currentPinned === unpinId) {
+            currentPinned = null;
+          }
+        }
+      }
+    }
+    return currentPinned;
+  }, [messages]);
+
+  const pinnedMessage = useMemo(() => {
+    if (!pinnedMessageId) return null;
+    return messages.find((m) => m.id === pinnedMessageId) || null;
+  }, [messages, pinnedMessageId]);
+
+  const togglePinMessage = useCallback(async (messageId: string, content: string) => {
+    const isCurrentlyPinned = pinnedMessageId === messageId;
+    if (isCurrentlyPinned) {
+      await sendMessage(`system:unpin:${messageId}`, "system");
+    } else {
+      if (pinnedMessageId) {
+        await sendMessage(`system:unpin:${pinnedMessageId}`, "system");
+      }
+      const previewText = content.substring(0, 50);
+      await sendMessage(`system:pin:${messageId}:${previewText}`, "system");
+    }
+  }, [pinnedMessageId, sendMessage]);
+
+  const visibleMessages = useMemo(() => {
+    return messages.filter((m) => {
+      if (deletedForMeIds.has(m.id)) return false;
+      if (clearTimestamp && new Date(m.created_at) <= new Date(clearTimestamp)) return false;
+      if (
+        m.message_type === "system" &&
+        (m.content.startsWith("system:pin:") || m.content.startsWith("system:unpin:"))
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [messages, deletedForMeIds, clearTimestamp]);
+
+  return {
+    messages: visibleMessages,
+    rawMessages: messages,
+    pinnedMessage,
+    starredIds,
+    isLoading,
+    isSending,
+    sendMessage,
+    retryMessage,
+    toggleStarMessage,
+    togglePinMessage,
+    deleteMessageForMe,
+    deleteMessageForEveryone,
+  };
 }
 
 // Typing indicator via Supabase Presence (ephemeral, never stored in DB)

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { useMessages, useTypingPresence } from "@/hooks/useMessages";
+import { useMessages, useTypingPresence, type ExtendedMessage } from "@/hooks/useMessages";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
@@ -47,7 +47,29 @@ export default function ChatThreadPage() {
 
   const connectionId = params.connectionId;
 
-  const { messages, isLoading, isSending, sendMessage, retryMessage } = useMessages(connectionId);
+  const {
+    messages,
+    pinnedMessage,
+    starredIds,
+    isLoading,
+    isSending,
+    sendMessage,
+    retryMessage,
+    toggleStarMessage,
+    togglePinMessage,
+    deleteMessageForMe,
+    deleteMessageForEveryone,
+  } = useMessages(connectionId);
+
+  const [infoMsg, setInfoMsg] = useState<ExtendedMessage | null>(null);
+  const [deleteEveryoneMsgId, setDeleteEveryoneMsgId] = useState<string | null>(null);
+
+  const scrollToMessage = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
 
   const [other, setOther] = useState<OtherUser | null | undefined>(undefined);
@@ -251,6 +273,38 @@ export default function ChatThreadPage() {
             <div className="opacity-90 mt-0.5">Technical fixes in progress</div>
           </div>
 
+          {/* Pinned Message Banner */}
+          {pinnedMessage && (
+            <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between gap-3 shadow-sm z-20 shrink-0">
+              <div
+                onClick={() => scrollToMessage(pinnedMessage.id)}
+                className="flex items-center gap-2 cursor-pointer min-w-0 flex-1"
+                title="Click to view message"
+              >
+                <div className="bg-brand-50 rounded-lg p-1.5 shrink-0 text-brand-600">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-brand-600 uppercase tracking-wider">Pinned Message</p>
+                  <p className="text-sm text-slate-600 truncate font-medium">
+                    {pinnedMessage.image_url ? "📷 Image" : pinnedMessage.content}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => togglePinMessage(pinnedMessage.id, pinnedMessage.content)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors shrink-0 cursor-pointer"
+                title="Unpin message"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* ── Pinned bill split reminder ── */}
           {!isSupport && user && (
             <BillSplitPinnedBanner connectionId={connectionId} currentUserId={user.id} />
@@ -287,12 +341,12 @@ export default function ChatThreadPage() {
               <EmptyThread name={other?.display_name} />
             ) : (
               <>
-                {messages.map((msg, idx) => {
+                {messages.map((msg: ExtendedMessage, idx: number) => {
                   const showDateSep =
                     idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
 
                   return (
-                    <div key={msg.id}>
+                    <div key={msg.id} id={`msg-${msg.id}`}>
                       {showDateSep && (
                         <div className="flex justify-center py-2">
                           <span className="bg-white/80 text-slate-500 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm">
@@ -305,6 +359,14 @@ export default function ChatThreadPage() {
                         isOwn={msg.sender_id === user.id}
                         currentUserId={user.id}
                         onRetry={retryMessage}
+                        isStarred={starredIds.has(msg.id)}
+                        isPinned={pinnedMessage?.id === msg.id}
+                        onStar={toggleStarMessage}
+                        onPin={(messageId) => togglePinMessage(messageId, msg.content)}
+                        onDeleteForMe={deleteMessageForMe}
+                        onDeleteForEveryone={(messageId) => setDeleteEveryoneMsgId(messageId)}
+                        onShowInfo={(m) => setInfoMsg(m)}
+                        disableActions={isSupport}
                       />
                     </div>
                   );
@@ -377,6 +439,68 @@ export default function ChatThreadPage() {
 
         </div>
       </div>
+
+      {/* Info Modal */}
+      {infoMsg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4 text-slate-800 animate-in fade-in zoom-in duration-200">
+            <h3 className="font-display font-bold text-lg text-slate-900 border-b pb-2">Message Details</h3>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="font-semibold text-slate-500 block">Sent:</span>
+                <span className="font-medium">{new Date(infoMsg.created_at).toLocaleString("en-NG", { dateStyle: "long", timeStyle: "medium" })}</span>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-500 block">Status:</span>
+                <span className="font-medium">{infoMsg.read_at ? "Read" : "Delivered"}</span>
+              </div>
+              {infoMsg.read_at && (
+                <div>
+                  <span className="font-semibold text-slate-500 block">Read at:</span>
+                  <span className="font-medium">{new Date(infoMsg.read_at).toLocaleString("en-NG", { dateStyle: "long", timeStyle: "medium" })}</span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setInfoMsg(null)}
+              className="w-full py-2.5 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Everyone Confirmation Modal */}
+      {deleteEveryoneMsgId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4 text-slate-800 animate-in fade-in zoom-in duration-200">
+            <h3 className="font-display font-bold text-lg text-slate-900">Delete Message?</h3>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Are you sure you want to delete this message for everyone? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteEveryoneMsgId(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (deleteEveryoneMsgId) {
+                    await deleteMessageForEveryone(deleteEveryoneMsgId);
+                    setDeleteEveryoneMsgId(null);
+                  }
+                }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl transition-colors cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
