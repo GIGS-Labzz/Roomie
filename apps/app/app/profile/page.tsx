@@ -340,10 +340,11 @@ export default function ProfilePage() {
             </Link>
             <button
               onClick={handleShareProfile}
-              className="px-4 py-1.5 300 rounded-full font-bold text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 relative"
+              className="px-4 py-1.5 border border-slate-300 rounded-full font-bold text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 relative"
               title="Share your profile"
             >
               <Share2 className="w-4 h-4 text-slate-500" />
+              Share
             </button>
             {showShareToast && (
               <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
