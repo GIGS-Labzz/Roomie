@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { createClient } from "@repo/db/client";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { useAuth } from "@/context/AuthContext";
+import { validatePassword } from "@/lib/password-validation";
+import { createClient } from "@repo/db/client";
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] p-6 space-y-4">
-      <h3 className="font-display font-semibold text-slate-900 text-base">{title}</h3>
+    <div className="space-y-4 rounded-3xl bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.07)]">
+      <h3 className="font-display text-base font-semibold text-slate-900">{title}</h3>
       {children}
     </div>
   );
@@ -18,7 +21,7 @@ function FormSection({ title, children }: { title: string; children: React.React
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string | null }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</label>
       {children}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
@@ -26,11 +29,11 @@ function Field({ label, children, error }: { label: string; children: React.Reac
 }
 
 const inputCls =
-  "w-full px-4 py-3 bg-sage-surface border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-300 transition-colors";
+  "w-full rounded-2xl border border-slate-200 bg-sage-surface px-4 py-3 pr-11 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300";
 
 export default function SetNewPasswordPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,28 +42,16 @@ export default function SetNewPasswordPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const validateNewPassword = (pwd: string): string | null => {
-    if (pwd.length < 8) {
-      return "Password must be at least 8 characters long.";
-    }
-    if (!/[0-9]/.test(pwd)) {
-      return "Password must contain at least one number.";
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
-      return "Password must contain at least one special character.";
-    }
-    return null;
-  };
+  const passwordResult = validatePassword(newPassword);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
 
-    const validationErr = validateNewPassword(newPassword);
-    if (validationErr) {
-      setError(validationErr);
+    const validationResult = validatePassword(newPassword);
+    if (!validationResult.isValid) {
+      setError(validationResult.error);
       return;
     }
 
@@ -72,10 +63,9 @@ export default function SetNewPasswordPage() {
     setIsUpdating(true);
     const supabase = createClient();
 
-    // Update password via Supabase Auth and save metadata
     const { error: updateError } = await supabase.auth.updateUser({
       password: newPassword,
-      data: { has_password: true }
+      data: { has_password: true },
     });
 
     if (updateError) {
@@ -88,56 +78,56 @@ export default function SetNewPasswordPage() {
         router.push("/settings");
       }, 1500);
     }
+
     setIsUpdating(false);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-sage-surface flex">
+      <div className="flex min-h-screen bg-sage-surface">
         <AppSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <span className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
+        <div className="flex flex-1 items-center justify-center">
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-brand-300 border-t-brand-500" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-sage-surface flex">
+    <div className="flex min-h-screen bg-sage-surface">
       <AppSidebar />
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-sage-surface/95 backdrop-blur-md border-b border-sage-light/40 px-4 py-3">
-          <div className="max-w-2xl mx-auto flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 border-b border-sage-light/40 bg-sage-surface/95 px-4 py-3 backdrop-blur-md">
+          <div className="mx-auto flex max-w-2xl items-center gap-3">
             <button
               onClick={() => router.push("/settings/password")}
-              className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
+              className="-ml-2 rounded-xl p-2 text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
               aria-label="Go back"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="font-display font-bold text-slate-900 text-xl flex-1">Reset Password</h1>
+            <h1 className="font-display flex-1 text-xl font-bold text-slate-900">Reset Password</h1>
           </div>
         </header>
 
-        <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-4 pb-28">
+        <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-6 pb-28">
           <form onSubmit={handleUpdate}>
             <FormSection title="Update Credentials">
-              <p className="text-xs text-slate-500 mb-2 leading-relaxed">
+              <p className="mb-2 text-xs leading-relaxed text-slate-500">
                 Choose a strong, secure new password for your account.
               </p>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 animate-fadeIn">
+                <div className="animate-fadeIn rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 animate-fadeIn">
+                <div className="animate-fadeIn rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
                   Password updated successfully! Redirecting...
                 </div>
               )}
@@ -149,17 +139,20 @@ export default function SetNewPasswordPage() {
                     className={inputCls}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Enter a secure password"
                     required
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors text-xs font-semibold"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 transition-colors hover:text-slate-600"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <PasswordStrengthMeter result={passwordResult} show={newPassword.length > 0} />
               </Field>
 
               <Field label="Confirm New Password">
@@ -169,32 +162,25 @@ export default function SetNewPasswordPage() {
                     className={inputCls}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Confirm your secure password"
                     required
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors text-xs font-semibold"
+                    onClick={() => setShowConfirmPassword((value) => !value)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 transition-colors hover:text-slate-600"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
-                    {showConfirmPassword ? "Hide" : "Show"}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </Field>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-600">Password requirements:</p>
-                <ul className="list-disc pl-4 space-y-0.5">
-                  <li className={newPassword.length >= 8 ? "text-green-600 font-medium" : ""}>At least 8 characters long</li>
-                  <li className={/[0-9]/.test(newPassword) ? "text-green-600 font-medium" : ""}>Must contain at least one number</li>
-                  <li className={/[!@#$%^&*(),.?":{}|<>]/.test(newPassword) ? "text-green-600 font-medium" : ""}>Must contain at least one special character</li>
-                </ul>
-              </div>
-
               <button
                 type="submit"
                 disabled={isUpdating || !newPassword || !confirmPassword}
-                className="w-full py-3.5 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-900 transition-all active:scale-[0.98] disabled:opacity-60 text-sm"
+                className="w-full rounded-2xl bg-slate-800 py-3.5 text-sm font-bold text-white transition-all hover:bg-slate-900 active:scale-[0.98] disabled:opacity-60"
               >
                 {isUpdating ? "Updating..." : "Save Password"}
               </button>
