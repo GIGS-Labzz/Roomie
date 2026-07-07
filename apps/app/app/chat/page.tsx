@@ -75,13 +75,13 @@ function previewText(
   
   let prefix = isOwn ? "You: " : "";
   if (isOwn && msg.isSending) {
-    prefix = "🕒 You: ";
+    prefix = "Sending... You: ";
   } else if (isOwn && msg.isFailed) {
-    prefix = "⚠️ You: ";
+    prefix = "Failed: You: ";
   }
 
   switch (msg.message_type) {
-    case "image": return `${prefix}📷 Photo`;
+    case "image": return `${prefix}[Photo]`;
     case "agreement_request": return `${prefix}Roommate agreement proposal`;
     case "agreement_confirmed": return "Agreement confirmed";
     case "agreement_declined": return "Agreement declined";

@@ -13,6 +13,7 @@ import { getPostById, getComments, addComment, getLikedPostIds } from "@repo/db/
 import type { Post, PostComment } from "@repo/db/queries/posts";
 import { Avatar } from "@repo/ui/avatar";
 import { useNotifications } from "@/context/NotificationContext";
+import { Search, Sparkles } from "lucide-react";
 
 function CommentItem({ comment }: { comment: PostComment }) {
   const diff = Date.now() - new Date(comment.created_at).getTime();
@@ -273,7 +274,7 @@ export default function PostDetailPage() {
             </div>
           ) : !post ? (
             <div className="bg-white rounded-3xl p-8 shadow-[0_4px_24px_rgba(0,0,0,0.07)] text-center flex flex-col items-center gap-4">
-              <div className="text-4xl">🔎</div>
+              <Search className="w-10 h-10 text-slate-400" />
               <h2 className="font-display font-bold text-slate-800 text-lg">Post not found</h2>
               <p className="text-slate-400 text-sm max-w-xs">The post you are trying to view doesn't exist or has been removed.</p>
               <Link href="/feed" className="px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-semibold transition-all">
@@ -293,8 +294,8 @@ export default function PostDetailPage() {
               {/* Guest Access Call-to-action Banner */}
               {!user && (
                 <div className="bg-gradient-to-tr from-brand-50 to-peach-50 border border-brand-100 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-center flex flex-col items-center gap-4 animate-fade-in">
-                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm text-brand-500 text-xl font-bold">
-                    👋
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm text-brand-500">
+                    <Sparkles className="w-6 h-6" />
                   </div>
                   <div>
                     <h3 className="font-display font-bold text-slate-800 text-base">Join the conversation on Roomie</h3>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@repo/db/client";
 import { useAuth } from "@/context/AuthContext";
+import { Sparkles } from "lucide-react";
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -26,8 +27,8 @@ export default function WelcomePage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
       {/* Lottie placeholder — wired in Phase 9 */}
-      <div className="w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center mb-8 text-4xl">
-        👋
+      <div className="w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center mb-8 text-brand-500">
+        <Sparkles className="w-10 h-10" />
       </div>
 
       <h1 className="text-3xl font-display font-semibold text-slate-900 mb-3">

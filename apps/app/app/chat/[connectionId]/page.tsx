@@ -289,7 +289,7 @@ export default function ChatThreadPage() {
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold text-brand-600 uppercase tracking-wider">Pinned Message</p>
                   <p className="text-sm text-slate-600 truncate font-medium">
-                    {pinnedMessage.image_url ? "📷 Image" : pinnedMessage.content}
+                    {pinnedMessage.image_url ? "[Photo]" : pinnedMessage.content}
                   </p>
                 </div>
               </div>

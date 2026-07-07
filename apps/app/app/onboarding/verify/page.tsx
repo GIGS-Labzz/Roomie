@@ -41,7 +41,7 @@ export default function VerifyPage() {
         await (supabase as any).from("messages").insert({
           connection_id: conn.id,
           sender_id: officialId,
-          content: "Welcome to Roomie 😊 , this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
+          content: "Welcome to Roomie, this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
         });
       }
     } catch (err) {
@@ -113,7 +113,7 @@ export default function VerifyPage() {
         await (supabase as any).from("messages").insert({
           connection_id: conn.id,
           sender_id: officialId,
-          content: "Welcome to Roomie 😊 , this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
+          content: "Welcome to Roomie, this is the official support account, visit our Website on https://roomie-web-pg11.vercel.app/ \nFeel free to always reach out in case of any type of support",
         });
       }
     } catch (err) {

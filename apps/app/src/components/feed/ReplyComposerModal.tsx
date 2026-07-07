@@ -8,6 +8,7 @@ import { createPost } from "@repo/db/queries/posts";
 import { MentionAutocomplete } from "./MentionAutocomplete";
 import type { Post } from "@repo/db/queries/posts";
 import type { User } from "@supabase/supabase-js";
+import { MapPin } from "lucide-react";
 
 interface ReplyComposerModalProps {
   parentPost: Post;
@@ -190,7 +191,10 @@ export function ReplyComposerModal({
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-slate-800 text-sm">{parentPost.author.display_name}</span>
                 {parentPost.city && (
-                  <span className="text-xs text-slate-400">📍 {parentPost.city}</span>
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>{parentPost.city}</span>
+                  </span>
                 )}
               </div>
               <p className="text-slate-500 text-sm mt-1 line-clamp-3 leading-relaxed whitespace-pre-wrap">{parentPost.content}</p>

@@ -9,6 +9,7 @@ import { ReplyComposerModal } from "./ReplyComposerModal";
 import { MentionText, registerUsernameId } from "./MentionText";
 import type { Post } from "@repo/db/queries/posts";
 import type { User } from "@supabase/supabase-js";
+import { MapPin } from "lucide-react";
 
 interface PostCardProps {
   post: Post;
@@ -214,7 +215,8 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
                 )}
                 {(post.city || post.author.city) && (
                   <span className="text-xs text-slate-400 flex items-center gap-1">
-                    📍 {post.city ?? post.author.city}
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>{post.city ?? post.author.city}</span>
                   </span>
                 )}
               </div>

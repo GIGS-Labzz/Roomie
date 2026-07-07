@@ -68,6 +68,21 @@ export function MessageBubble({
   disableActions = false,
 }: MessageBubbleProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownDirection, setDropdownDirection] = useState<"up" | "down">("down");
+
+  const toggleDropdown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!showDropdown) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+      if (rect.top < viewportHeight / 2) {
+        setDropdownDirection("down");
+      } else {
+        setDropdownDirection("up");
+      }
+    }
+    setShowDropdown(!showDropdown);
+  };
   // ── Bill split events (created, item paid/unpaid, settled) ─────────────
   if (message.message_type === "bill_split") {
     return (
@@ -134,7 +149,7 @@ export function MessageBubble({
           {/* If own message, three-dots is on the left */}
           {isOwn && !disableActions && (
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={toggleDropdown}
               className="opacity-40 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 rounded-full transition-opacity cursor-pointer shrink-0"
               title="Message options"
             >
@@ -202,7 +217,7 @@ export function MessageBubble({
           {/* If received message, three-dots is on the right */}
           {!isOwn && !disableActions && (
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={toggleDropdown}
               className="opacity-40 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 rounded-full transition-opacity cursor-pointer shrink-0"
               title="Message options"
             >
@@ -220,9 +235,9 @@ export function MessageBubble({
           {/* Dropdown Menu */}
           {showDropdown && (
             <div
-              className={`absolute bottom-full mb-1 z-50 bg-white border border-slate-200 rounded-xl shadow-lg py-1 w-44 text-slate-700 text-sm ${
-                isOwn ? "right-6" : "left-6"
-              }`}
+              className={`absolute z-50 bg-white border border-slate-200 rounded-xl shadow-lg py-1 w-44 text-slate-700 text-sm ${
+                dropdownDirection === "down" ? "top-full mt-1" : "bottom-full mb-1"
+              } ${isOwn ? "right-6" : "left-6"}`}
             >
               <button
                 onClick={() => {
