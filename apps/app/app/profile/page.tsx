@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Share2 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@repo/db/client";
@@ -14,6 +15,7 @@ import { Badge } from "@repo/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
 import { useNotifications } from "@/context/NotificationContext";
+import { getProfileHref } from "@/lib/profile-url";
 
 const YEAR_LABELS: Record<number, string> = {
   1: "100 Level", 2: "200 Level", 3: "300 Level", 4: "400 Level",
@@ -101,6 +103,40 @@ export default function ProfilePage() {
   // Post action states
   const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
   const [actingPostId, setActingPostId] = useState<string | null>(null);
+  const [showShareToast, setShowShareToast] = useState(false);
+
+  const handleShareProfile = async () => {
+    if (!profile?.username) {
+      alert("Your profile is still being set up. Please try again in a moment.");
+      return;
+    }
+
+    const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/discover/${encodeURIComponent(profile.username)}`;
+
+    if (navigator.share) {
+      // Use Web Share API if available
+      try {
+        await navigator.share({
+          title: `Check out ${profile.display_name} on Roomie`,
+          text: `I found a potential roommate on Roomie! ${profile.bio ? `"${profile.bio}"` : ""}`,
+          url: shareUrl,
+        });
+      } catch (err) {
+        // User cancelled or error occurred
+        console.error("Share failed:", err);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowShareToast(true);
+        setTimeout(() => setShowShareToast(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy to clipboard:", err);
+        alert("Profile link:\n\n" + shareUrl);
+      }
+    }
+  };
 
   const handlePinPost = async (postId: string, isCurrentlyPinned: boolean) => {
     if (!user) return;
@@ -291,7 +327,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Action Row (Edit/Settings Button) */}
-          <div className="flex justify-end p-3 h-14">
+          <div className="flex justify-end p-3 h-14 gap-2">
             <Link
               href="/settings"
               className="px-4 py-1.5 border border-slate-300 rounded-full font-bold text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5"
@@ -302,6 +338,18 @@ export default function ProfilePage() {
               </svg>
               Settings
             </Link>
+            <button
+              onClick={handleShareProfile}
+              className="px-4 py-1.5 300 rounded-full font-bold text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 relative"
+              title="Share your profile"
+            >
+              <Share2 className="w-4 h-4 text-slate-500" />
+            </button>
+            {showShareToast && (
+              <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+                ✓ Profile link copied to clipboard!
+              </div>
+            )}
           </div>
 
           {/* User Details */}
@@ -579,7 +627,7 @@ export default function ProfilePage() {
                       if (!other) return null;
                       return (
                         <Link 
-                          href={`/discover/${other.id}`} 
+                          href={getProfileHref(other)} 
                           key={conn.id}
                           className="flex items-center gap-3 py-3 hover:bg-slate-50 rounded-2xl px-2 transition-colors"
                         >
@@ -626,7 +674,7 @@ export default function ProfilePage() {
                       if (!other) return null;
                       return (
                         <Link 
-                          href={`/discover/${other.id}`} 
+                          href={getProfileHref(other)} 
                           key={roomie.id}
                           className="flex items-center gap-3 py-3 hover:bg-slate-50 rounded-2xl px-2 transition-colors"
                         >

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@repo/db/client";
 
 export default function UsernameRedirectPage() {
   const params = useParams<{ username: string }>();
@@ -14,28 +13,7 @@ export default function UsernameRedirectPage() {
       return;
     }
 
-    const supabase = createClient();
-    
-    const resolveUsername = async () => {
-      try {
-        const { data, error } = await (supabase as any)
-          .from("profiles")
-          .select("id")
-          .eq("username", params.username)
-          .maybeSingle();
-
-        if (error || !data) {
-          router.replace("/discover");
-        } else {
-          router.replace(`/discover/${(data as any).id}`);
-        }
-      } catch (err) {
-        console.error("Error resolving username redirect:", err);
-        router.replace("/discover");
-      }
-    };
-
-    void resolveUsername();
+    router.replace(`/discover/${encodeURIComponent(params.username)}`);
   }, [params.username, router]);
 
   return (

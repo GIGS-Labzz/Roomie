@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { getProfileHref } from "@/lib/profile-url";
 import { useMessages, useTypingPresence, type ExtendedMessage } from "@/hooks/useMessages";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -187,7 +188,7 @@ export default function ChatThreadPage() {
             {/* Profile section — tapping goes to profile */}
             {other ? (
               <Link
-                href={`/discover/${other.id}`}
+                href={getProfileHref(other)}
                 className="flex items-center gap-2.5 flex-1 min-w-0 group"
               >
                 <div className="relative flex-shrink-0">

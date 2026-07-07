@@ -18,6 +18,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CompatibilityScore } from "@/components/discover/CompatibilityScore";
 import { useAuth } from "@/context/AuthContext";
+import { getProfileHref, isUuid } from "@/lib/profile-url";
 import type { Database } from "@repo/db/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -154,26 +155,41 @@ export default function ProfileDetailPage() {
       setConnectsLoading(true);
       setRoomiesLoading(true);
 
-      const [profileResult, myResult, postsResult, connectsResult, roomiesResult] = await Promise.all([
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProfileById(supabase as any, params.id),
+      const profileResult = isUuid(params.id)
+        ? await getProfileById(supabase as any, params.id)
+        : await (supabase as any)
+          .from("profiles")
+          .select("*")
+          .eq("username", decodeURIComponent(params.id))
+          .eq("is_active", true)
+          .single();
+
+      const resolvedProfile = (profileResult.data as Profile) ?? null;
+
+      if (resolvedProfile && isUuid(params.id) && resolvedProfile.username) {
+        router.replace(getProfileHref(resolvedProfile));
+        return;
+      }
+
+      const profileId = resolvedProfile?.id ?? params.id;
+      const [myResult, postsResult, connectsResult, roomiesResult] = await Promise.all([
         user
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ? (supabase as any).from("profiles").select("*").eq("id", user.id).single()
           : Promise.resolve({ data: null }),
-        getUserPosts(supabase as any, params.id),
-        getActiveConnections(supabase as any, params.id),
-        getConfirmedRoomies(supabase as any, params.id),
+        getUserPosts(supabase as any, profileId),
+        getActiveConnections(supabase as any, profileId),
+        getConfirmedRoomies(supabase as any, profileId),
       ]);
 
-      setProfile(profileResult.data as Profile ?? null);
+      setProfile(resolvedProfile);
       setMyProfile(myResult.data ?? null);
       setPosts(postsResult);
       setConnects(connectsResult.data ?? []);
       setRoomies(roomiesResult.data ?? []);
 
-      if (user && params.id) {
-        const { data: conn } = await getExistingConnection(supabase as any, user.id, params.id);
+      if (user && resolvedProfile) {
+        const { data: conn } = await getExistingConnection(supabase as any, user.id, resolvedProfile.id);
         setExistingConnection(conn ?? null);
         setConnectStatus(conn?.status ?? null);
       }
@@ -184,7 +200,7 @@ export default function ProfileDetailPage() {
       setRoomiesLoading(false);
     };
     void load();
-  }, [params.id, user]);
+  }, [params.id, router, user]);
 
   const handleConnectDetail = async () => {
     if (!user || !profile || connecting) return;
@@ -574,7 +590,7 @@ export default function ProfileDetailPage() {
                     const isMe = other.id === user?.id;
                     return (
                       <Link 
-                        href={isMe ? "/profile" : `/discover/${other.id}`} 
+                        href={isMe ? "/profile" : getProfileHref(other)} 
                         key={conn.id}
                         className="flex items-center gap-3 py-3 hover:bg-slate-50 rounded-2xl px-2 transition-colors"
                       >
@@ -624,7 +640,7 @@ export default function ProfileDetailPage() {
                     const isMe = other.id === user?.id;
                     return (
                       <Link 
-                        href={isMe ? "/profile" : `/discover/${other.id}`} 
+                        href={isMe ? "/profile" : getProfileHref(other)} 
                         key={roomie.id}
                         className="flex items-center gap-3 py-3 hover:bg-slate-50 rounded-2xl px-2 transition-colors"
                       >

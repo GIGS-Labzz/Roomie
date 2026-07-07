@@ -14,6 +14,7 @@ import type { Post, PostComment } from "@repo/db/queries/posts";
 import { Avatar } from "@repo/ui/avatar";
 import { useNotifications } from "@/context/NotificationContext";
 import { Search, Sparkles } from "lucide-react";
+import { getProfileHref } from "@/lib/profile-url";
 
 function CommentItem({ comment }: { comment: PostComment }) {
   const diff = Date.now() - new Date(comment.created_at).getTime();
@@ -25,12 +26,12 @@ function CommentItem({ comment }: { comment: PostComment }) {
 
   return (
     <div className="flex gap-3 p-4 bg-white rounded-2xl border border-slate-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition-all">
-      <Link href={`/discover/${comment.author.id}`} className="flex-shrink-0">
+      <Link href={getProfileHref(comment.author)} className="flex-shrink-0">
         <Avatar src={comment.author.avatar_url} name={comment.author.display_name} size="sm" />
       </Link>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <Link href={`/discover/${comment.author.id}`} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors">
+          <Link href={getProfileHref(comment.author)} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors">
             {comment.author.display_name}
           </Link>
           <span className="text-xs text-slate-300">·</span>

@@ -7,6 +7,7 @@ import { createClient } from "@repo/db/client";
 import { CommentSheet } from "./CommentSheet";
 import { ReplyComposerModal } from "./ReplyComposerModal";
 import { MentionText, registerUsernameId } from "./MentionText";
+import { getProfileHref } from "@/lib/profile-url";
 import type { Post } from "@repo/db/queries/posts";
 import type { User } from "@supabase/supabase-js";
 import { MapPin } from "lucide-react";
@@ -85,6 +86,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
   
   const budget = formatBudget(post.budget_min, post.budget_max);
   const isOwnPost = currentUser?.id === post.user_id;
+  const authorHref = getProfileHref(post.author);
 
   const handleReact = async (type: string) => {
     if (!currentUser) return;
@@ -175,7 +177,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
         {/* Author row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <Link href={`/discover/${post.author.id}`} className="flex-shrink-0">
+            <Link href={authorHref} className="flex-shrink-0">
               <Avatar
                 src={post.author.avatar_url}
                 name={post.author.display_name}
@@ -185,7 +187,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
             </Link>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <Link href={`/discover/${post.author.id}`}>
+                <Link href={authorHref}>
                   <span className="font-display font-semibold text-slate-900 text-sm leading-tight hover:text-brand-600 transition-colors">
                     {post.author.display_name}
                   </span>
@@ -416,7 +418,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
             {/* View profile CTA */}
             {!isOwnPost && (
               <Link
-                href={`/discover/${post.author.id}`}
+                href={authorHref}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-sm font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 transition-all whitespace-nowrap"
               >
                 <span className="hidden sm:inline">View profile</span>

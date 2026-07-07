@@ -9,6 +9,7 @@ import { CompatibilityScore } from "./CompatibilityScore";
 import { useAuth } from "@/context/AuthContext";
 import { useConnections } from "@/hooks/useConnections";
 import { createClient } from "@repo/db/client";
+import { getProfileHref } from "@/lib/profile-url";
 import type { Database } from "@repo/db/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -66,6 +67,7 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
   const status = conn?.status ?? connectionStatus ?? null;
   const tags = (profile.lifestyle_tags ?? []).slice(0, 3);
   const handle = profile.username ? `@${profile.username}` : `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}`;
+  const profileHref = getProfileHref(profile);
 
   const handleConnect = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -137,7 +139,7 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
     <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] p-5 flex flex-col gap-3.5 hover:shadow-[0_8px_32px_rgba(0,0,0,0.10)] transition-shadow duration-200">
       {/* Header row */}
       <div className="flex items-start gap-3">
-        <Link href={`/discover/${profile.id}`} className="flex-shrink-0">
+        <Link href={profileHref} className="flex-shrink-0">
           <Avatar
             src={profile.avatar_url}
             name={profile.display_name}
@@ -148,7 +150,7 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Link href={`/discover/${profile.id}`}>
+            <Link href={profileHref}>
               <h3 className="font-display font-bold text-slate-900 text-base leading-tight hover:text-brand-600 transition-colors break-words whitespace-normal">
                 {profile.display_name}
               </h3>

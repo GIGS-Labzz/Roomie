@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@repo/db/client";
 import { getUserConnections } from "@repo/db/queries/connections";
+import { getProfileHref } from "@/lib/profile-url";
 import {
   getLastMessagesForConnections,
   getUnreadCountPerConnection,
@@ -443,7 +444,7 @@ export default function ChatListPage() {
                     <div className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
                       {other ? (
                         <Link
-                          href={`/discover/${other.id}`}
+                          href={getProfileHref(other)}
                           className="flex-shrink-0 mr-3 z-10"
                           onClick={(e) => e.stopPropagation()}
                         >
