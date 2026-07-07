@@ -344,7 +344,7 @@ export default function ProfilePage() {
               title="Share your profile"
             >
               <Share2 className="w-4 h-4 text-slate-500" />
-              Share
+
             </button>
             {showShareToast && (
               <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
