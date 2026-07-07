@@ -7,6 +7,252 @@
   --foreground: #0a0a0a;
 }
 
+/* Generic/Default Theme Variables */
+[data-theme="generic"] {
+  --color-peach-200: #FAE8CC;
+  --color-peach-300: #f5d4a6;
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --color-sage-surface: #F8FAFC;
+  --color-sage-light: #E2E8F0;
+  --color-peach-200: #8AAF6E;
+  --color-peach-300: #72964d;
+}
+
+/* Midnight Black Theme Variables */
+[data-theme="dark"] {
+  --background: #09090B;
+  --foreground: #F4F4F5;
+  --color-sage-surface: #09090B;
+  --color-sage-light: #18181b; /* zinc-900 card background */
+  --color-brand-50:  #09090b;
+  --color-brand-100: #1b2f21;
+  --color-brand-200: #25442e;
+  --color-brand-300: #305c3d;
+  --color-brand-400: #10B981; /* Emerald */
+  --color-brand-500: #10B981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-peach-200: #10B981;
+  --color-peach-300: #059669;
+}
+
+/* Deep Navy Theme Variables */
+[data-theme="deep"] {
+  --background: #0B1329;
+  --foreground: #FFFFFF;
+  --color-sage-surface: #0B1329;
+  --color-sage-light: #1C2541;
+  --color-brand-50:  #0f172a;
+  --color-brand-100: #1e293b;
+  --color-brand-200: #334155;
+  --color-brand-300: #475569;
+  --color-brand-400: #3b82f6; /* cobalt */
+  --color-brand-500: #3B82F6;
+  --color-brand-600: #2563EB;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-peach-200: #3B82F6;
+  --color-peach-300: #2563EB;
+  --color-peach-500: #06b6d4;
+}
+
+/* Forest Gold Theme Variables */
+[data-theme="forest"] {
+  --background: #12221A;
+  --foreground: #F7F3E9;
+  --color-sage-surface: #12221A;
+  --color-sage-light: #1C3629;
+  --color-brand-50:  #1C3629;
+  --color-brand-100: #244736;
+  --color-brand-200: #2d5843;
+  --color-brand-300: #386a51;
+  --color-brand-400: #E4C580; /* Gold */
+  --color-brand-500: #E4C580;
+  --color-brand-600: #D4B470;
+  --color-brand-700: #c2a15c;
+  --color-brand-800: #b08e4a;
+  --color-brand-900: #9e7b3a;
+  --color-peach-200: #E4C580;
+  --color-peach-300: #D4B470;
+  --color-peach-500: #f59e0b;
+}
+
+/* Global Overrides based on Active Theme */
+
+/* Dark-based global classes (applies to Dark, Deep Navy, Forest Gold) */
+[data-theme="dark"] .bg-white,
+[data-theme="deep"] .bg-white,
+[data-theme="forest"] .bg-white {
+  background-color: var(--color-sage-light) !important;
+}
+
+[data-theme="dark"] .bg-sage-surface,
+[data-theme="deep"] .bg-sage-surface,
+[data-theme="forest"] .bg-sage-surface {
+  background-color: var(--color-sage-surface) !important;
+}
+
+[data-theme="dark"] .bg-slate-50,
+[data-theme="deep"] .bg-slate-50,
+[data-theme="forest"] .bg-slate-50 {
+  background-color: var(--color-sage-surface) !important;
+}
+
+[data-theme="dark"] .bg-slate-100,
+[data-theme="deep"] .bg-slate-100,
+[data-theme="forest"] .bg-slate-100 {
+  background-color: var(--color-brand-100) !important;
+}
+
+[data-theme="dark"] .bg-slate-200,
+[data-theme="deep"] .bg-slate-200,
+[data-theme="forest"] .bg-slate-200 {
+  background-color: var(--color-brand-200) !important;
+}
+
+[data-theme="dark"] .text-slate-900,
+[data-theme="dark"] .text-slate-950,
+[data-theme="dark"] .text-slate-800,
+[data-theme="deep"] .text-slate-900,
+[data-theme="deep"] .text-slate-950,
+[data-theme="deep"] .text-slate-800,
+[data-theme="forest"] .text-slate-900,
+[data-theme="forest"] .text-slate-950,
+[data-theme="forest"] .text-slate-800 {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .text-slate-700,
+[data-theme="dark"] .text-slate-600,
+[data-theme="deep"] .text-slate-700,
+[data-theme="deep"] .text-slate-600,
+[data-theme="forest"] .text-slate-700,
+[data-theme="forest"] .text-slate-600 {
+  color: rgba(244, 244, 245, 0.85) !important;
+}
+
+[data-theme="dark"] .text-slate-500,
+[data-theme="deep"] .text-slate-500,
+[data-theme="forest"] .text-slate-500 {
+  color: rgba(244, 244, 245, 0.6) !important;
+}
+
+[data-theme="dark"] .text-slate-400,
+[data-theme="deep"] .text-slate-400,
+[data-theme="forest"] .text-slate-400 {
+  color: rgba(244, 244, 245, 0.4) !important;
+}
+
+[data-theme="dark"] .border-slate-200,
+[data-theme="dark"] .border-slate-100,
+[data-theme="deep"] .border-slate-200,
+[data-theme="deep"] .border-slate-100,
+[data-theme="forest"] .border-slate-200,
+[data-theme="forest"] .border-slate-100 {
+  border-color: var(--color-brand-100) !important;
+}
+
+/* Specific component tweaks in dark theme */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="deep"] input,
+[data-theme="deep"] select,
+[data-theme="deep"] textarea,
+[data-theme="forest"] input,
+[data-theme="forest"] select,
+[data-theme="forest"] textarea {
+  background-color: var(--color-sage-surface) !important;
+  color: var(--foreground) !important;
+  border-color: var(--color-brand-100) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="deep"] input::placeholder,
+[data-theme="deep"] textarea::placeholder,
+[data-theme="forest"] input::placeholder,
+[data-theme="forest"] textarea::placeholder {
+  color: rgba(244, 244, 245, 0.3) !important;
+}
+
+/* Hover fixes for sidebar or lists in dark-based modes */
+[data-theme="dark"] .hover\:bg-white\/60:hover,
+[data-theme="deep"] .hover\:bg-white\/60:hover,
+[data-theme="forest"] .hover\:bg-white\/60:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Selected item hover or bg in lists */
+[data-theme="dark"] .bg-white.text-brand-600,
+[data-theme="deep"] .bg-white.text-brand-600,
+[data-theme="forest"] .bg-white.text-brand-600 {
+  background-color: var(--color-brand-100) !important;
+  color: var(--color-brand-500) !important;
+}
+
+/* Opacity header / banner overrides */
+[data-theme="dark"] .bg-white\/90,
+[data-theme="dark"] .bg-white\/95,
+[data-theme="dark"] .bg-white\/80 {
+  background-color: rgba(24, 24, 27, 0.95) !important;
+}
+[data-theme="deep"] .bg-white\/90,
+[data-theme="deep"] .bg-white\/95,
+[data-theme="deep"] .bg-white\/80 {
+  background-color: rgba(28, 37, 65, 0.95) !important;
+}
+[data-theme="forest"] .bg-white\/90,
+[data-theme="forest"] .bg-white\/95,
+[data-theme="forest"] .bg-white\/80 {
+  background-color: rgba(28, 54, 41, 0.95) !important;
+}
+
+/* Dynamic Hover classes overrides in dark-based themes */
+[data-theme="dark"] .hover\:bg-slate-50:hover,
+[data-theme="dark"] .hover\:bg-slate-100:hover,
+[data-theme="dark"] .hover\:bg-brand-50:hover,
+[data-theme="dark"] .hover\:bg-brand-100:hover,
+[data-theme="dark"] .hover\:bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+[data-theme="deep"] .hover\:bg-slate-50:hover,
+[data-theme="deep"] .hover\:bg-slate-100:hover,
+[data-theme="deep"] .hover\:bg-brand-50:hover,
+[data-theme="deep"] .hover\:bg-brand-100:hover,
+[data-theme="deep"] .hover\:bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+[data-theme="forest"] .hover\:bg-slate-50:hover,
+[data-theme="forest"] .hover\:bg-slate-100:hover,
+[data-theme="forest"] .hover\:bg-brand-50:hover,
+[data-theme="forest"] .hover\:bg-brand-100:hover,
+[data-theme="forest"] .hover\:bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* Border fixes for profile buttons */
+[data-theme="dark"] .border-slate-300 {
+  border-color: var(--color-brand-200) !important;
+}
+[data-theme="deep"] .border-slate-300 {
+  border-color: var(--color-brand-200) !important;
+}
+[data-theme="forest"] .border-slate-300 {
+  border-color: var(--color-brand-200) !important;
+}
+
 html {
   scroll-behavior: smooth;
 }

@@ -768,6 +768,15 @@ export default function SettingsPage() {
           {/* App Preferences & Legal */}
           <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] overflow-hidden">
             <Link
+              href="/settings/personalization"
+              className="flex items-center justify-between px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-700">Personalization</span>
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
               href="/notifications"
               className="flex items-center justify-between px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors"
             >
