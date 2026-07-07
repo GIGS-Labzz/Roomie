@@ -4,11 +4,36 @@ import { getActiveConnections, getConfirmedRoomies } from "@repo/db/queries/conn
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.roomie.ng";
 
+function isHttpUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
 function toAbsoluteUrl(value: string) {
   if (!value) return `${APP_URL}/icons/icon-192.png`;
-  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  if (isHttpUrl(value)) return value;
   if (value.startsWith("/")) return `${APP_URL}${value}`;
   return `${APP_URL}/${value}`;
+}
+
+function resolveStorageImageUrl(value: string | null | undefined, supabase?: any) {
+  if (!value) return `${APP_URL}/icons/icon-192.png`;
+
+  if (isHttpUrl(value)) return value;
+
+  if (value.includes("/storage/v1/object/public/")) return value;
+
+  if (value.startsWith("/")) return `${APP_URL}${value}`;
+
+  const candidate = value.replace(/^\/+/, "");
+
+  if (candidate.startsWith("avatars/") || candidate.startsWith("student-ids/")) {
+    if (supabase) {
+      const { data } = supabase.storage.from("avatars").getPublicUrl(candidate);
+      if (data?.publicUrl) return data.publicUrl;
+    }
+  }
+
+  return toAbsoluteUrl(candidate);
 }
 
 function cleanText(value?: string | null) {
@@ -88,7 +113,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const description = descriptionParts.join(" • ");
   const profilePath = profile.username ? `/discover/${encodeURIComponent(profile.username)}` : `/discover/${profile.id}`;
   const url = `${APP_URL}${profilePath}`;
-  const imageUrl = toAbsoluteUrl(profile.avatar_url ?? profile.cover_url ?? "");
+  const imageUrl = resolveStorageImageUrl(profile.avatar_url ?? profile.cover_url ?? "", supabase);
 
   return {
     title: `${displayName} • Roomie`,
