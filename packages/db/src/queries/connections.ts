@@ -10,7 +10,8 @@ export async function getUserConnections(
     .select(
       `*,
        requester:profiles!requester_id(id, display_name, username, avatar_url, university, city, student_verified),
-       receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified)`
+       receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city, student_verified),
+       roommate_agreements(status)`
     )
     .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("updated_at", { ascending: false });
@@ -55,7 +56,7 @@ export async function getExistingConnection(
 ) {
   return supabase
     .from("connections")
-    .select("*")
+    .select("*, roommate_agreements(status)")
     .or(
       `and(requester_id.eq.${userAId},receiver_id.eq.${userBId}),and(requester_id.eq.${userBId},receiver_id.eq.${userAId})`
     )
@@ -136,5 +137,131 @@ export async function getConfirmedRoomies(
     `)
     .eq("status", "CONFIRMED")
     .or(`initiator_id.eq.${userId},acceptor_id.eq.${userId}`);
+}
+
+export async function getConnectionMap(
+  supabase: SupabaseClient<Database>,
+  targetUserId: string,
+  currentUserId: string
+) {
+  // 1. Fetch target user profile
+  const { data: targetProfile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("id, display_name, username, avatar_url, university, city")
+    .eq("id", targetUserId)
+    .single();
+
+  if (profileErr || !targetProfile) {
+    throw new Error(profileErr?.message || "Target profile not found");
+  }
+
+  // 2. Fetch target user's active connections (1st-degree)
+  const { data: firstDegreeConns, error: connErr } = await supabase
+    .from("connections")
+    .select(`
+      id,
+      requester_id,
+      receiver_id,
+      requester:profiles!requester_id(id, display_name, username, avatar_url, university, city),
+      receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city)
+    `)
+    .eq("status", "ACTIVE")
+    .or(`requester_id.eq.${targetUserId},receiver_id.eq.${targetUserId}`);
+
+  if (connErr) throw connErr;
+
+  const firstDegreeProfilesMap = new Map<string, any>();
+  const firstDegreeIds: string[] = [];
+
+  for (const c of (firstDegreeConns || [])) {
+    const other = c.requester_id === targetUserId ? c.receiver : c.requester;
+    if (other && other.id !== targetUserId) {
+      firstDegreeProfilesMap.set(other.id, {
+        ...other,
+        isMutual: false,
+        connections: []
+      });
+      firstDegreeIds.push(other.id);
+    }
+  }
+
+  // 3. Fetch current user's active connections to check for mutual connections
+  if (currentUserId !== targetUserId && firstDegreeIds.length > 0) {
+    const { data: currentUserConns } = await supabase
+      .from("connections")
+      .select("requester_id, receiver_id")
+      .eq("status", "ACTIVE")
+      .or(`requester_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`);
+
+    const currentUserActiveIds = new Set<string>();
+    for (const c of (currentUserConns || [])) {
+      currentUserActiveIds.add(c.requester_id === currentUserId ? c.receiver_id : c.requester_id);
+    }
+
+    for (const id of firstDegreeIds) {
+      if (currentUserActiveIds.has(id)) {
+        const prof = firstDegreeProfilesMap.get(id);
+        if (prof) prof.isMutual = true;
+      }
+    }
+  }
+
+  // 4. Fetch 2nd-degree connections (active connections of B's 1st-degree connections)
+  if (firstDegreeIds.length > 0) {
+    const { data: secondDegreeConns1 } = await supabase
+      .from("connections")
+      .select(`
+        id,
+        requester_id,
+        receiver_id,
+        requester:profiles!requester_id(id, display_name, username, avatar_url, university, city),
+        receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city)
+      `)
+      .eq("status", "ACTIVE")
+      .in("requester_id", firstDegreeIds);
+
+    const { data: secondDegreeConns2 } = await supabase
+      .from("connections")
+      .select(`
+        id,
+        requester_id,
+        receiver_id,
+        requester:profiles!requester_id(id, display_name, username, avatar_url, university, city),
+        receiver:profiles!receiver_id(id, display_name, username, avatar_url, university, city)
+      `)
+      .eq("status", "ACTIVE")
+      .in("receiver_id", firstDegreeIds);
+
+    const secondDegreeConns = [...(secondDegreeConns1 || []), ...(secondDegreeConns2 || [])];
+
+    for (const c of secondDegreeConns) {
+      const isRequester1st = firstDegreeProfilesMap.has(c.requester_id);
+      const isReceiver1st = firstDegreeProfilesMap.has(c.receiver_id);
+
+      if (isRequester1st) {
+        const first = firstDegreeProfilesMap.get(c.requester_id);
+        const second = c.receiver;
+        if (second && second.id !== targetUserId && !firstDegreeProfilesMap.has(second.id)) {
+          if (!first.connections.some((existing: any) => existing.id === second.id)) {
+            first.connections.push(second);
+          }
+        }
+      }
+      if (isReceiver1st) {
+        const first = firstDegreeProfilesMap.get(c.receiver_id);
+        const second = c.requester;
+        if (second && second.id !== targetUserId && !firstDegreeProfilesMap.has(second.id)) {
+          if (!first.connections.some((existing: any) => existing.id === second.id)) {
+            first.connections.push(second);
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    root: targetProfile,
+    connections: Array.from(firstDegreeProfilesMap.values())
+  };
 }
 

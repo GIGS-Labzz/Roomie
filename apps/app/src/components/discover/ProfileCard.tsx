@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
+import { Shield } from "lucide-react";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -68,6 +69,7 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
   const [connecting, setConnecting] = useState(false);
 
   const status = conn?.status ?? connectionStatus ?? null;
+  const isRoomie = (conn as any)?.roommate_agreements?.status === "CONFIRMED";
   const tags = (profile.lifestyle_tags ?? []).slice(0, 3);
   const handle = profile.username ? `@${profile.username}` : `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}`;
   const profileHref = getProfileHref(profile);
@@ -163,14 +165,15 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
         </Link>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Link href={profileHref}>
-              <h3 className="font-display font-bold text-slate-900 text-base leading-tight hover:text-brand-600 transition-colors break-words whitespace-normal">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Link href={profileHref} className="min-w-0">
+              <h3 className="font-display font-bold text-slate-900 text-base leading-tight hover:text-brand-600 transition-colors truncate">
                 {profile.display_name}
               </h3>
             </Link>
+            {isRoomie && <Shield className="w-4 h-4 text-brand-500 fill-current shrink-0" />}
             {profile.student_verified && (
-              <span title="Student ID verified by Roomie">
+              <span title="Student ID verified by Roomie" className="shrink-0">
                 <LottieIcon animationData={verifiedBadgeAnimation} size={18} loop={false} />
               </span>
             )}

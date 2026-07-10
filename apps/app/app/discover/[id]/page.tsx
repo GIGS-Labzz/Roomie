@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Shield } from "lucide-react";
 import { createClient } from "@repo/db/client";
 import { getProfileById } from "@repo/db/queries/profiles";
 import { getUserPosts } from "@repo/db/queries/posts";
@@ -23,6 +24,7 @@ import verifiedBadgeAnimation from "@repo/animations/verified-badge";
 import matchFoundAnimation from "@repo/animations/match-found";
 import billSettledAnimation from "@repo/animations/bill-settled";
 import { CompatibilityScore } from "@/components/discover/CompatibilityScore";
+import { NetworkMapModal } from "@/components/discover/NetworkMapModal";
 import { useAuth } from "@/context/AuthContext";
 import { getProfileHref, isUuid } from "@/lib/profile-url";
 import type { Database } from "@repo/db/types";
@@ -130,6 +132,7 @@ export default function ProfileDetailPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [showNetworkMap, setShowNetworkMap] = useState(false);
 
   const handleReport = async () => {
     if (!user || !profile || !reportReason.trim()) return;
@@ -314,6 +317,7 @@ export default function ProfileDetailPage() {
   const compatScore = myProfile ? calculateCompatibility(myProfile, profile) : 0;
   const tags = profile.lifestyle_tags ?? [];
   const handle = profile.username ? `@${profile.username}` : (profile.display_name ? `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}` : "@user");
+  const isRoomie = existingConnection?.roommate_agreements?.status === "CONFIRMED";
 
   return (
     <div className="min-h-screen bg-sage-surface">
@@ -330,9 +334,14 @@ export default function ProfileDetailPage() {
             </svg>
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display font-black text-slate-900 text-base truncate">
-              {profile.display_name}
-            </h1>
+            <div className="flex items-center gap-1 min-w-0">
+              <h1 className="font-display font-black text-slate-900 text-base truncate">
+                {profile.display_name}
+              </h1>
+              {isRoomie && (
+                <Shield className="w-4 h-4 text-brand-500 fill-current shrink-0" />
+              )}
+            </div>
             {!isRoomieApp && (
               <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{compatScore}% Compatible</p>
             )}
@@ -412,12 +421,15 @@ export default function ProfileDetailPage() {
         {/* User Details */}
         <div className="px-4 space-y-3">
           <div>
-            <div className="flex items-center gap-1">
-              <h2 className="font-display font-black text-slate-900 text-xl leading-tight">
+            <div className="flex items-center gap-1 min-w-0">
+              <h2 className="font-display font-black text-slate-900 text-xl leading-tight truncate">
                 {profile.display_name}
               </h2>
+              {isRoomie && (
+                <Shield className="w-5 h-5 text-brand-500 fill-current shrink-0" />
+              )}
               {profile.student_verified && (
-                <span className="w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-white" title="Verified Student">
+                <span className="w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-white shrink-0" title="Verified Student">
                   <svg className="w-3.5 h-3.5" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -535,6 +547,15 @@ export default function ProfileDetailPage() {
             >
               <span className="font-extrabold text-slate-950">{roomies.length}</span>
               <span className="text-slate-500">Roomies</span>
+            </button>
+            <button 
+              onClick={() => setShowNetworkMap(true)} 
+              className="hover:underline flex items-center gap-1.5 ml-auto text-brand-600 font-semibold text-xs border border-brand-100 bg-brand-50/50 hover:bg-brand-50 px-2.5 py-1 rounded-full transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span>Network Map</span>
             </button>
           </div>
         </div>
@@ -832,6 +853,14 @@ export default function ProfileDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Connection Network Map Modal */}
+      <NetworkMapModal
+        isOpen={showNetworkMap}
+        onClose={() => setShowNetworkMap(false)}
+        userId={profile.id}
+        userName={profile.display_name}
+      />
     </div>
   );
 }

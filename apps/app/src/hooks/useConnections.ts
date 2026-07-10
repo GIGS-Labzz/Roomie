@@ -17,7 +17,7 @@ export function useConnections() {
       const supabase = createClient();
       const { data, error: fetchError } = await (supabase as any)
         .from("connections")
-        .select("*")
+        .select("*, roommate_agreements(status)")
         .or(`requester_id.eq.${user!.id},receiver_id.eq.${user!.id}`);
       if (fetchError) throw fetchError;
       return (data ?? []) as Connection[];

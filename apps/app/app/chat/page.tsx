@@ -302,6 +302,7 @@ export default function ChatListPage() {
 
       const unread = clearTime ? 0 : (unreadCounts[c.id] ?? 0);
       const isOwnLast = lastMsg?.sender_id === user?.id;
+      const isRoomie = c.roommate_agreements?.status === "CONFIRMED";
       return {
         connection: c,
         other,
@@ -309,6 +310,7 @@ export default function ChatListPage() {
         unread,
         preview: previewText(lastMsg, isOwnLast),
         time: formatChatTime(lastMsg?.created_at ?? c.connected_at),
+        isRoomie,
       };
     });
   }, [connections, lastMessages, unreadCounts, user?.id]);
@@ -427,7 +429,7 @@ export default function ChatListPage() {
               <EmptySearch onClear={() => { setQuery(""); setFilter("ALL"); }} />
             ) : (
               <ul className="divide-y divide-slate-100">
-                {filteredConnections.map(({ connection: conn, other, unread, preview, time }) => (
+                {filteredConnections.map(({ connection: conn, other, unread, preview, time, isRoomie }) => (
                   <li
                     key={conn.id}
                     onTouchStart={() => !isSupportUser(other) && handlePressStart(conn, other)}
