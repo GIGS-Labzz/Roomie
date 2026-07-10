@@ -99,6 +99,7 @@ export function MessageBubble({
     return (
       <AgreementCard
         agreementId={payload.agreement_id ?? ""}
+        connectionId={message.connection_id}
         initiatorName={payload.initiator_name ?? message.sender?.display_name ?? "Your connection"}
         isOwn={isOwn}
         isInitiator={message.sender_id === currentUserId}

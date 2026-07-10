@@ -14,6 +14,7 @@
     "./queries/housing": "./src/queries/housing.ts",
     "./queries/posts": "./src/queries/posts.ts",
     "./queries/billSplits": "./src/queries/billSplits.ts",
+    "./queries/badges": "./src/queries/badges.ts",
     "./lib/compatibility": "./src/lib/compatibility.ts"
   },
   "scripts": {

@@ -95,6 +95,31 @@ export async function getActiveConnections(
     .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
 }
 
+export async function getMutualConnections(
+  supabase: SupabaseClient<Database>,
+  userAId: string,
+  userBId: string
+) {
+  const [aIds, bIds] = await Promise.all([
+    getConnectedUserIds(supabase, userAId),
+    getConnectedUserIds(supabase, userBId),
+  ]);
+
+  const bSet = new Set(bIds);
+  const mutualIds = aIds.filter(
+    (id) => bSet.has(id) && id !== userAId && id !== userBId
+  );
+
+  if (mutualIds.length === 0) return [];
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, display_name, username, avatar_url")
+    .in("id", mutualIds);
+
+  return data ?? [];
+}
+
 export async function getConfirmedRoomies(
   supabase: SupabaseClient<Database>,
   userId: string

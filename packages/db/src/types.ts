@@ -52,6 +52,78 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          id: string
+          code: string
+          name: string
+          description: string
+          icon_lottie: string | null
+          icon_svg: string | null
+          category: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          name: string
+          description: string
+          icon_lottie?: string | null
+          icon_svg?: string | null
+          category?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          name?: string
+          description?: string
+          icon_lottie?: string | null
+          icon_svg?: string | null
+          category?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          id: string
+          user_id: string
+          badge_id: string
+          awarded_at: string
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          badge_id: string
+          awarded_at?: string
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          badge_id?: string
+          awarded_at?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_reports: {
         Row: {
           id: string
@@ -735,6 +807,9 @@ export type Database = {
           payment_reference: string | null
           payment_channel: string | null
           amount: number | null
+          badge_color: string | null
+          badge_variant: string | null
+          badge_theme: string | null
           accepted_at: string | null
           paid_at: string | null
         }
@@ -747,6 +822,9 @@ export type Database = {
           payment_reference?: string | null
           payment_channel?: string | null
           amount?: number | null
+          badge_color?: string | null
+          badge_variant?: string | null
+          badge_theme?: string | null
           accepted_at?: string | null
           paid_at?: string | null
         }
@@ -759,6 +837,9 @@ export type Database = {
           payment_reference?: string | null
           payment_channel?: string | null
           amount?: number | null
+          badge_color?: string | null
+          badge_variant?: string | null
+          badge_theme?: string | null
           accepted_at?: string | null
           paid_at?: string | null
         }
@@ -814,6 +895,7 @@ export type Database = {
           max_budget: number | null
           min_budget: number | null
           move_in_date: string | null
+          network_size: number | null
           noise_pref: Database["public"]["Enums"]["noise_preference"] | null
           onboarding_complete: boolean | null
           onboarding_step: number | null
@@ -861,6 +943,7 @@ export type Database = {
           max_budget?: number | null
           min_budget?: number | null
           move_in_date?: string | null
+          network_size?: number | null
           noise_pref?: Database["public"]["Enums"]["noise_preference"] | null
           onboarding_complete?: boolean | null
           onboarding_step?: number | null
@@ -908,6 +991,7 @@ export type Database = {
           max_budget?: number | null
           min_budget?: number | null
           move_in_date?: string | null
+          network_size?: number | null
           noise_pref?: Database["public"]["Enums"]["noise_preference"] | null
           onboarding_complete?: boolean | null
           onboarding_step?: number | null

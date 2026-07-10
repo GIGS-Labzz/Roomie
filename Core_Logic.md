@@ -10,6 +10,11 @@ This document outlines the detailed system design, database models, and API inte
 Trust is the primary currency of roommate matching. While standard compatibility questionnaires help, peer verification, track records, and social proof provide absolute validation. 
 - **Roomie Connection Network:** Map and analyze relationships between matched roommates. Similar to professional networking connections (1st, 2nd, 3rd degrees), this allows users to see mutual connections (e.g., "Connected to 2 of your friends") and check their reputation network.
 - **Dynamic Badges:** Earnable badges that showcase verification status, financial reliability, and community standing.
+  - **Roomie Badge:** Special badge assigned when a roommate agreement is successfully paid. It is visible **only in their private chat thread** to represent their active confirmed connection. Confirmed roommates can **customize the badge's color, variant, and theme styling** directly from the chat interface to represent their joint identity.
+- **Scoped Housing Access:** Housing features do not unlock globally for a user. Instead, housing is unlocked **strictly for a specific confirmed Roommate Agreement** connection.
+  - **Mobile:** Users can only access housing via the confirmed roommate's private chat header. Direct access to `/housing` on mobile displays a guide prompt directing users to their roommate chat thread.
+  - **Desktop:** Accessing `/housing` prompts the user to select which confirmed roommate connection/agreement to use for browsing.
+  - **Provider Redirection:** Upon clicking a housing provider, the user is redirected with query parameters: `roomie_id` (the unique roommate connection Roomie ID), `roommate_id` (roommate's username), and `agreement_id` (roommate agreement UUID) to establish a joint renter profile.
 
 ### 1.2 Database Schema (Prisma)
 We will extend the existing `profiles` model and introduce new models for `badges` and `user_badges`.
@@ -51,10 +56,10 @@ model user_badges {
 
 ### 1.3 Badge Inventory & Issuance Rules
 
-| Badge Code | Name | Description | Issuance Logic | Lottie Animation |
+| Badge Code | Name | Description | Issuance Logic | Lottie Animation / UI |
 | :--- | :--- | :--- | :--- | :--- |
 | `VERIFIED_STUDENT` | Verified Student | Identity and enrollment verified via student ID. | Approved by Super Admin after ID upload. | `verified-badge.json` |
-| `ROOMIE_PARTNER` | Roomie Partner | Successfully entered a paid roommate agreement. | Automatically awarded upon Paystack success of a Roommate Agreement. | `match-found.json` |
+| `ROOMIE_PARTNER` | Roomie Partner | Successfully entered a paid roommate agreement. | Automatically awarded upon Paystack success of a Roommate Agreement. Visible **only in their private chat**. | Custom "Roomie" pill / `match-found.json` |
 | `GOOD_PAYER` | On-Time Payer | Settles bills reliably and quickly. | `bill_split_items` paid within 48h of split creation, for at least 5 consecutive items. | `bill-settled.json` |
 | `HOUSING_VERIFIED` | Verified Resident | Resident status verified by a housing platform provider. | Housing provider checks a box in Admin Panel confirming active tenancy. | `shield-check.json` |
 | `COMMUNITY_VIBE` | High Vibe | Active contributor on the feed. | Post count > 10 and likes received > 50. | `star-pulse.json` |
@@ -75,9 +80,10 @@ When two users transition their [connections](file:///c:/Users/admin/Desktop/Roo
 
 ### 2.1 Overview & Objectives
 Students shouldn't have to fill out the same onboarding forms (budget, study details, lifestyle habits, ID uploads) when applying to housing agencies (e.g., UniHousing, Hostels.ng).
-- **Roomie ID:** A decentralized username identity (e.g., `@john_doe`) acting as a universal renter profile.
-- **SSO Authentication:** Third-party partners can embed a "Sign In with Roomie ID" button, allowing users to authenticate via OAuth 2.0.
-- **Profile Synchronization:** Authorised housing platforms fetch verified student credentials and roommate connections directly from Roomie API, bypassing the agency's verification paperwork.
+- **Roomie ID (Connection-Scoped):** For every roommate connection (confirmed agreement), a unique joint Roomie ID is created representing this specific roommate pair. When browsing housing, this joint Roomie ID is shared with the housing providers.
+- **SSO Authentication & Dual Accounts:** Third-party partners can embed a "Sign In with Roomie ID" button. Upon authentication, a dual account is established on the partner housing provider's platform using the unique Roomie ID as the primary identifier.
+- **Unified Renter Passport:** The details of both roommates (individual profiles, budget range, lifestyle preferences, and verified student credentials) are sent together to the housing provider. This establishes a shared renting credibility passport, boosting validation score and streamlining joint tenancy approvals.
+- **Customizable Roomie Badge:** The roommate badge associated with the connection is customizable. Roommates can collaboratively select custom colors or visual variant themes directly in their chat to display their joint connection status.
 
 ### 2.2 Database Schema (Prisma)
 We will add OAuth client fields to the [housing_platforms](file:///c:/Users/admin/Desktop/Roomie/apps/api/prisma/schema.prisma#L107-L128) model and create tracking models for authorization codes and tokens.

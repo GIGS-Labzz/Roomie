@@ -6,12 +6,13 @@ import { PaystackButton } from "@/components/connect/PaystackButton";
 
 interface AgreementCardProps {
   agreementId: string;
+  connectionId: string;
   initiatorName: string;
   isOwn: boolean;
   isInitiator: boolean;
 }
 
-export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }: AgreementCardProps) {
+export function AgreementCard({ agreementId, connectionId, initiatorName, isOwn, isInitiator }: AgreementCardProps) {
   const [status, setStatus] = useState<"PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED" | "CONFIRMING">("PENDING");
   const [isDeclining, setIsDeclining] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +93,7 @@ export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }
           Roomie partners confirmed — housing providers are unlocked for both of you.
           <div className="mt-2">
             <Link
-              href="/housing"
+              href={`/housing?connectionId=${connectionId}`}
               className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
             >
               Browse housing
@@ -115,6 +116,7 @@ export function AgreementCard({ agreementId, initiatorName, isOwn, isInitiator }
         <div className="mt-4 flex flex-col gap-2">
           <PaystackButton
             agreementId={agreementId}
+            connectionId={connectionId}
             onStarted={() => setStatus("PAYMENT_STARTED")}
             onConfirmed={() => setStatus("CONFIRMING")}
           />

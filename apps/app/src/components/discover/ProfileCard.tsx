@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { LottieIcon } from "@repo/ui/lottie-icon";
+import verifiedBadgeAnimation from "@repo/animations/verified-badge";
 import { CompatibilityScore } from "./CompatibilityScore";
 import { useAuth } from "@/context/AuthContext";
 import { useConnections } from "@/hooks/useConnections";
@@ -68,6 +71,17 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
   const tags = (profile.lifestyle_tags ?? []).slice(0, 3);
   const handle = profile.username ? `@${profile.username}` : `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}`;
   const profileHref = getProfileHref(profile);
+
+  const { data: mutualData } = useSWR(
+    user ? `mutual-${profile.id}` : null,
+    async () => {
+      const res = await fetch(`/api/network/mutual/${profile.id}`);
+      if (!res.ok) return { mutuals: [] };
+      return res.json() as Promise<{ mutuals: { id: string }[] }>;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
+  );
+  const mutualCount = mutualData?.mutuals?.length ?? 0;
 
   const handleConnect = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -156,17 +170,17 @@ export function ProfileCard({ profile, compatibilityScore, connectionStatus }: P
               </h3>
             </Link>
             {profile.student_verified && (
-              <span
-                className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand-500 text-white"
-                title="Student ID verified by Roomie"
-              >
-                <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <span title="Student ID verified by Roomie">
+                <LottieIcon animationData={verifiedBadgeAnimation} size={18} loop={false} />
               </span>
             )}
           </div>
           <p className="text-xs text-slate-400 font-medium mt-0.5">{handle}</p>
+          {mutualCount > 0 && (
+            <p className="text-[11px] text-brand-600 font-semibold mt-1">
+              Matched with {mutualCount} mutual connection{mutualCount > 1 ? "s" : ""}
+            </p>
+          )}
 
           {profile.university && (
             <p className="text-xs text-slate-500 mt-1.5 truncate">

@@ -12,6 +12,18 @@ model admin_users {
   created_at DateTime? @default(now()) @db.Timestamptz(6)
 }
 
+model badges {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String        @unique
+  name        String
+  description String
+  icon_lottie String?
+  icon_svg    String?
+  category    String        @default("SYSTEM")
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  user_badges user_badges[]
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bill_split_items {
   id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -270,6 +282,7 @@ model profiles {
   onboarding_complete                                            Boolean?              @default(false)
   last_seen_at                                                   DateTime?             @default(now()) @db.Timestamptz(6)
   is_active                                                      Boolean?              @default(true)
+  network_size                                                   Int?                  @default(0)
   created_at                                                     DateTime?             @default(now()) @db.Timestamptz(6)
   updated_at                                                     DateTime?             @default(now()) @db.Timestamptz(6)
   bill_split_items                                               bill_split_items[]
@@ -289,6 +302,7 @@ model profiles {
   push_subscriptions                                             push_subscriptions[]
   roommate_agreements_roommate_agreements_acceptor_idToprofiles  roommate_agreements[] @relation("roommate_agreements_acceptor_idToprofiles")
   roommate_agreements_roommate_agreements_initiator_idToprofiles roommate_agreements[] @relation("roommate_agreements_initiator_idToprofiles")
+  user_badges                                                    user_badges[]
 }
 
 model push_subscriptions {
@@ -312,6 +326,9 @@ model roommate_agreements {
   payment_reference                                   String?     @unique
   payment_channel                                     String?
   amount                                              Int?        @default(200000)
+  badge_color                                         String?     @default("brand")
+  badge_variant                                       String?     @default("standard")
+  badge_theme                                         String?     @default("light")
   created_at                                          DateTime?   @default(now()) @db.Timestamptz(6)
   accepted_at                                         DateTime?   @db.Timestamptz(6)
   paid_at                                             DateTime?   @db.Timestamptz(6)
@@ -321,6 +338,18 @@ model roommate_agreements {
 
   @@index([connection_id], map: "idx_agreements_connection")
   @@index([status], map: "idx_agreements_status")
+}
+
+model user_badges {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  badge_id   String   @db.Uuid
+  awarded_at DateTime @default(now()) @db.Timestamptz(6)
+  metadata   Json?    @default("{}")
+  badges     badges   @relation(fields: [badge_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles   profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, badge_id])
 }
 
 model waitlist {

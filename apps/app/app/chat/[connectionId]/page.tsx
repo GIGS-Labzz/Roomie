@@ -11,12 +11,50 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BillSplitPinnedBanner } from "@/components/splits/BillSplitPinnedBanner";
+import { CongratsModal } from "@/components/connect/CongratsModal";
 import { Avatar } from "@repo/ui/avatar";
+import { Modal } from "@repo/ui/modal";
 import { createClient } from "@repo/db/client";
 import { getConnectionById } from "@repo/db/queries/connections";
 import { useProfile } from "@/hooks/useProfile";
 
 const supabase = createClient();
+
+const BADGE_COLORS = ["brand", "peach", "sage", "slate"] as const;
+const BADGE_VARIANTS = ["standard", "outline", "glass"] as const;
+const BADGE_THEMES = ["light", "dark"] as const;
+
+type BadgeColor = (typeof BADGE_COLORS)[number];
+type BadgeVariant = (typeof BADGE_VARIANTS)[number];
+type BadgeTheme = (typeof BADGE_THEMES)[number];
+
+const BADGE_COLOR_LABELS: Record<BadgeColor, string> = {
+  brand: "Brand green",
+  peach: "Peach",
+  sage: "Sage",
+  slate: "Slate",
+};
+
+function getBadgeClasses(color: string, variant: string, theme: string): string {
+  if (theme === "dark") {
+    if (variant === "outline") return "bg-transparent border border-white/70 text-white";
+    if (variant === "glass") return "bg-white/15 backdrop-blur-sm border border-white/20 text-white";
+    return "bg-white/90 border border-white/60 text-slate-900";
+  }
+  const colorMap: Record<string, string> = {
+    brand: "bg-brand-100 border-brand-200/50 text-brand-800",
+    peach: "bg-peach-100 border-peach-200/50 text-slate-800",
+    sage: "bg-sage-surface border-slate-200/50 text-slate-700",
+    slate: "bg-slate-100 border-slate-200/50 text-slate-700",
+  };
+  const base = colorMap[color] ?? colorMap.brand;
+  if (variant === "outline") {
+    const textClass = base.split(" ").find((c) => c.startsWith("text-")) ?? "text-slate-700";
+    return `bg-transparent border border-slate-300 ${textClass}`;
+  }
+  if (variant === "glass") return `${base} backdrop-blur-sm bg-opacity-70`;
+  return `${base} border`;
+}
 
 // ── Date separator helpers ─────────────────────────────────────────────────
 
@@ -75,6 +113,15 @@ export default function ChatThreadPage() {
 
   const [other, setOther] = useState<OtherUser | null | undefined>(undefined);
   const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
+  const [agreementId, setAgreementId] = useState<string | null>(null);
+  const [roomieId, setRoomieId] = useState<string | null>(null);
+  const [justConfirmed, setJustConfirmed] = useState(false);
+  const agreementStatusRef = useRef(agreementStatus);
+  const [badgeColor, setBadgeColor] = useState<BadgeColor>("brand");
+  const [badgeVariant, setBadgeVariant] = useState<BadgeVariant>("standard");
+  const [badgeTheme, setBadgeTheme] = useState<BadgeTheme>("light");
+  const [showBadgeCustomizer, setShowBadgeCustomizer] = useState(false);
+  const [savingBadge, setSavingBadge] = useState(false);
   const [isProposingAgreement, setIsProposingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState("");
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -94,6 +141,10 @@ export default function ChatThreadPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOtherTyping]);
+
+  useEffect(() => {
+    agreementStatusRef.current = agreementStatus;
+  }, [agreementStatus]);
 
   // Load connection (with profile join) to get other user's info
   useEffect(() => {
@@ -128,11 +179,16 @@ export default function ChatThreadPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (supabase as any)
           .from("roommate_agreements")
-          .select("status")
+          .select("id, status, roomie_id, badge_color, badge_variant, badge_theme")
           .eq("connection_id", connectionId)
           .maybeSingle();
         if (error) throw error;
         setAgreementStatus(data?.status ?? "NONE");
+        setAgreementId(data?.id ?? null);
+        setRoomieId(data?.roomie_id ?? null);
+        setBadgeColor(data?.badge_color ?? "brand");
+        setBadgeVariant(data?.badge_variant ?? "standard");
+        setBadgeTheme(data?.badge_theme ?? "light");
       } catch (err) {
         console.error("Failed to roommate agreement status:", err);
         setAgreementLoadError(err instanceof Error ? err.message : "Failed to load agreement status");
@@ -140,6 +196,41 @@ export default function ChatThreadPage() {
     };
     void load();
   }, [connectionId, user]);
+
+  // Realtime: update instantly when the roommate accepts and pays
+  useEffect(() => {
+    if (!connectionId) return;
+    const channel = supabase
+      .channel(`agreement:${connectionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "roommate_agreements",
+          filter: `connection_id=eq.${connectionId}`,
+        },
+        (payload) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const row = payload.new as any;
+          if (!row) return;
+          if (row.status === "CONFIRMED" && agreementStatusRef.current !== "CONFIRMED") {
+            setJustConfirmed(true);
+          }
+          setAgreementStatus(row.status ?? "NONE");
+          setAgreementId(row.id ?? null);
+          setRoomieId(row.roomie_id ?? null);
+          setBadgeColor(row.badge_color ?? "brand");
+          setBadgeVariant(row.badge_variant ?? "standard");
+          setBadgeTheme(row.badge_theme ?? "light");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [connectionId]);
 
   const proposeAgreement = async () => {
     if (isProposingAgreement || agreementStatus === "PENDING" || agreementStatus === "CONFIRMED") return;
@@ -158,6 +249,26 @@ export default function ChatThreadPage() {
       setAgreementError(err instanceof Error ? err.message : "Could not propose agreement");
     } finally {
       setIsProposingAgreement(false);
+    }
+  };
+
+  const saveBadgeCustomization = async (color: BadgeColor, variant: BadgeVariant, theme: BadgeTheme) => {
+    if (!agreementId || savingBadge) return;
+    setSavingBadge(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("roommate_agreements")
+        .update({ badge_color: color, badge_variant: variant, badge_theme: theme })
+        .eq("id", agreementId);
+      if (error) throw error;
+      setBadgeColor(color);
+      setBadgeVariant(variant);
+      setBadgeTheme(theme);
+    } catch (err) {
+      console.error("Failed to save badge customization:", err);
+    } finally {
+      setSavingBadge(false);
     }
   };
 
@@ -202,6 +313,20 @@ export default function ChatThreadPage() {
                       <svg className="inline w-3.5 h-3.5 ml-1 text-white/80" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
+                    )}
+                    {agreementStatus === "CONFIRMED" && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowBadgeCustomizer(true);
+                        }}
+                        title="Customize your Roomie badge"
+                        className={`inline-flex items-center ml-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm transition-transform hover:scale-105 ${getBadgeClasses(badgeColor, badgeVariant, badgeTheme)}`}
+                      >
+                        Roomie
+                      </button>
                     )}
                   </p>
                   <p className="text-white/70 text-xs truncate leading-tight">
@@ -255,9 +380,9 @@ export default function ChatThreadPage() {
             )}
 
             {/* Housing shortcut */}
-            {!isSupport && (
+            {!isSupport && agreementStatus === "CONFIRMED" && (
               <Link
-                href="/housing"
+                href={`/housing?connectionId=${connectionId}`}
                 className="flex-shrink-0 p-2 rounded-full text-white/80 hover:bg-white/10 transition-colors"
                 title="Find housing"
               >
@@ -440,6 +565,94 @@ export default function ChatThreadPage() {
 
         </div>
       </div>
+
+      {justConfirmed && (
+        <CongratsModal agreementId={agreementId} roomieId={roomieId} roommateName={other?.display_name} />
+      )}
+
+      {/* Customize Roomie Badge Sheet */}
+      <Modal
+        isOpen={showBadgeCustomizer}
+        onClose={() => setShowBadgeCustomizer(false)}
+        title="Customize Roomie Badge"
+      >
+        <div className="space-y-5">
+          <div className="flex justify-center py-4 rounded-2xl bg-brand-500">
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm ${getBadgeClasses(badgeColor, badgeVariant, badgeTheme)}`}
+            >
+              Roomie
+            </span>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Color</p>
+            <div className="flex gap-2 flex-wrap">
+              {BADGE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => void saveBadgeCustomization(color, badgeVariant, badgeTheme)}
+                  disabled={savingBadge}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                    badgeColor === color
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {BADGE_COLOR_LABELS[color]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Style</p>
+            <div className="flex gap-2 flex-wrap">
+              {BADGE_VARIANTS.map((variant) => (
+                <button
+                  key={variant}
+                  type="button"
+                  onClick={() => void saveBadgeCustomization(badgeColor, variant, badgeTheme)}
+                  disabled={savingBadge}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
+                    badgeVariant === variant
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {variant}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Theme</p>
+            <div className="flex gap-2 flex-wrap">
+              {BADGE_THEMES.map((theme) => (
+                <button
+                  key={theme}
+                  type="button"
+                  onClick={() => void saveBadgeCustomization(badgeColor, badgeVariant, theme)}
+                  disabled={savingBadge}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
+                    badgeTheme === theme
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {theme}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Changes apply instantly for both you and {other?.display_name ?? "your roommate"}.
+          </p>
+        </div>
+      </Modal>
 
       {/* Info Modal */}
       {infoMsg && (

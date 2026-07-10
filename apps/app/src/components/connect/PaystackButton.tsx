@@ -24,6 +24,7 @@ interface PaystackTransactionConfig {
 
 interface PaystackButtonProps {
   agreementId: string;
+  connectionId: string;
   className?: string;
   disabled?: boolean;
   onStarted?: () => void;
@@ -55,6 +56,7 @@ function loadPaystackScript() {
 
 export function PaystackButton({
   agreementId,
+  connectionId,
   className = "",
   disabled = false,
   onStarted,
@@ -83,7 +85,7 @@ export function PaystackButton({
       // Already paid — skip straight to housing
       if (data.confirmed) {
         onConfirmed?.();
-        window.location.href = "/housing";
+        window.location.href = `/housing?connectionId=${connectionId}`;
         return;
       }
 
@@ -102,7 +104,7 @@ export function PaystackButton({
               onConfirmed?.();
             }
           } finally {
-            window.location.href = "/housing";
+            window.location.href = `/housing?connectionId=${connectionId}&celebrate=1`;
           }
         }, 1500);
         return;
@@ -140,7 +142,7 @@ export function PaystackButton({
               onConfirmed?.();
             }
           } finally {
-            window.location.href = "/housing";
+            window.location.href = `/housing?connectionId=${connectionId}&celebrate=1`;
           }
         },
         onCancel: () => {

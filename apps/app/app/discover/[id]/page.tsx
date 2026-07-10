@@ -7,19 +7,31 @@ import { createClient } from "@repo/db/client";
 import { getProfileById } from "@repo/db/queries/profiles";
 import { getUserPosts } from "@repo/db/queries/posts";
 import type { PostWithLikes } from "@repo/db/queries/posts";
-import { 
-  getActiveConnections, 
-  getConfirmedRoomies, 
-  getExistingConnection 
+import {
+  getActiveConnections,
+  getConfirmedRoomies,
+  getExistingConnection,
+  getMutualConnections,
 } from "@repo/db/queries/connections";
+import { getUserBadges } from "@repo/db/queries/badges";
 import { calculateCompatibility } from "@repo/db/lib/compatibility";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { LottieIcon } from "@repo/ui/lottie-icon";
+import verifiedBadgeAnimation from "@repo/animations/verified-badge";
+import matchFoundAnimation from "@repo/animations/match-found";
+import billSettledAnimation from "@repo/animations/bill-settled";
 import { CompatibilityScore } from "@/components/discover/CompatibilityScore";
 import { useAuth } from "@/context/AuthContext";
 import { getProfileHref, isUuid } from "@/lib/profile-url";
 import type { Database } from "@repo/db/types";
+
+const BADGE_ANIMATIONS: Record<string, object> = {
+  "verified-badge.json": verifiedBadgeAnimation,
+  "match-found.json": matchFoundAnimation,
+  "bill-settled.json": billSettledAnimation,
+};
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type TabType = "posts" | "connects" | "roomies" | "lifestyle";
@@ -106,6 +118,8 @@ export default function ProfileDetailPage() {
   const [connectsLoading, setConnectsLoading] = useState(true);
   const [roomies, setRoomies] = useState<any[]>([]);
   const [roomiesLoading, setRoomiesLoading] = useState(true);
+  const [badges, setBadges] = useState<any[]>([]);
+  const [mutuals, setMutuals] = useState<any[]>([]);
 
   // Connection status with this user
   const [existingConnection, setExistingConnection] = useState<any | null>(null);
@@ -172,7 +186,7 @@ export default function ProfileDetailPage() {
       }
 
       const profileId = resolvedProfile?.id ?? params.id;
-      const [myResult, postsResult, connectsResult, roomiesResult] = await Promise.all([
+      const [myResult, postsResult, connectsResult, roomiesResult, badgesResult, mutualsResult] = await Promise.all([
         user
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ? (supabase as any).from("profiles").select("*").eq("id", user.id).single()
@@ -180,6 +194,10 @@ export default function ProfileDetailPage() {
         getUserPosts(supabase as any, profileId),
         getActiveConnections(supabase as any, profileId),
         getConfirmedRoomies(supabase as any, profileId),
+        getUserBadges(supabase as any, profileId),
+        user && user.id !== profileId
+          ? getMutualConnections(supabase as any, user.id, profileId)
+          : Promise.resolve([]),
       ]);
 
       setProfile(resolvedProfile);
@@ -187,6 +205,8 @@ export default function ProfileDetailPage() {
       setPosts(postsResult);
       setConnects(connectsResult.data ?? []);
       setRoomies(roomiesResult.data ?? []);
+      setBadges(badgesResult);
+      setMutuals(mutualsResult);
 
       if (user && resolvedProfile) {
         const { data: conn } = await getExistingConnection(supabase as any, user.id, resolvedProfile.id);
@@ -409,6 +429,40 @@ export default function ProfileDetailPage() {
 
           {profile.bio && (
             <p className="text-sm sm:text-base text-slate-800 leading-relaxed">{profile.bio}</p>
+          )}
+
+          {/* Badges */}
+          {badges.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {badges.map((ub) => (
+                <div
+                  key={ub.id}
+                  title={ub.badges?.description}
+                  className="flex items-center gap-1.5 bg-sage-surface rounded-full pl-1 pr-2.5 py-1"
+                >
+                  {ub.badges?.icon_lottie && BADGE_ANIMATIONS[ub.badges.icon_lottie] ? (
+                    <LottieIcon animationData={BADGE_ANIMATIONS[ub.badges.icon_lottie]} size={18} loop={false} />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full bg-brand-500" />
+                  )}
+                  <span className="text-xs font-semibold text-slate-700">{ub.badges?.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mutual Connections */}
+          {mutuals.length > 0 && (
+            <div className="flex items-center gap-2 bg-brand-50 border border-brand-200/60 rounded-2xl px-3 py-2">
+              <div className="flex items-center -space-x-1.5">
+                {mutuals.slice(0, 4).map((m: any) => (
+                  <Avatar key={m.id} src={m.avatar_url} name={m.display_name} size="xs" className="ring-2 ring-white" />
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-brand-700">
+                Matched with {mutuals.length} mutual connection{mutuals.length > 1 ? "s" : ""}
+              </span>
+            </div>
           )}
 
           {/* Meta Info Rows */}

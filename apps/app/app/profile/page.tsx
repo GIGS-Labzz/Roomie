@@ -10,12 +10,23 @@ import { createClient } from "@repo/db/client";
 import { getUserPosts } from "@repo/db/queries/posts";
 import type { PostWithLikes } from "@repo/db/queries/posts";
 import { getActiveConnections, getConfirmedRoomies } from "@repo/db/queries/connections";
+import { getUserBadges } from "@repo/db/queries/badges";
 import { Avatar } from "@repo/ui/avatar";
 import { Badge } from "@repo/ui/badge";
+import { LottieIcon } from "@repo/ui/lottie-icon";
+import verifiedBadgeAnimation from "@repo/animations/verified-badge";
+import matchFoundAnimation from "@repo/animations/match-found";
+import billSettledAnimation from "@repo/animations/bill-settled";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomTabNav } from "@repo/ui/bottom-tab-nav";
 import { useNotifications } from "@/context/NotificationContext";
 import { getProfileHref } from "@/lib/profile-url";
+
+const BADGE_ANIMATIONS: Record<string, object> = {
+  "verified-badge.json": verifiedBadgeAnimation,
+  "match-found.json": matchFoundAnimation,
+  "bill-settled.json": billSettledAnimation,
+};
 
 const YEAR_LABELS: Record<number, string> = {
   1: "100 Level", 2: "200 Level", 3: "300 Level", 4: "400 Level",
@@ -99,6 +110,7 @@ export default function ProfilePage() {
   const [connectsLoading, setConnectsLoading] = useState(true);
   const [roomies, setRoomies] = useState<any[]>([]);
   const [roomiesLoading, setRoomiesLoading] = useState(true);
+  const [badges, setBadges] = useState<any[]>([]);
 
   // Post action states
   const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
@@ -225,14 +237,16 @@ export default function ProfilePage() {
     const loadData = async () => {
       const supabase = createClient();
       try {
-        const [postsRes, connectsRes, roomiesRes] = await Promise.all([
+        const [postsRes, connectsRes, roomiesRes, badgesRes] = await Promise.all([
           getUserPosts(supabase, user.id),
           getActiveConnections(supabase as any, user.id),
           getConfirmedRoomies(supabase as any, user.id),
+          getUserBadges(supabase as any, user.id),
         ]);
         setPosts(postsRes);
         setConnects(connectsRes.data ?? []);
         setRoomies(roomiesRes.data ?? []);
+        setBadges(badgesRes);
       } catch (err) {
         console.error("Error loading profile tab data", err);
       } finally {
@@ -373,6 +387,26 @@ export default function ProfilePage() {
 
             {profile?.bio && (
               <p className="text-sm sm:text-base text-slate-800 leading-relaxed">{profile.bio}</p>
+            )}
+
+            {/* Badges */}
+            {badges.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {badges.map((ub) => (
+                  <div
+                    key={ub.id}
+                    title={ub.badges?.description}
+                    className="flex items-center gap-1.5 bg-sage-surface rounded-full pl-1 pr-2.5 py-1"
+                  >
+                    {ub.badges?.icon_lottie && BADGE_ANIMATIONS[ub.badges.icon_lottie] ? (
+                      <LottieIcon animationData={BADGE_ANIMATIONS[ub.badges.icon_lottie]} size={18} loop={false} />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full bg-brand-500" />
+                    )}
+                    <span className="text-xs font-semibold text-slate-700">{ub.badges?.name}</span>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* Meta Rows (Location, Birthday, University, Join date) */}

@@ -38,6 +38,10 @@ const sections = [
         label: "D. Technical and Usage Data",
         text: "Includes IP address, browser type, device type, operating system version, page view durations, matching swipes, message logs, and broad geographic locations (city-level).",
       },
+      {
+        label: "E. Roommate Passports & Connection Data",
+        text: "When roommate agreements are confirmed, we generate a unique joint Roomie ID representing the verified roommate pair. We also record customizable roommate badge themes (color, variants, style choices) set by the roommates to distinguish their connection.",
+      },
     ],
   },
   {
@@ -48,7 +52,7 @@ const sections = [
   {
     id: "sharing",
     title: "4. Information Sharing and Disclosure",
-    body: "We do not sell, rent, or trade your personal data to third-party advertisers. Your information is disclosed only in the following scenarios: (a) Platform Users: your profile name, university, budget, age, lifestyle preferences, and bio are viewable by registered Roomie users looking for roommates; (b) Service Providers: we share data with cloud infrastructure provider Supabase (database storage), Vercel (web hosting), and payment gateways (Paystack/Flutterwave) strictly to deliver platform features; (c) Group Companies: with GIGSRentals affiliates to coordinate housing services; and (d) Legal Mandate: to Nigerian law enforcement agencies or courts if requested under a valid warrant or subpoena.",
+    body: "We do not sell, rent, or trade your personal data to third-party advertisers. Your information is disclosed only in the following scenarios: (a) Platform Users: your profile name, university, budget, age, lifestyle preferences, and bio are viewable by registered Roomie users looking for roommates; (b) Service Providers: we share data with cloud infrastructure provider Supabase (database storage), Vercel (web hosting), and payment gateways (Paystack/Flutterwave) strictly to deliver platform features; (c) Group Companies: with GIGSRentals affiliates to coordinate housing services; (d) Partner Housing Platforms: when you choose to browse housing under a confirmed roommate connection, we share the unique joint Roomie ID (representing the roommate agreement), your profile details, and the profile details of your roommate with the selected housing provider to establish a joint/dual renter profile and shared credibility passport; and (e) Legal Mandate: to Nigerian law enforcement agencies or courts if requested under a valid warrant or subpoena.",
   },
   {
     id: "transfers",

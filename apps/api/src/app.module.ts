@@ -15,10 +15,13 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StorageModule } from './storage/storage.module';
 import { AdminModule } from './admin/admin.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { NetworkModule } from './network/network.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     AuthModule,
     ProfilesModule,
     ConnectionsModule,
@@ -32,6 +35,7 @@ import { WaitlistModule } from './waitlist/waitlist.module';
     StorageModule,
     AdminModule,
     WaitlistModule,
+    NetworkModule,
   ],
   controllers: [AppController],
   providers: [],

@@ -5,9 +5,18 @@ import type { HousingPlatform } from "@repo/db/queries/housing";
 interface PlatformCardProps {
   platform: HousingPlatform;
   connectionId: string;
+  roomieId?: string | null;
+  roommateUsername?: string | null;
+  agreementId?: string | null;
 }
 
-export function PlatformCard({ platform, connectionId }: PlatformCardProps) {
+export function PlatformCard({
+  platform,
+  connectionId,
+  roomieId,
+  roommateUsername,
+  agreementId,
+}: PlatformCardProps) {
   const trackClick = () => {
     const payload = JSON.stringify({ connectionId });
     const url = `/api/platforms/${platform.id}/click`;
@@ -24,6 +33,24 @@ export function PlatformCard({ platform, connectionId }: PlatformCardProps) {
       keepalive: true,
     });
   };
+
+  // Construct final URL with query parameters for roomie identity and roommate agreement mapping
+  let finalUrl = platform.url;
+  try {
+    const urlObj = new URL(platform.url);
+    if (roomieId) {
+      urlObj.searchParams.set("roomie_id", roomieId);
+    }
+    if (roommateUsername) {
+      urlObj.searchParams.set("roommate_id", roommateUsername);
+    }
+    if (agreementId) {
+      urlObj.searchParams.set("agreement_id", agreementId);
+    }
+    finalUrl = urlObj.toString();
+  } catch (e) {
+    console.error("Invalid platform URL:", e);
+  }
 
   return (
     <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -76,7 +103,7 @@ export function PlatformCard({ platform, connectionId }: PlatformCardProps) {
       </div>
 
       <a
-        href={platform.url}
+        href={finalUrl}
         target="_blank"
         rel="noopener noreferrer"
         onClick={trackClick}
