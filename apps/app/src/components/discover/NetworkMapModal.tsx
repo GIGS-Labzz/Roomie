@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { X, Shield, Users, Info, GraduationCap } from "lucide-react";
 import { Avatar } from "@repo/ui/avatar";
 import { Button } from "@repo/ui/button";
@@ -33,7 +33,9 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,62 +69,33 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
   }, [isOpen, userId]);
 
   // Calculate Layout Positions (cx, cy = 300, 300 on a 600x600 canvas)
-  const layout = useMemo(() => {
-    if (!data) return null;
+  useEffect(() => {
+    if (!data) {
+      setNodePositions({});
+      return;
+    }
 
     const cx = 300;
     const cy = 300;
     const r1 = 120; // Radius for 1st-degree
     const r2 = 75;  // Radius for 2nd-degree branches
 
-    const nodes: any[] = [];
-    const lines: any[] = [];
+    const initialPositions: Record<string, { x: number; y: number }> = {};
 
     // 1. Root Node
-    const rootNode = {
-      id: data.root.id,
-      display_name: data.root.display_name,
-      username: data.root.username,
-      avatar_url: data.root.avatar_url,
-      university: data.root.university,
-      city: data.root.city,
-      x: cx,
-      y: cy,
-      degree: "root",
-    };
-    nodes.push(rootNode);
+    initialPositions[data.root.id] = { x: cx, y: cy };
 
     const firstDegreeCount = data.connections.length;
 
-    // 2. 1st-Degree Nodes & Lines
+    // 2. 1st-Degree Nodes
     data.connections.forEach((conn1, i) => {
       const angle = (2 * Math.PI * i) / firstDegreeCount - Math.PI / 2; // Offset by -90 deg
       const x1 = cx + r1 * Math.cos(angle);
       const y1 = cy + r1 * Math.sin(angle);
 
-      const conn1Node = {
-        id: conn1.id,
-        display_name: conn1.display_name,
-        username: conn1.username,
-        avatar_url: conn1.avatar_url,
-        university: conn1.university,
-        city: conn1.city,
-        x: x1,
-        y: y1,
-        degree: conn1.isMutual ? "mutual" : "1st",
-        isMutual: conn1.isMutual,
-      };
-      nodes.push(conn1Node);
+      initialPositions[conn1.id] = { x: x1, y: y1 };
 
-      lines.push({
-        x1: cx,
-        y1: cy,
-        x2: x1,
-        y2: y1,
-        type: conn1.isMutual ? "mutual" : "1st",
-      });
-
-      // 3. 2nd-Degree Nodes & Lines
+      // 3. 2nd-Degree Nodes
       const secondDegree = conn1.connections || [];
       const secondDegreeCount = secondDegree.length;
 
@@ -139,6 +112,109 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
         const x2 = x1 + r2 * Math.cos(branchAngle);
         const y2 = y1 + r2 * Math.sin(branchAngle);
 
+        initialPositions[conn2.id] = { x: x2, y: y2 };
+      });
+    });
+
+    setNodePositions(initialPositions);
+  }, [data]);
+
+  // Handle global drag events
+  useEffect(() => {
+    if (!activeDragId) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      // Calculate cursor coordinates relative to the 600x600 container
+      let newX = e.clientX - rect.left;
+      let newY = e.clientY - rect.top;
+
+      // Constrain to container boundaries [0, 600]
+      newX = Math.max(0, Math.min(600, newX));
+      newY = Math.max(0, Math.min(600, newY));
+
+      setNodePositions((prev) => ({
+        ...prev,
+        [activeDragId]: { x: newX, y: newY },
+      }));
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!containerRef.current || e.touches.length === 0) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const touch = e.touches[0];
+      let newX = touch.clientX - rect.left;
+      let newY = touch.clientY - rect.top;
+
+      newX = Math.max(0, Math.min(600, newX));
+      newY = Math.max(0, Math.min(600, newY));
+
+      setNodePositions((prev) => ({
+        ...prev,
+        [activeDragId]: { x: newX, y: newY },
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setActiveDragId(null);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleMouseUp);
+    };
+  }, [activeDragId]);
+
+  // Calculate Layout Structure
+  const layout = useMemo(() => {
+    if (!data) return null;
+
+    const nodes: any[] = [];
+    const lines: any[] = [];
+
+    // 1. Root Node
+    nodes.push({
+      id: data.root.id,
+      display_name: data.root.display_name,
+      username: data.root.username,
+      avatar_url: data.root.avatar_url,
+      university: data.root.university,
+      city: data.root.city,
+      degree: "root",
+    });
+
+    // 2. 1st-Degree Nodes
+    data.connections.forEach((conn1) => {
+      nodes.push({
+        id: conn1.id,
+        display_name: conn1.display_name,
+        username: conn1.username,
+        avatar_url: conn1.avatar_url,
+        university: conn1.university,
+        city: conn1.city,
+        degree: conn1.isMutual ? "mutual" : "1st",
+        isMutual: conn1.isMutual,
+      });
+
+      lines.push({
+        from: data.root.id,
+        to: conn1.id,
+        type: conn1.isMutual ? "mutual" : "1st",
+      });
+
+      // 3. 2nd-Degree Nodes
+      const secondDegree = conn1.connections || [];
+
+      secondDegree.forEach((conn2) => {
         nodes.push({
           id: conn2.id,
           display_name: conn2.display_name,
@@ -146,16 +222,12 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
           avatar_url: conn2.avatar_url,
           university: conn2.university,
           city: conn2.city,
-          x: x2,
-          y: y2,
           degree: "2nd",
         });
 
         lines.push({
-          x1: x1,
-          y1: y1,
-          x2: x2,
-          y2: y2,
+          from: conn1.id,
+          to: conn2.id,
           type: "2nd",
         });
       });
@@ -164,15 +236,21 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
     return { nodes, lines };
   }, [data]);
 
+  // Calculate active tooltip position dynamically
+  const activeTooltipPos = useMemo(() => {
+    if (!hoveredNode) return null;
+    const pos = nodePositions[hoveredNode.id];
+    if (!pos) return null;
+    return {
+      x: pos.x,
+      y: pos.y - 45,
+    };
+  }, [hoveredNode, nodePositions]);
+
   if (!isOpen) return null;
 
-  const handleNodeHover = (node: any, e: React.MouseEvent) => {
-    const container = e.currentTarget.getBoundingClientRect();
+  const handleNodeHover = (node: any) => {
     setHoveredNode(node);
-    setTooltipPos({
-      x: node.x,
-      y: node.y - 45, // Place tooltip above the node
-    });
   };
 
   return (
@@ -247,7 +325,7 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
             </div>
           ) : layout ? (
             /* Interactive Tree View */
-            <div className="relative w-[600px] h-[600px] flex-shrink-0">
+            <div ref={containerRef} className="relative w-[600px] h-[600px] flex-shrink-0">
               
               {/* SVG Network Lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -274,13 +352,17 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
                     strokeDash = "3, 3"; // Dashed line for 2nd degree
                   }
 
+                  const p1 = nodePositions[line.from];
+                  const p2 = nodePositions[line.to];
+                  if (!p1 || !p2) return null;
+
                   return (
                     <line
                       key={idx}
-                      x1={line.x1}
-                      y1={line.y1}
-                      x2={line.x2}
-                      y2={line.y2}
+                      x1={p1.x}
+                      y1={p1.y}
+                      x2={p2.x}
+                      y2={p2.y}
                       stroke={stroke}
                       strokeWidth={strokeWidth}
                       strokeDasharray={strokeDash}
@@ -309,13 +391,25 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
                   size = "w-8 h-8";
                 }
 
+                const pos = nodePositions[node.id];
+                if (!pos) return null;
+
                 return (
                   <div
                     key={node.id}
-                    className="absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 select-none group"
-                    style={{ left: node.x, top: node.y }}
-                    onMouseEnter={(e) => handleNodeHover(node, e)}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 select-none group ${
+                      activeDragId === node.id ? "cursor-grabbing z-40" : "cursor-grab z-10"
+                    }`}
+                    style={{ left: pos.x, top: pos.y }}
+                    onMouseEnter={() => handleNodeHover(node)}
                     onMouseLeave={() => setHoveredNode(null)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setActiveDragId(node.id);
+                    }}
+                    onTouchStart={() => {
+                      setActiveDragId(node.id);
+                    }}
                   >
                     <div className={`rounded-full overflow-hidden shadow-md transition-all duration-150 group-hover:scale-110 active:scale-95 ${border} ${size}`}>
                       <Avatar
@@ -329,10 +423,10 @@ export function NetworkMapModal({ isOpen, onClose, userId, userName }: NetworkMa
               })}
 
               {/* Glassmorphic Tooltip */}
-              {hoveredNode && (
+              {hoveredNode && activeTooltipPos && (
                 <div
                   className="absolute pointer-events-none bg-white/90 backdrop-blur-md border border-slate-100 rounded-2xl p-3 shadow-xl z-30 flex flex-col gap-1 -translate-x-1/2 -translate-y-full w-48 text-slate-800 animate-in fade-in slide-in-from-bottom-2 duration-150"
-                  style={{ left: tooltipPos.x, top: tooltipPos.y }}
+                  style={{ left: activeTooltipPos.x, top: activeTooltipPos.y }}
                 >
                   <div className="flex items-center gap-2">
                     <Avatar
