@@ -84,13 +84,8 @@ export default function DiscoverPage() {
 
             {/* Brand mark */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="none">
-                  <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-                  <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-                  <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-                  <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-                </svg>
+              <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
               </div>
               <span className="font-display font-bold text-slate-900 text-lg leading-none">Roomie</span>
             </div>

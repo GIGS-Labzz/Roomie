@@ -32,13 +32,8 @@ const NAV = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shrink-0">
-        <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
-          <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-          <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-          <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-          <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-        </svg>
+      <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shrink-0 overflow-hidden">
+        <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
       </div>
       <div>
         <div className="font-display font-bold text-slate-900 text-sm leading-none">Roomie</div>

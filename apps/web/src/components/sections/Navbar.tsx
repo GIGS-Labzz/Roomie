@@ -12,6 +12,7 @@ const navLinks = [
   { label: "Why Roomie",   href: "#why-roomie"   },
   { label: "Pricing",      href: "#pricing"       },
   { label: "For providers",href: "#for-providers" },
+  { label: "Pitch Deck ⚡", href: "/pitch"        },
 ];
 
 export function Navbar() {

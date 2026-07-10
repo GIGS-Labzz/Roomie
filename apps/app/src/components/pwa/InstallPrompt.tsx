@@ -95,13 +95,8 @@ export function InstallPrompt() {
       {!showInstructions && (
         <div className="fixed bottom-20 inset-x-4 md:inset-x-auto md:right-4 md:left-auto md:w-80 z-50 animate-in slide-in-from-bottom-4">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-4 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-white" viewBox="0 0 20 20" fill="none">
-                <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-                <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-                <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-                <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-              </svg>
+            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-900 text-sm leading-tight">Install Roomie</p>
@@ -139,13 +134,8 @@ export function InstallPrompt() {
             </button>
 
             <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center mb-4">
-                <svg className="w-7 h-7 text-white" viewBox="0 0 20 20" fill="none">
-                  <circle cx="6.5" cy="7" r="3" fill="white" opacity="0.9" />
-                  <circle cx="13.5" cy="7" r="3" fill="white" opacity="0.6" />
-                  <path d="M6.5 10C4 10 2 12 2 14.5h9C11 12 9 10 6.5 10z" fill="white" opacity="0.9" />
-                  <path d="M13.5 10C11 10 9 12 9 14.5h9C18 12 16 10 13.5 10z" fill="white" opacity="0.6" />
-                </svg>
+              <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center mb-4 overflow-hidden">
+                <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-lg font-bold text-slate-900">Install Roomie</h3>
               <p className="text-xs text-slate-500 mt-1 px-4">
