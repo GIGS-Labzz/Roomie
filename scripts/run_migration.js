@@ -19,10 +19,10 @@ async function run() {
     await client.connect();
     console.log('Connected successfully. Reading migration file...');
 
-    const migrationPath = path.join(process.cwd(), 'supabase', 'migrations', '0032_add_roomie_id_to_agreements.sql');
+    const migrationPath = path.join(process.cwd(), 'supabase', 'migrations', '0034_roommate_pool_expansion.sql');
     const sql = fs.readFileSync(migrationPath, 'utf8');
 
-    console.log('Executing migration 0032...');
+    console.log('Executing migration 0034...');
     await client.query(sql);
 
     console.log('Migration completed successfully!');

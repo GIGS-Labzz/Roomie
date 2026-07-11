@@ -13,7 +13,7 @@ interface AgreementCardProps {
 }
 
 export function AgreementCard({ agreementId, connectionId, initiatorName, isOwn, isInitiator }: AgreementCardProps) {
-  const [status, setStatus] = useState<"PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED" | "CONFIRMING">("PENDING");
+  const [status, setStatus] = useState<"PENDING_APPROVAL" | "PENDING" | "DECLINED" | "CONFIRMED" | "PAYMENT_STARTED" | "CONFIRMING">("PENDING");
   const [isDeclining, setIsDeclining] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -100,6 +100,10 @@ export function AgreementCard({ agreementId, connectionId, initiatorName, isOwn,
             </Link>
           </div>
         </div>
+      ) : status === "PENDING_APPROVAL" ? (
+        <p className="mt-4 rounded-2xl bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-700">
+          Pending approval from existing roommate pool members…
+        </p>
       ) : status === "DECLINED" ? (
         <p className="mt-4 rounded-2xl bg-slate-50 px-3 py-2 text-center text-xs font-semibold text-slate-500">
           Agreement declined

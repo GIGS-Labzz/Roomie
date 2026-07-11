@@ -1071,7 +1071,16 @@ export type Database = {
         | "EXPIRED"
         | "CANCELLED"
       gender_type: "male" | "female" | "non_binary" | "prefer_not_to_say"
-      message_type: "text" | "image" | "system" | "agreement_request" | "agreement_confirmed" | "agreement_declined"
+      message_type:
+        | "text"
+        | "image"
+        | "system"
+        | "agreement_request"
+        | "agreement_confirmed"
+        | "agreement_declined"
+        | "bill_split"
+        | "pool_add_request"
+        | "roomie_id_request"
       noise_preference: "very_quiet" | "quiet" | "moderate" | "lively"
       payment_status: "PENDING" | "SUCCESS" | "FAILED" | "ABANDONED"
       platform_status: "PENDING_REVIEW" | "ACTIVE" | "SUSPENDED" | "REJECTED"
@@ -1668,7 +1677,17 @@ export const Constants = {
         "CANCELLED",
       ],
       gender_type: ["male", "female", "non_binary", "prefer_not_to_say"],
-      message_type: ["text", "image", "system", "agreement_request", "agreement_confirmed", "agreement_declined"],
+      message_type: [
+        "text",
+        "image",
+        "system",
+        "agreement_request",
+        "agreement_confirmed",
+        "agreement_declined",
+        "bill_split",
+        "pool_add_request",
+        "roomie_id_request",
+      ],
       noise_preference: ["very_quiet", "quiet", "moderate", "lively"],
       payment_status: ["PENDING", "SUCCESS", "FAILED", "ABANDONED"],
       platform_status: ["PENDING_REVIEW", "ACTIVE", "SUSPENDED", "REJECTED"],

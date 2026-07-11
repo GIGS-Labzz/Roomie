@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createServerClient } from "@repo/db/server";
+import { createServerClient, createServiceClient } from "@repo/db/server";
 import { type HousingPlatform } from "@repo/db/queries/housing";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { PlatformCard } from "@/components/housing/PlatformCard";
@@ -19,15 +19,17 @@ export default async function HousingPage({ searchParams }: { searchParams: Sear
 
   if (!user) redirect("/auth/signin");
 
+  const db = await createServiceClient();
+
   // Fetch user's own profile to retrieve username and location/campus details
-  const { data: myProfile } = await (supabase as any)
+  const { data: myProfile } = await (db as any)
     .from("profiles")
     .select("username, city, university")
     .eq("id", user.id)
     .single();
 
   // Fetch all active connections of the user
-  const { data: connections } = await (supabase as any)
+  const { data: connections } = await (db as any)
     .from("connections")
     .select(`
       id, requester_id, receiver_id, status, connected_at,
@@ -41,17 +43,85 @@ export default async function HousingPage({ searchParams }: { searchParams: Sear
   const activeConnections = connections ?? [];
   const connectionIds = activeConnections.map((c: any) => c.id);
 
-  // Fetch all roommate agreements that are CONFIRMED for these connections
-  const { data: confirmedAgreements } = connectionIds.length > 0
-    ? await (supabase as any)
+  // Fetch all roommate agreements directly confirmed for these connections
+  const { data: userConfirmed } = connectionIds.length > 0
+    ? await (db as any)
         .from("roommate_agreements")
         .select("id, connection_id, status, roomie_id")
         .in("connection_id", connectionIds)
         .eq("status", "CONFIRMED")
     : { data: [] };
 
-  const agreements = confirmedAgreements ?? [];
+  const userAgreements = userConfirmed ?? [];
+  const userRoomieIds = Array.from(new Set(userAgreements.map((a: any) => a.roomie_id).filter(Boolean)));
+
+  // Fetch all confirmed agreements in the database that share these roomie_ids
+  const { data: poolConfirmed } = userRoomieIds.length > 0
+    ? await (db as any)
+        .from("roommate_agreements")
+        .select("id, connection_id, status, roomie_id")
+        .in("roomie_id", userRoomieIds)
+        .eq("status", "CONFIRMED")
+    : { data: [] };
+
+  const agreements = poolConfirmed ?? [];
+
+  // Extract all connection IDs from the pool confirmed agreements
+  const poolConnectionIds = Array.from(new Set(agreements.map((a: any) => a.connection_id)));
+
+  // Fetch all connections for these agreements to resolve profiles of all pool members
+  const { data: poolConnections } = poolConnectionIds.length > 0
+    ? await (db as any)
+        .from("connections")
+        .select(`
+          id, requester_id, receiver_id, status, connected_at,
+          requester:profiles!requester_id(id, display_name, username, avatar_url, city, university),
+          receiver:profiles!receiver_id(id, display_name, username, avatar_url, city, university)
+        `)
+        .in("id", poolConnectionIds)
+    : { data: [] };
+
+  const allActiveConnections = poolConnections ?? [];
   const confirmedConnectionIds = agreements.map((a: any) => a.connection_id);
+
+  // Group agreements by roomie_id to support roommate pools
+  const poolGroupsMap: Record<string, {
+    roomieId: string;
+    agreements: any[];
+    roommates: any[];
+    primaryConnectionId: string;
+  }> = {};
+
+  for (const agreement of agreements) {
+    const rId = agreement.roomie_id;
+    if (!rId) continue;
+    const conn = allActiveConnections.find((c: any) => c.id === agreement.connection_id);
+    if (!conn) continue;
+
+    if (!poolGroupsMap[rId]) {
+      poolGroupsMap[rId] = {
+        roomieId: rId,
+        agreements: [],
+        roommates: [],
+        primaryConnectionId: agreement.connection_id
+      };
+    }
+    poolGroupsMap[rId].agreements.push(agreement);
+    
+    // Add unique roommates (not current user)
+    if (conn.requester && conn.requester.id !== user.id) {
+      if (!poolGroupsMap[rId].roommates.some(r => r.id === conn.requester.id)) {
+        poolGroupsMap[rId].roommates.push(conn.requester);
+      }
+    }
+    if (conn.receiver && conn.receiver.id !== user.id) {
+      if (!poolGroupsMap[rId].roommates.some(r => r.id === conn.receiver.id)) {
+        poolGroupsMap[rId].roommates.push(conn.receiver);
+      }
+    }
+  }
+
+  const poolGroups = Object.values(poolGroupsMap);
 
   // Show locked state if there are no connections at all
   if (activeConnections.length === 0) {
@@ -111,8 +181,28 @@ export default async function HousingPage({ searchParams }: { searchParams: Sear
   // If a valid connection is selected, fetch platforms and display them
   if (isSelectedValid) {
     const selectedAgreement = agreements.find((a: any) => a.connection_id === connectionId);
-    const selectedConnection = activeConnections.find((c: any) => c.id === connectionId);
+    const selectedConnection = allActiveConnections.find((c: any) => c.id === connectionId);
+    if (!selectedConnection) redirect("/housing");
     const roommate = selectedConnection.requester_id === user.id ? selectedConnection.receiver : selectedConnection.requester;
+
+    // Fetch all roommates in this pool
+    const poolAgreements = selectedAgreement?.roomie_id
+      ? agreements.filter((a: any) => a.roomie_id === selectedAgreement.roomie_id)
+      : [];
+
+    const roommatesMap = new Map<string, any>();
+    for (const pa of poolAgreements) {
+      const conn = allActiveConnections.find((c: any) => c.id === pa.connection_id);
+      if (conn) {
+        if (conn.requester && conn.requester.id !== user.id) {
+          roommatesMap.set(conn.requester.id, conn.requester);
+        }
+        if (conn.receiver && conn.receiver.id !== user.id) {
+          roommatesMap.set(conn.receiver.id, conn.receiver);
+        }
+      }
+    }
+    const poolRoommates = Array.from(roommatesMap.values());
 
     const { data: allPlatforms } = await (supabase as any)
       .from("housing_platforms")
@@ -157,10 +247,24 @@ export default async function HousingPage({ searchParams }: { searchParams: Sear
           {/* Active Connection sub-header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-brand-50 border border-brand-200/60 rounded-2xl p-4 mb-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <Avatar src={roommate.avatar_url} name={roommate.display_name} size="sm" className="ring-2 ring-brand-100" />
+              {poolRoommates.length > 1 ? (
+                <div className="flex -space-x-2">
+                  {poolRoommates.slice(0, 3).map((r: any) => (
+                    <Avatar key={r.id} src={r.avatar_url} name={r.display_name} size="sm" className="ring-2 ring-white" />
+                  ))}
+                </div>
+              ) : (
+                <Avatar src={roommate.avatar_url} name={roommate.display_name} size="sm" className="ring-2 ring-brand-100" />
+              )}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Roommate Connection</p>
-                <p className="text-sm font-bold text-slate-800">Browsing housing with {roommate.display_name}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
+                  {poolRoommates.length > 1 ? "Roommate Pool" : "Roommate Connection"}
+                </p>
+                <p className="text-sm font-bold text-slate-800">
+                  {poolRoommates.length > 1
+                    ? `Browsing housing with pool: ${poolRoommates.map((r: any) => r.display_name.split(" ")[0]).join(" & ")}`
+                    : `Browsing housing with ${roommate.display_name}`}
+                </p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -266,17 +370,33 @@ export default async function HousingPage({ searchParams }: { searchParams: Sear
               You have confirmed roommate agreements. Please select the connection you would like to use to browse housing.
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {agreements.map((agreement: any) => {
-                const conn = activeConnections.find((c: any) => c.id === agreement.connection_id);
-                if (!conn) return null;
-                const rm = conn.requester_id === user.id ? conn.receiver : conn.requester;
+              {poolGroups.map((group) => {
+                const isPool = group.roommates.length > 1;
+                const displayName = isPool
+                  ? `Pool: ${group.roommates.map(r => r.display_name.split(" ")[0]).join(" & ")}`
+                  : group.roommates[0].display_name;
+                
+                const subtitle = isPool
+                  ? `Roomie Pool (${group.roommates.length + 1} members)`
+                  : group.roommates[0].university ?? group.roommates[0].city ?? "Roomie Partner";
+
+                const avatarUrl = isPool ? null : group.roommates[0].avatar_url;
+
                 return (
-                  <div key={agreement.id} className="border border-slate-100 rounded-2xl p-4 flex flex-col items-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors shadow-sm">
-                    <Avatar src={rm.avatar_url} name={rm.display_name} size="md" className="mb-3 ring-2 ring-white shadow-sm" />
-                    <h3 className="font-bold text-slate-900 text-sm">{rm.display_name}</h3>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-1">{rm.university ?? rm.city ?? "Roomie Partner"}</p>
+                  <div key={group.roomieId} className="border border-slate-100 rounded-2xl p-4 flex flex-col items-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors shadow-sm">
+                    {isPool ? (
+                      <div className="flex -space-x-2.5 mb-3">
+                        {group.roommates.slice(0, 3).map((r: any) => (
+                          <Avatar key={r.id} src={r.avatar_url} name={r.display_name} size="md" className="ring-2 ring-white shadow-sm" />
+                        ))}
+                      </div>
+                    ) : (
+                      <Avatar src={avatarUrl} name={displayName} size="md" className="mb-3 ring-2 ring-white shadow-sm" />
+                    )}
+                    <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{displayName}</h3>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-1">{subtitle}</p>
                     <Link
-                      href={`/housing?connectionId=${agreement.connection_id}`}
+                      href={`/housing?connectionId=${group.primaryConnectionId}`}
                       className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-brand-500 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-brand-600 shadow-sm"
                     >
                       Browse Housing

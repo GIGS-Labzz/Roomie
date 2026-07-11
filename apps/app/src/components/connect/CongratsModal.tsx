@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Modal } from "@repo/ui/modal";
 import { LottieIcon } from "@repo/ui/lottie-icon";
 import matchFoundAnimation from "@repo/animations/match-found";
+import { createClient } from "@repo/db/client";
+
+const supabase = createClient();
 
 interface CongratsModalProps {
   agreementId?: string | null;
@@ -17,11 +20,28 @@ function storageKey(agreementId: string) {
 
 export function CongratsModal({ agreementId, roomieId, roommateName }: CongratsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPool, setIsPool] = useState(false);
 
   useEffect(() => {
     if (!agreementId || !roomieId) return;
     if (!window.localStorage.getItem(storageKey(agreementId))) {
       setIsOpen(true);
+      
+      const checkPool = async () => {
+        try {
+          const { data } = await (supabase as any)
+            .from("roommate_agreements")
+            .select("pool_roomie_id")
+            .eq("id", agreementId)
+            .maybeSingle();
+          if (data?.pool_roomie_id) {
+            setIsPool(true);
+          }
+        } catch (e) {
+          console.error("Failed to check pool status:", e);
+        }
+      };
+      void checkPool();
     }
   }, [agreementId, roomieId]);
 
@@ -47,11 +67,14 @@ export function CongratsModal({ agreementId, roomieId, roommateName }: CongratsM
 
         <div className="space-y-1.5">
           <h2 className="font-display text-2xl font-bold text-slate-900">
-            Congrats, you are now Roomies! 🎉
+            {isPool ? "Joined Roomie Pool! 🎉" : "Congrats, you are now Roomies! 🎉"}
           </h2>
           <p className="max-w-xs text-sm text-slate-500">
-            {roommateName ? `You and ${roommateName} have` : "You've"} confirmed your roommate
-            agreement. Housing providers are now unlocked for both of you.
+            {isPool
+              ? `You and other pool members have confirmed your roommate agreement. Housing providers are now unlocked for everyone in the pool.`
+              : roommateName
+              ? `You and ${roommateName} have confirmed your roommate agreement. Housing providers are now unlocked for both of you.`
+              : "You've confirmed your roommate agreement. Housing providers are now unlocked."}
           </p>
         </div>
 

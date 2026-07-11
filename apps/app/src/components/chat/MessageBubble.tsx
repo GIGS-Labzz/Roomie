@@ -3,6 +3,8 @@ import { Avatar } from "@repo/ui/avatar";
 import type { ExtendedMessage } from "@/hooks/useMessages";
 import { AgreementCard } from "./AgreementCard";
 import { BillSplitChatMessage } from "./BillSplitChatMessage";
+import { PoolAddRequestCard } from "./PoolAddRequestCard";
+import { RoomieIdRequestCard } from "./RoomieIdRequestCard";
 
 interface MessageBubbleProps {
   message: ExtendedMessage;
@@ -46,7 +48,7 @@ function Ticks({ read }: { read: boolean }) {
 
 function ClockIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="7" />
       <polyline points="8 4 8 8 10 9.5" />
     </svg>
@@ -89,6 +91,40 @@ export function MessageBubble({
       <BillSplitChatMessage
         content={message.content}
         connectionId={message.connection_id}
+      />
+    );
+  }
+
+  // ── Roomie ID request card ───────────────────────────────────────────────
+  if ((message.message_type as string) === "roomie_id_request") {
+    const payload = parsePayload(message.content);
+    return (
+      <RoomieIdRequestCard
+        messageId={message.id}
+        requestId={payload.request_id ?? ""}
+        requesterId={payload.requester_id ?? ""}
+        requesterName={payload.requester_name ?? "Someone"}
+        targetId={payload.target_id ?? ""}
+        targetName={payload.target_name ?? ""}
+        roomieId={payload.roomie_id ?? ""}
+        initialStatus={payload.status ?? "pending"}
+        currentUserId={currentUserId ?? ""}
+      />
+    );
+  }
+
+  // ── Pool add request card ────────────────────────────────────────────────
+  if ((message.message_type as string) === "pool_add_request") {
+    const payload = parsePayload(message.content);
+    return (
+      <PoolAddRequestCard
+        agreementId={payload.agreement_id ?? ""}
+        connectionId={message.connection_id}
+        initiatorName={payload.initiator_name ?? "Your connection"}
+        inviteeName={payload.invitee_name ?? "Someone"}
+        inviteeId={payload.invitee_id ?? ""}
+        isOwn={isOwn}
+        currentUserId={currentUserId ?? ""}
       />
     );
   }

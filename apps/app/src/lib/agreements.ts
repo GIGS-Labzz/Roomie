@@ -24,7 +24,7 @@ export async function confirmRoommateAgreement(
 
   const { data: agreement } = await db
     .from("roommate_agreements")
-    .select("id, connection_id, initiator_id, acceptor_id, status, payment_reference")
+    .select("id, connection_id, initiator_id, acceptor_id, status, payment_reference, pool_roomie_id")
     .eq("id", agreementId)
     .single();
 
@@ -83,7 +83,7 @@ export async function confirmRoommateAgreement(
     message_type: "agreement_confirmed",
   });
 
-  await db.from("notifications").insert([
+  const notificationsList = [
     {
       user_id: acceptorId,
       type: "AGREEMENT_CONFIRMED",
@@ -98,7 +98,50 @@ export async function confirmRoommateAgreement(
       body: `${acceptorName} accepted your agreement and paid. Housing is unlocked for both of you.`,
       data: { connection_id: connectionId, agreement_id: agreementId },
     },
-  ]);
+  ];
+
+  await db.from("notifications").insert(notificationsList);
+
+  // Pool Notification Logic
+  if (agreement.pool_roomie_id) {
+    const { data: otherAgreements } = await db
+      .from("roommate_agreements")
+      .select("id, connection_id, initiator_id, acceptor_id")
+      .eq("roomie_id", agreement.pool_roomie_id)
+      .eq("status", "CONFIRMED");
+
+    const otherMemberIds = new Set<string>();
+    for (const og of (otherAgreements ?? [])) {
+      if (og.initiator_id !== acceptorId) otherMemberIds.add(og.initiator_id);
+      if (og.acceptor_id && og.acceptor_id !== acceptorId) otherMemberIds.add(og.acceptor_id);
+    }
+
+    if (otherMemberIds.size > 0) {
+      const idsArray = Array.from(otherMemberIds);
+      
+      // Notify other connections in the pool via system messages
+      for (const og of (otherAgreements ?? [])) {
+        if (og.connection_id !== connectionId) {
+          await db.from("messages").insert({
+            connection_id: og.connection_id,
+            sender_id: acceptorId,
+            content: `${acceptorName} has joined your roommate connection pool!`,
+            message_type: "system",
+          });
+        }
+      }
+
+      const poolNotifications = idsArray.map((memberId) => ({
+        user_id: memberId,
+        type: "POOL_MEMBER_JOINED",
+        title: "New roommate joined pool",
+        body: `${acceptorName} has joined your roommate connection pool!`,
+        data: { connection_id: connectionId, agreement_id: agreementId },
+      }));
+
+      await db.from("notifications").insert(poolNotifications);
+    }
+  }
 
   return { alreadyConfirmed: false, agreement: { ...agreement, status: "CONFIRMED" } };
 }

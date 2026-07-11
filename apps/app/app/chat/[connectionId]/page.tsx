@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { Shield, Plus, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getProfileHref } from "@/lib/profile-url";
 import { useMessages, useTypingPresence, type ExtendedMessage } from "@/hooks/useMessages";
@@ -55,6 +55,53 @@ function getBadgeClasses(color: string, variant: string, theme: string): string 
   }
   if (variant === "glass") return `${base} backdrop-blur-sm bg-opacity-70`;
   return `${base} border`;
+}
+
+const fontClassMap: Record<string, string> = {
+  sans: "font-sans",
+  serif: "font-serif",
+  mono: "font-mono",
+  handwritten: "italic font-serif font-black tracking-wide",
+};
+
+const fontLabels: Record<string, string> = {
+  sans: "Sans-Serif",
+  serif: "Serif",
+  mono: "Monospace",
+  handwritten: "Handwritten",
+};
+
+const bgPatterns = ["solid", "gradient", "stripes", "dots", "grid"];
+
+function getPatternStyle(color: string, pattern: string) {
+  if (pattern === "solid") return {};
+  if (pattern === "gradient") {
+    const gradients: Record<string, string> = {
+      brand: "linear-gradient(135deg, #10B981, #059669)",
+      peach: "linear-gradient(135deg, #FFEDD5, #FED7AA)",
+      sage: "linear-gradient(135deg, #CBD5E1, #94A3B8)",
+      slate: "linear-gradient(135deg, #E2E8F0, #94A3B8)",
+    };
+    return { backgroundImage: gradients[color] || gradients.brand };
+  }
+  if (pattern === "stripes") {
+    return {
+      backgroundImage: "repeating-linear-gradient(45deg, rgba(255,255,255,0.15), rgba(255,255,255,0.15) 6px, transparent 6px, transparent 12px)"
+    };
+  }
+  if (pattern === "dots") {
+    return {
+      backgroundImage: "radial-gradient(rgba(0,0,0,0.12) 20%, transparent 20%)",
+      backgroundSize: "6px 6px"
+    };
+  }
+  if (pattern === "grid") {
+    return {
+      backgroundImage: "linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)",
+      backgroundSize: "8px 8px"
+    };
+  }
+  return {};
 }
 
 // ── Date separator helpers ─────────────────────────────────────────────────
@@ -112,8 +159,13 @@ export default function ChatThreadPage() {
   };
   const { isOtherTyping, setTyping } = useTypingPresence(connectionId, user?.id ?? "");
 
+  interface ActivePool {
+    roomie_id: string;
+    names: string[];
+  }
+
   const [other, setOther] = useState<OtherUser | null | undefined>(undefined);
-  const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
+  const [agreementStatus, setAgreementStatus] = useState<"NONE" | "PENDING_APPROVAL" | "PENDING" | "CONFIRMED" | "DECLINED">("NONE");
   const [agreementId, setAgreementId] = useState<string | null>(null);
   const [roomieId, setRoomieId] = useState<string | null>(null);
   const [justConfirmed, setJustConfirmed] = useState(false);
@@ -121,12 +173,32 @@ export default function ChatThreadPage() {
   const [badgeColor, setBadgeColor] = useState<BadgeColor>("brand");
   const [badgeVariant, setBadgeVariant] = useState<BadgeVariant>("standard");
   const [badgeTheme, setBadgeTheme] = useState<BadgeTheme>("light");
+  const [badgeFont, setBadgeFont] = useState<string>("sans");
+  const [badgeBgPattern, setBadgeBgPattern] = useState<string>("solid");
+  const [agreementCreatedAt, setAgreementCreatedAt] = useState<string | null>(null);
+  
   const [showBadgeCustomizer, setShowBadgeCustomizer] = useState(false);
   const [savingBadge, setSavingBadge] = useState(false);
   const [isProposingAgreement, setIsProposingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState("");
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [agreementLoadError, setAgreementLoadError] = useState<string | null>(null);
+
+  // Security approval states for Roomie ID
+  const [poolMembers, setPoolMembers] = useState<any[]>([]);
+  const [loadingPoolMembers, setLoadingPoolMembers] = useState(false);
+  const [showIdRequested, setShowIdRequested] = useState(false);
+  const [inputUsername, setInputUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameVerified, setUsernameVerified] = useState(false);
+  const [selectedApprovalRoommateId, setSelectedApprovalRoommateId] = useState("");
+  const [approvalRequestStatus, setApprovalRequestStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [roomieIdVisible, setRoomieIdVisible] = useState(false);
+  const [customizerTab, setCustomizerTab] = useState<"style" | "details">("style");
+
+  const [activePools, setActivePools] = useState<ActivePool[]>([]);
+  const [selectedPoolId, setSelectedPoolId] = useState<string>("NEW_AGREEMENT");
+  const [showProposeOptions, setShowProposeOptions] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -180,7 +252,7 @@ export default function ChatThreadPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (supabase as any)
           .from("roommate_agreements")
-          .select("id, status, roomie_id, badge_color, badge_variant, badge_theme")
+          .select("id, status, roomie_id, badge_color, badge_variant, badge_theme, badge_font, badge_bg_pattern, created_at")
           .eq("connection_id", connectionId)
           .maybeSingle();
         if (error) throw error;
@@ -190,6 +262,9 @@ export default function ChatThreadPage() {
         setBadgeColor(data?.badge_color ?? "brand");
         setBadgeVariant(data?.badge_variant ?? "standard");
         setBadgeTheme(data?.badge_theme ?? "light");
+        setBadgeFont(data?.badge_font ?? "sans");
+        setBadgeBgPattern(data?.badge_bg_pattern ?? "solid");
+        setAgreementCreatedAt(data?.created_at ?? null);
       } catch (err) {
         console.error("Failed to roommate agreement status:", err);
         setAgreementLoadError(err instanceof Error ? err.message : "Failed to load agreement status");
@@ -197,6 +272,191 @@ export default function ChatThreadPage() {
     };
     void load();
   }, [connectionId, user]);
+
+  // Load user's active roommate pools
+  useEffect(() => {
+    if (!user) return;
+    const loadPools = async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("roommate_agreements")
+          .select(`
+            roomie_id,
+            initiator:profiles!initiator_id(id, display_name),
+            acceptor:profiles!acceptor_id(id, display_name)
+          `)
+          .eq("status", "CONFIRMED")
+          .or(`initiator_id.eq.${user.id},acceptor_id.eq.${user.id}`);
+
+        if (error) throw error;
+
+        const poolMap: Record<string, Set<string>> = {};
+        for (const row of (data ?? [])) {
+          if (!row.roomie_id) continue;
+          if (!poolMap[row.roomie_id]) poolMap[row.roomie_id] = new Set();
+          
+          const init = row.initiator as any;
+          const acc = row.acceptor as any;
+
+          if (init && init.id !== user.id) poolMap[row.roomie_id].add(init.display_name);
+          if (acc && acc.id !== user.id) poolMap[row.roomie_id].add(acc.display_name);
+        }
+
+        const pools = Object.entries(poolMap).map(([roomie_id, namesSet]) => ({
+          roomie_id,
+          names: Array.from(namesSet)
+        }));
+        
+        setActivePools(pools);
+      } catch (err) {
+        console.error("Failed to load active pools:", err);
+      }
+    };
+    void loadPools();
+  }, [user]);
+
+  // Load connection pool members when badge customizer is opened
+  useEffect(() => {
+    if (!showBadgeCustomizer) {
+      // Clear pool members and auto-hide states on close
+      setPoolMembers([]);
+      setShowIdRequested(false);
+      setInputUsername("");
+      setUsernameError("");
+      setUsernameVerified(false);
+      setSelectedApprovalRoommateId("");
+      setApprovalRequestStatus("idle");
+      setRoomieIdVisible(false);
+      setCustomizerTab("style");
+      return;
+    }
+
+    const loadPoolMembers = async () => {
+      if (!user) return;
+      setLoadingPoolMembers(true);
+      try {
+        let rId = roomieId;
+        if (!rId && agreementId) {
+          const { data: agreementData } = await (supabase as any)
+            .from("roommate_agreements")
+            .select("roomie_id")
+            .eq("id", agreementId)
+            .maybeSingle();
+          rId = agreementData?.roomie_id ?? null;
+        }
+
+        const memberIds = new Set<string>();
+        if (user?.id) memberIds.add(user.id);
+        if (other?.id) memberIds.add(other.id);
+
+        if (rId) {
+          const { data: agreementsData } = await (supabase as any)
+            .from("roommate_agreements")
+            .select("initiator_id, acceptor_id")
+            .eq("roomie_id", rId)
+            .eq("status", "CONFIRMED");
+
+          for (const row of (agreementsData ?? [])) {
+            if (row.initiator_id) memberIds.add(row.initiator_id);
+            if (row.acceptor_id) memberIds.add(row.acceptor_id);
+          }
+        }
+
+        if (memberIds.size > 0) {
+          const { data: profiles } = await (supabase as any)
+            .from("profiles")
+            .select("id, display_name, username, avatar_url")
+            .in("id", Array.from(memberIds));
+          setPoolMembers(profiles ?? []);
+
+          // Check if there is an existing roomie_id_request message in the active connections with pool roommates
+          for (const memberId of Array.from(memberIds)) {
+            if (memberId === user.id) continue;
+            
+            const { data: conn } = await (supabase as any)
+              .from("connections")
+              .select("id")
+              .or(`and(requester_id.eq.${user.id},receiver_id.eq.${memberId}),and(requester_id.eq.${memberId},receiver_id.eq.${user.id})`)
+              .eq("status", "ACTIVE")
+              .maybeSingle();
+
+            if (conn) {
+              const { data: lastRequest } = await (supabase as any)
+                .from("messages")
+                .select("content")
+                .eq("connection_id", conn.id)
+                .eq("message_type", "roomie_id_request")
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (lastRequest) {
+                try {
+                  const content = JSON.parse(lastRequest.content);
+                  if (content.requester_id === user.id && content.target_id === memberId) {
+                    setSelectedApprovalRoommateId(memberId);
+                    setApprovalRequestStatus(content.status);
+                    if (content.status === "approved") {
+                      setRoomieIdVisible(true);
+                    }
+                  }
+                } catch (e) {
+                  console.error("Failed to parse last request content:", e);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load pool members:", err);
+      } finally {
+        setLoadingPoolMembers(false);
+      }
+    };
+
+    void loadPoolMembers();
+  }, [showBadgeCustomizer, roomieId, agreementId, user, other]);
+
+  // Listen to realtime updates on roomie_id_request messages to update state
+  useEffect(() => {
+    if (!showBadgeCustomizer || !user) return;
+
+    const currentUserId = user.id;
+
+    const channel = supabase
+      .channel(`roomie-id-request-listener:${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: "message_type=eq.roomie_id_request",
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row) return;
+          try {
+            const content = JSON.parse(row.content);
+            if (content.requester_id === currentUserId && content.target_id === selectedApprovalRoommateId) {
+              setApprovalRequestStatus(content.status);
+              if (content.status === "approved") {
+                setRoomieIdVisible(true);
+              } else {
+                setRoomieIdVisible(false);
+              }
+            }
+          } catch (e) {
+            console.error("Failed to parse request status update", e);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [showBadgeCustomizer, user, selectedApprovalRoommateId]);
 
   // Realtime: update instantly when the roommate accepts and pays
   useEffect(() => {
@@ -224,6 +484,8 @@ export default function ChatThreadPage() {
           setBadgeColor(row.badge_color ?? "brand");
           setBadgeVariant(row.badge_variant ?? "standard");
           setBadgeTheme(row.badge_theme ?? "light");
+          setBadgeFont(row.badge_font ?? "sans");
+          setBadgeBgPattern(row.badge_bg_pattern ?? "solid");
         }
       )
       .subscribe();
@@ -233,19 +495,20 @@ export default function ChatThreadPage() {
     };
   }, [connectionId]);
 
-  const proposeAgreement = async () => {
-    if (isProposingAgreement || agreementStatus === "PENDING" || agreementStatus === "CONFIRMED") return;
+  const proposeAgreement = async (poolRoomieId?: string) => {
+    if (isProposingAgreement || agreementStatus === "PENDING" || agreementStatus === "PENDING_APPROVAL" || agreementStatus === "CONFIRMED") return;
     setIsProposingAgreement(true);
     setAgreementError("");
     try {
       const res = await fetch("/api/agreements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId }),
+        body: JSON.stringify({ connectionId, poolRoomieId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Could not propose agreement");
-      setAgreementStatus("PENDING");
+      setAgreementStatus(poolRoomieId ? "PENDING_APPROVAL" : "PENDING");
+      setShowProposeOptions(false);
     } catch (err) {
       setAgreementError(err instanceof Error ? err.message : "Could not propose agreement");
     } finally {
@@ -253,19 +516,33 @@ export default function ChatThreadPage() {
     }
   };
 
-  const saveBadgeCustomization = async (color: BadgeColor, variant: BadgeVariant, theme: BadgeTheme) => {
+  const saveBadgeCustomization = async (
+    color: BadgeColor,
+    variant: BadgeVariant,
+    theme: BadgeTheme,
+    font: string,
+    bgPattern: string
+  ) => {
     if (!agreementId || savingBadge) return;
     setSavingBadge(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from("roommate_agreements")
-        .update({ badge_color: color, badge_variant: variant, badge_theme: theme })
+        .update({
+          badge_color: color,
+          badge_variant: variant,
+          badge_theme: theme,
+          badge_font: font,
+          badge_bg_pattern: bgPattern,
+        })
         .eq("id", agreementId);
       if (error) throw error;
       setBadgeColor(color);
       setBadgeVariant(variant);
       setBadgeTheme(theme);
+      setBadgeFont(font);
+      setBadgeBgPattern(bgPattern);
     } catch (err) {
       console.error("Failed to save badge customization:", err);
     } finally {
@@ -328,8 +605,9 @@ export default function ChatThreadPage() {
                           e.stopPropagation();
                           setShowBadgeCustomizer(true);
                         }}
+                        style={getPatternStyle(badgeColor, badgeBgPattern)}
                         title="Customize your Roomie badge"
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm transition-transform hover:scale-105 shrink-0 ${getBadgeClasses(badgeColor, badgeVariant, badgeTheme)}`}
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm transition-transform hover:scale-105 shrink-0 ${getBadgeClasses(badgeColor, badgeVariant, badgeTheme)} ${fontClassMap[badgeFont] || "font-sans"} ${badgeBgPattern === "gradient" && badgeColor === "brand" ? "text-white" : ""}`}
                       >
                         Roomie
                       </button>
@@ -529,22 +807,100 @@ export default function ChatThreadPage() {
             )}
 
             {/* Agreement propose banner */}
-            {!isSupport && agreementStatus !== "PENDING" && agreementStatus !== "CONFIRMED" && (
+            {!isSupport && agreementStatus !== "PENDING" && agreementStatus !== "PENDING_APPROVAL" && agreementStatus !== "CONFIRMED" && (
               <div className="bg-white border-t border-slate-200 px-4 py-2">
-                <button
-                  type="button"
-                  onClick={proposeAgreement}
-                  disabled={isProposingAgreement || !other}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {isProposingAgreement ? "Proposing…" : "Propose roommate agreement"}
-                </button>
+                {activePools.length > 0 ? (
+                  !showProposeOptions ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowProposeOptions(true);
+                          if (activePools.length > 0) {
+                            setSelectedPoolId(activePools[0].roomie_id);
+                          }
+                        }}
+                        disabled={!other}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-brand-200 bg-brand-50 px-3 py-2.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="h-4.5 w-4.5" />
+                        Add Roomie Pool
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => proposeAgreement()}
+                        disabled={isProposingAgreement || !other}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-brand-200 bg-brand-50 px-3 py-2.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Send className="h-4 w-4" />
+                        New Roomie Proposal
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-1">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="pool-select" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Select roommate pool
+                        </label>
+                        <select
+                          id="pool-select"
+                          value={selectedPoolId}
+                          onChange={(e) => setSelectedPoolId(e.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
+                        >
+                          {activePools.map((pool) => (
+                            <option key={pool.roomie_id} value={pool.roomie_id}>
+                              Add to pool: {pool.names.join(" & ")} ({pool.roomie_id})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={isProposingAgreement}
+                          onClick={() => {
+                            void proposeAgreement(selectedPoolId);
+                          }}
+                          className="flex-1 rounded-xl bg-brand-500 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                        >
+                          {isProposingAgreement ? "Sending..." : "Send proposal"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowProposeOptions(false)}
+                          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => proposeAgreement()}
+                    disabled={isProposingAgreement || !other}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {isProposingAgreement ? "Proposing…" : "Propose roommate agreement"}
+                  </button>
+                )}
                 {agreementError && (
                   <p className="mt-1 text-center text-xs text-red-500">{agreementError}</p>
                 )}
+              </div>
+            )}
+
+            {!isSupport && agreementStatus === "PENDING_APPROVAL" && (
+              <div className="bg-amber-50 border-t border-amber-200 px-4 py-2 text-center text-xs font-semibold text-amber-700 flex items-center justify-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Agreement pending pool approval
               </div>
             )}
 
@@ -583,80 +939,393 @@ export default function ChatThreadPage() {
         title="Customize Roomie Badge"
       >
         <div className="space-y-5">
-          <div className="flex justify-center py-4 rounded-2xl bg-brand-500">
+          {/* Badge Preview */}
+          <div className="flex justify-center py-5 rounded-2xl bg-brand-500 relative overflow-hidden">
             <span
-              className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm ${getBadgeClasses(badgeColor, badgeVariant, badgeTheme)}`}
+              style={getPatternStyle(badgeColor, badgeBgPattern)}
+              className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition-all duration-300 ${getBadgeClasses(
+                badgeColor,
+                badgeVariant,
+                badgeTheme
+              )} ${fontClassMap[badgeFont] || "font-sans"} ${
+                badgeBgPattern === "gradient" && badgeColor === "brand" ? "text-white" : ""
+              }`}
             >
               Roomie
             </span>
           </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Color</p>
-            <div className="flex gap-2 flex-wrap">
-              {BADGE_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => void saveBadgeCustomization(color, badgeVariant, badgeTheme)}
-                  disabled={savingBadge}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
-                    badgeColor === color
-                      ? "border-brand-500 bg-brand-50 text-brand-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {BADGE_COLOR_LABELS[color]}
-                </button>
-              ))}
-            </div>
+          {/* Tab selector */}
+          <div className="flex border-b border-slate-200">
+            <button
+              type="button"
+              onClick={() => setCustomizerTab("style")}
+              className={`flex-1 pb-2.5 text-xs font-bold transition-all border-b-2 ${
+                customizerTab === "style"
+                  ? "border-brand-500 text-brand-600 font-black"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Personalize
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomizerTab("details")}
+              className={`flex-1 pb-2.5 text-xs font-bold transition-all border-b-2 ${
+                customizerTab === "details"
+                  ? "border-brand-500 text-brand-600 font-black"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Badge Details
+            </button>
           </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Style</p>
-            <div className="flex gap-2 flex-wrap">
-              {BADGE_VARIANTS.map((variant) => (
-                <button
-                  key={variant}
-                  type="button"
-                  onClick={() => void saveBadgeCustomization(badgeColor, variant, badgeTheme)}
-                  disabled={savingBadge}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
-                    badgeVariant === variant
-                      ? "border-brand-500 bg-brand-50 text-brand-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {variant}
-                </button>
-              ))}
-            </div>
-          </div>
+          {customizerTab === "style" ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Color</p>
+                <div className="flex gap-2 flex-wrap">
+                  {BADGE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => void saveBadgeCustomization(color, badgeVariant, badgeTheme, badgeFont, badgeBgPattern)}
+                      disabled={savingBadge}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                        badgeColor === color
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {BADGE_COLOR_LABELS[color]}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Theme</p>
-            <div className="flex gap-2 flex-wrap">
-              {BADGE_THEMES.map((theme) => (
-                <button
-                  key={theme}
-                  type="button"
-                  onClick={() => void saveBadgeCustomization(badgeColor, badgeVariant, theme)}
-                  disabled={savingBadge}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
-                    badgeTheme === theme
-                      ? "border-brand-500 bg-brand-50 text-brand-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Style</p>
+                <div className="flex gap-2 flex-wrap">
+                  {BADGE_VARIANTS.map((variant) => (
+                    <button
+                      key={variant}
+                      type="button"
+                      onClick={() => void saveBadgeCustomization(badgeColor, variant, badgeTheme, badgeFont, badgeBgPattern)}
+                      disabled={savingBadge}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
+                        badgeVariant === variant
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {variant}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            Changes apply instantly for both you and {other?.display_name ?? "your roommate"}.
-          </p>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Theme</p>
+                <div className="flex gap-2 flex-wrap">
+                  {BADGE_THEMES.map((theme) => (
+                    <button
+                      key={theme}
+                      type="button"
+                      onClick={() => void saveBadgeCustomization(badgeColor, badgeVariant, theme, badgeFont, badgeBgPattern)}
+                      disabled={savingBadge}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
+                        badgeTheme === theme
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {theme}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Font</p>
+                <div className="flex gap-2 flex-wrap">
+                  {Object.keys(fontLabels).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => void saveBadgeCustomization(badgeColor, badgeVariant, badgeTheme, f, badgeBgPattern)}
+                      disabled={savingBadge}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                        badgeFont === f
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {fontLabels[f]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Background Pattern</p>
+                <div className="flex gap-2 flex-wrap">
+                  {bgPatterns.map((pattern) => (
+                    <button
+                      key={pattern}
+                      type="button"
+                      onClick={() => void saveBadgeCustomization(badgeColor, badgeVariant, badgeTheme, badgeFont, pattern)}
+                      disabled={savingBadge}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border capitalize transition-colors ${
+                        badgeBgPattern === pattern
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {pattern}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-400 leading-relaxed pt-2 border-t border-slate-100">
+                Changes apply instantly for both you and {other?.display_name ?? "your roommate"}.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date Created</p>
+                <p className="text-xs font-bold text-slate-700">
+                  {agreementCreatedAt
+                    ? new Date(agreementCreatedAt).toLocaleDateString("en-NG", {
+                        dateStyle: "long",
+                      })
+                    : "N/A"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Connection Members ({poolMembers.length})</p>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-3">
+                  {loadingPoolMembers ? (
+                    <div className="text-xs text-slate-500 animate-pulse">Loading members...</div>
+                  ) : (
+                    poolMembers.map((member) => (
+                      <div key={member.id} className="flex items-center gap-2.5">
+                        <Avatar src={member.avatar_url} name={member.display_name} size="xs" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-800 truncate">{member.display_name}</p>
+                          <p className="text-[10px] text-slate-400">@{member.username || "username"}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Roomie ID</p>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                  {!showIdRequested ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span className="font-mono text-xs tracking-wider text-slate-400 select-none">RM-••••••••</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowIdRequested(true)}
+                        className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                      >
+                        Unlock ID
+                      </button>
+                    </div>
+                  ) : !usernameVerified ? (
+                    <div className="space-y-2.5">
+                      <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                        To view the Roomie ID, please verify your identity by entering your username:
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={inputUsername}
+                          onChange={(e) => {
+                            setInputUsername(e.target.value);
+                            setUsernameError("");
+                          }}
+                          placeholder="Enter your username"
+                          className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-brand-500 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentUsername = profile?.username || "";
+                            if (!inputUsername.trim()) {
+                              setUsernameError("Username is required");
+                              return;
+                            }
+                            if (inputUsername.trim().toLowerCase() !== currentUsername.trim().toLowerCase()) {
+                              setUsernameError("Incorrect username");
+                              return;
+                            }
+                            setUsernameVerified(true);
+                          }}
+                          className="px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                        >
+                          Verify
+                        </button>
+                      </div>
+                      {usernameError && (
+                        <p className="text-[10px] text-red-500 font-bold">{usernameError}</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowIdRequested(false);
+                          setInputUsername("");
+                          setUsernameError("");
+                        }}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 underline font-semibold block"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : !roomieIdVisible ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                        Select a roommate in this pool to request authorization from:
+                      </p>
+                      <div className="space-y-2">
+                        {poolMembers.filter(m => m.id !== user.id).length === 0 ? (
+                          <div className="text-xs text-slate-400 italic">No other roommates in this connection pool.</div>
+                        ) : (
+                          poolMembers.filter(m => m.id !== user.id).map((roommate) => {
+                            const isSelected = selectedApprovalRoommateId === roommate.id;
+                            return (
+                              <div key={roommate.id} className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-100 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                  <Avatar src={roommate.avatar_url} name={roommate.display_name} size="xs" />
+                                  <span className="text-xs font-bold text-slate-700">{roommate.display_name}</span>
+                                </div>
+                                
+                                {isSelected ? (
+                                  approvalRequestStatus === "loading" ? (
+                                    <div className="flex flex-col items-end">
+                                      <div className="flex items-center gap-1 text-[10px] text-brand-600 font-bold">
+                                        <svg className="animate-spin h-3.5 w-3.5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Awaiting...
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setApprovalRequestStatus("success");
+                                          setRoomieIdVisible(true);
+                                        }}
+                                        className="text-[9px] text-brand-600 underline font-semibold mt-1"
+                                      >
+                                        Simulate Approval
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-green-600 font-bold flex items-center gap-0.5">
+                                      ✓ Approved
+                                    </span>
+                                  )
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={approvalRequestStatus === "loading"}
+                                    onClick={async () => {
+                                      setSelectedApprovalRoommateId(roommate.id);
+                                      setApprovalRequestStatus("loading");
+                                      
+                                      try {
+                                        const myName = profile?.display_name || "Your roommate";
+                                        
+                                        // 1. Send push notification fallback
+                                        await (supabase as any).from("notifications").insert({
+                                          user_id: roommate.id,
+                                          type: "ROOMIE_ID_VIEW_REQUEST",
+                                          title: "Roomie ID access request",
+                                          body: `${myName} is requesting approval to view the Roomie ID.`,
+                                          data: { connection_id: connectionId, agreement_id: agreementId },
+                                        });
+
+                                        // 2. Find active connection to post chat message card
+                                        const { data: conn } = await (supabase as any)
+                                          .from("connections")
+                                          .select("id")
+                                          .or(`and(requester_id.eq.${user.id},receiver_id.eq.${roommate.id}),and(requester_id.eq.${roommate.id},receiver_id.eq.${user.id})`)
+                                          .eq("status", "ACTIVE")
+                                          .maybeSingle();
+
+                                        if (conn) {
+                                          await (supabase as any).from("messages").insert({
+                                            connection_id: conn.id,
+                                            sender_id: user.id,
+                                            content: JSON.stringify({
+                                              request_id: crypto.randomUUID(),
+                                              requester_id: user.id,
+                                              requester_name: myName,
+                                              target_id: roommate.id,
+                                              target_name: roommate.display_name,
+                                              status: "pending",
+                                              roomie_id: roomieId
+                                            }),
+                                            message_type: "roomie_id_request"
+                                          });
+                                        }
+                                      } catch (e) {
+                                        console.error("Failed to process ID request:", e);
+                                        setApprovalRequestStatus("idle");
+                                        setSelectedApprovalRoommateId("");
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm"
+                                  >
+                                    Request
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between p-2 bg-green-50 border border-green-100 rounded-xl">
+                        <span className="font-mono text-sm font-black text-green-700 tracking-wider select-all">
+                          {roomieId || "RM-NO-ID"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(roomieId || "");
+                          }}
+                          className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                          title="Copy Roomie ID"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-green-600 font-bold leading-normal">
+                        ✓ Roomie ID unlocked! Note: This ID will auto-hide immediately when you exit this panel.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
