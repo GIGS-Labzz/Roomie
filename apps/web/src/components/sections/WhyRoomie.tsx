@@ -9,6 +9,8 @@ import {
   Building2,
   Banknote,
   Wifi,
+  Network,
+  KeyRound,
 } from "lucide-react";
 
 const features = [
@@ -27,6 +29,22 @@ const features = [
       "Chat opens the moment you connect — no payment needed. Get to know your potential roommate first.",
     color: "text-sky-500",
     bg: "bg-sky-50",
+  },
+  {
+    icon: Network,
+    title: "Connection pools",
+    description:
+      "Group up with up to 5 roommates into a single roommate pool sharing one Roomie ID. Apply for housing collectively.",
+    color: "text-brand-500",
+    bg: "bg-brand-50",
+  },
+  {
+    icon: KeyRound,
+    title: "Roomie Auth SSO",
+    description:
+      "Authenticate with your Roomie ID across partner housing platforms for instant shared renter passports.",
+    color: "text-amber-500",
+    bg: "bg-amber-50",
   },
   {
     icon: SplitSquareVertical,
