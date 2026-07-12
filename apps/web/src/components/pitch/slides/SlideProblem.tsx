@@ -67,10 +67,10 @@ export default function SlideProblem() {
           <AlertTriangle className="w-4 h-4" />
           <span>The Problem</span>
         </div>
-        <h2 className="text-4xl md:text-5xl font-bold font-display text-white mb-6 leading-tight">
+        <h2 className="text-4xl md:text-5xl font-bold font-display text-slate-900 mb-6 leading-tight">
           Finding student roommates is a <span className="text-rose-500 underline decoration-wavy">broken</span> experience.
         </h2>
-        <p className="text-slate-400 mb-8 max-w-lg">
+        <p className="text-slate-500 mb-8 max-w-lg">
           Nigerian university students off-campus are forced to rely on fragmented channels. Click the issues below to simulate the stress:
         </p>
 
@@ -84,21 +84,21 @@ export default function SlideProblem() {
                 onClick={() => toggleProblem(prob.id)}
                 className={`w-full text-left p-4 border-2 rounded-xl transition-all duration-200 ${
                   isChecked
-                    ? "bg-slate-900 border-rose-500 shadow-[4px_4px_0px_0px_#f43f5e]"
-                    : "bg-slate-950 border-slate-800 hover:border-slate-700 shadow-[4px_4px_0px_0px_#1e293b]"
+                    ? "bg-white border-rose-500 shadow-[4px_4px_0px_0px_#f43f5e]"
+                    : "bg-slate-50 border-slate-900/10 hover:border-slate-900/20 shadow-[4px_4px_0px_0px_#e6eeda]"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div
                     className={`mt-1 w-5 h-5 flex items-center justify-center border-2 rounded ${
-                      isChecked ? "border-rose-500 bg-rose-500/20 text-rose-500" : "border-slate-600 text-transparent"
+                      isChecked ? "border-rose-500 bg-rose-500/20 text-rose-500" : "border-slate-300 text-transparent"
                     }`}
                   >
                     ✓
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white text-base md:text-lg">{prob.label}</h4>
-                    <p className="text-xs md:text-sm text-slate-400 mt-0.5">{prob.desc}</p>
+                    <h4 className="font-semibold text-slate-900 text-base md:text-lg">{prob.label}</h4>
+                    <p className="text-xs md:text-sm text-slate-500 mt-0.5">{prob.desc}</p>
                   </div>
                 </div>
               </button>
@@ -108,30 +108,30 @@ export default function SlideProblem() {
       </div>
 
       {/* Right side: Interactive Stress Tracker */}
-      <div className="flex flex-col items-center justify-center p-6 md:p-8 bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-brutal relative overflow-hidden min-h-[350px]">
+      <div className="flex flex-col items-center justify-center p-6 md:p-8 bg-white border-2 border-slate-900/10 rounded-2xl shadow-brutal relative overflow-hidden min-h-[350px]">
         {/* Glow grid background */}
         <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
 
         <div className="relative z-10 w-full flex flex-col items-center">
-          <span className="text-xs font-mono tracking-widest text-slate-400 mb-4 uppercase">
+          <span className="text-xs font-mono tracking-widest text-slate-500 mb-4 uppercase">
             Interactive Stress Tracker
           </span>
 
           {/* Stress Meter circle/arc */}
           <div className="relative w-44 h-44 flex items-center justify-center mb-6">
             {/* Outer gauge border */}
-            <div className="absolute inset-0 border-4 border-slate-800 rounded-full" />
+            <div className="absolute inset-0 border-4 border-slate-200 rounded-full" />
 
             <div className="text-center">
               <motion.span
                 key={totalStress}
                 initial={{ scale: 0.8, opacity: 0.5 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="text-5xl font-black font-display text-white block"
+                className="text-5xl font-black font-display text-slate-900 block"
               >
                 {totalStress}%
               </motion.span>
-              <span className="text-xs font-mono text-slate-400 uppercase tracking-wide">
+              <span className="text-xs font-mono text-slate-500 uppercase tracking-wide">
                 STRESS SCORE
               </span>
             </div>

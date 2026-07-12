@@ -129,45 +129,45 @@ export function SlideDeck() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 select-none font-sans justify-between py-6">
+    <div className="flex flex-col min-h-screen bg-sage-surface text-slate-900 select-none font-sans justify-between py-6">
       {/* Top Navbar HUD */}
       <div className="max-w-6xl mx-auto w-full px-6 flex justify-between items-center h-12">
         <Link
           href="/"
-          className="flex items-center gap-2 hover:bg-slate-900 border border-transparent hover:border-slate-800 px-3 py-1.5 rounded-xl transition-all"
+          className="flex items-center gap-2 hover:bg-white border border-transparent hover:border-slate-900/10 px-3 py-1.5 rounded-xl transition-all"
         >
-          <Home className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-mono font-bold text-slate-400">Main Site</span>
+          <Home className="w-4 h-4 text-slate-500" />
+          <span className="text-xs font-mono font-bold text-slate-500">Main Site</span>
         </Link>
 
         {/* Roomie Wordmark */}
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-          <span className="font-display font-black tracking-widest text-sm text-white">ROOMIE PITCH HUD</span>
+          <span className="font-display font-black tracking-widest text-sm text-slate-900">ROOMIE PITCH HUD</span>
         </div>
 
         {/* Action HUD buttons */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPlaying((p) => !p)}
-            className="w-9 h-9 flex items-center justify-center bg-slate-900 hover:bg-slate-850 border border-slate-850 rounded-xl transition-colors"
+            className="w-9 h-9 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-900/10 rounded-xl transition-colors shadow-sm"
             title={isPlaying ? "Pause Autoplay" : "Play Autoplay (10s)"}
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 text-brand-500" />
+              <Pause className="w-4 h-4 text-brand-600" />
             ) : (
-              <Play className="w-4 h-4 text-slate-400" />
+              <Play className="w-4 h-4 text-slate-500" />
             )}
           </button>
           <button
             onClick={toggleFullscreen}
-            className="w-9 h-9 flex items-center justify-center bg-slate-900 hover:bg-slate-850 border border-slate-850 rounded-xl transition-colors"
+            className="w-9 h-9 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-900/10 rounded-xl transition-colors shadow-sm"
             title="Toggle Fullscreen"
           >
             {isFullscreen ? (
-              <Minimize2 className="w-4 h-4 text-brand-500" />
+              <Minimize2 className="w-4 h-4 text-brand-600" />
             ) : (
-              <Maximize2 className="w-4 h-4 text-slate-400" />
+              <Maximize2 className="w-4 h-4 text-slate-500" />
             )}
           </button>
         </div>
@@ -210,12 +210,12 @@ export function SlideDeck() {
                       ? "bg-brand-500 shadow-[0_0_8px_#8AAF6E]"
                       : isCompleted
                       ? "bg-brand-500/50"
-                      : "bg-slate-850"
+                      : "bg-slate-900/10"
                   }`}
                 />
                 <span
                   className={`hidden md:block text-[9px] font-mono tracking-wide mt-2 transition-colors ${
-                    isActive ? "text-white font-bold" : "text-slate-500 group-hover:text-slate-400"
+                    isActive ? "text-slate-900 font-bold" : "text-slate-400 group-hover:text-slate-600"
                   }`}
                 >
                   {idx + 1}. {name}
@@ -226,19 +226,19 @@ export function SlideDeck() {
         </div>
 
         {/* Buttons Nav HUD */}
-        <div className="flex justify-between items-center border-t border-slate-900 pt-4 text-xs font-mono text-slate-500">
+        <div className="flex justify-between items-center border-t border-slate-900/10 pt-4 text-xs font-mono text-slate-500">
           <div className="flex items-center gap-2">
             <span>Slide</span>
-            <span className="font-bold text-white font-mono">{currentSlide + 1}</span>
+            <span className="font-bold text-slate-900 font-mono">{currentSlide + 1}</span>
             <span>of</span>
-            <span className="font-bold text-white font-mono">{totalSlides}</span>
+            <span className="font-bold text-slate-900 font-mono">{totalSlides}</span>
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={prevSlide}
               disabled={currentSlide === 0}
-              className="px-4 py-2 bg-slate-900 border border-slate-850 hover:border-slate-700 disabled:opacity-40 disabled:hover:border-slate-850 rounded-xl transition-all flex items-center gap-1.5 text-white"
+              className="px-4 py-2 bg-white border border-slate-900/15 hover:border-slate-900/30 disabled:opacity-40 disabled:hover:border-slate-900/15 rounded-xl transition-all flex items-center gap-1.5 text-slate-900 shadow-sm"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Back</span>

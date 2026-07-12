@@ -19,10 +19,10 @@ export default function SlideCover({ onNext }: SlideProps) {
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="inline-flex items-center gap-2 px-4 py-2 border-2 border-white rounded-full bg-slate-900 shadow-[4px_4px_0px_0px_#8AAF6E] mb-8"
+        className="inline-flex items-center gap-2 px-4 py-2 border-2 border-slate-900 rounded-full bg-white shadow-[4px_4px_0px_0px_#8AAF6E] mb-8"
       >
         <span className="w-2.5 h-2.5 bg-brand-500 rounded-full animate-pulse" />
-        <span className="text-xs md:text-sm font-semibold tracking-wider font-mono text-brand-300">
+        <span className="text-xs md:text-sm font-semibold tracking-wider font-mono text-brand-700">
           KANO PITCHATHON 2026
         </span>
       </motion.div>
@@ -34,11 +34,11 @@ export default function SlideCover({ onNext }: SlideProps) {
         transition={{ delay: 0.2, duration: 0.6 }}
         className="max-w-4xl mx-auto"
       >
-        <h1 className="text-5xl md:text-8xl font-black font-display tracking-tight text-white mb-6 leading-none">
+        <h1 className="text-5xl md:text-8xl font-black font-display tracking-tight text-slate-900 mb-6 leading-none">
           ROOM<span className="text-brand-500">IE</span>
         </h1>
-        <p className="text-xl md:text-3xl font-medium text-slate-300 max-w-2xl mx-auto mb-8 font-sans">
-          Find your perfect roommate. <span className="text-peach-300 font-semibold underline decoration-wavy decoration-brand-500">Pay once</span>. Move in together.
+        <p className="text-xl md:text-3xl font-medium text-slate-600 max-w-2xl mx-auto mb-8 font-sans">
+          Find your perfect roommate. <span className="text-peach-600 font-semibold underline decoration-wavy decoration-brand-500">Pay once</span>. Move in together.
         </p>
       </motion.div>
 
@@ -49,7 +49,7 @@ export default function SlideCover({ onNext }: SlideProps) {
         transition={{ delay: 0.4, duration: 0.6 }}
         className="mb-12 max-w-lg"
       >
-        <div className="text-slate-400 font-mono text-sm uppercase tracking-widest flex items-center justify-center gap-2">
+        <div className="text-slate-500 font-mono text-sm uppercase tracking-widest flex items-center justify-center gap-2">
           <span>Connect</span>
           <span className="text-brand-500">and</span>
           <span className="text-peach-400 animate-pulse font-bold">Cooonnectttt ⚡</span>
@@ -64,7 +64,7 @@ export default function SlideCover({ onNext }: SlideProps) {
       >
         <button
           onClick={onNext}
-          className="group relative inline-flex items-center gap-3 px-8 py-4 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold text-lg rounded-xl border-2 border-white shadow-[6px_6px_0px_0px_#FAE8CC] transition-all hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#FAE8CC] active:translate-x-0 active:translate-y-0 active:shadow-[4px_4px_0px_0px_#FAE8CC]"
+          className="group relative inline-flex items-center gap-3 px-8 py-4 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold text-lg rounded-xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] transition-all hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#0f172a] active:translate-x-0 active:translate-y-0 active:shadow-[4px_4px_0px_0px_#0f172a]"
         >
           <Presentation className="w-5 h-5 transition-transform group-hover:rotate-12" />
           <span>Launch Presentation</span>

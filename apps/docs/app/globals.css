@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Clean Light Mode (default) */
+  --background: #ffffff; /* Crisp pure white */
+  --foreground: #0f172a; /* Slate 900 */
+  --card-bg: rgba(248, 250, 252, 0.8); /* Slate 50 */
+  --card-border: rgba(148, 163, 184, 0.25); /* Slate 300 scale */
+  --sidebar-bg: #f1f5f9; /* Slate 100 sidebar */
+  --console-bg: #f8fafc; /* Slate 50 console */
+  --console-border: rgba(148, 163, 184, 0.25);
+  --input-bg: #ffffff;
+  --logo-text: #0f172a;
+
+  --color-brand-500: #8AAF6E;
+  --color-peach-200: #FAE8CC;
+  --color-peach-500: #e49e45;
+}
+
+.dark {
+  /* Midnight Black Dark Mode */
+  --background: #000000; /* Pure midnight black */
+  --foreground: #f8fafc; /* Slate 50 */
+  --card-bg: rgba(9, 9, 11, 0.7); /* Zinc 950 glass */
+  --card-border: rgba(39, 39, 42, 0.6); /* Zinc 800 */
+  --sidebar-bg: #09090b; /* Midnight black sidebar */
+  --console-bg: #09090b; /* Midnight console */
+  --console-border: rgba(39, 39, 42, 0.5);
+  --input-bg: #000000; /* Midnight inputs */
+  --logo-text: #ffffff;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Subtle glow at the top */
+.dark body {
+  background-image: radial-gradient(circle at 50% -20%, rgba(138, 175, 110, 0.08), transparent 60%);
+}
+
+body:not(.dark) {
+  background-image: radial-gradient(circle at 50% -20%, rgba(138, 175, 110, 0.04), transparent 50%);
+}
+
+.font-display {
+  font-family: "Clash Display", sans-serif;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(138, 175, 110, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 175, 110, 0.5);
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(138, 175, 110, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-panel-hover:hover {
+  border-color: rgba(138, 175, 110, 0.25);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Code block styles */
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* --- LOGO STYLING OVERRIDES --- */
+.logo-container-docs {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Styled outer container of LogoMark */
+.logo-container-docs > span:first-child {
+  background-color: #ffffff !important; /* Keep badge white so logo image blends seamlessly */
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 3px 10px rgba(138, 175, 110, 0.18) !important;
+  padding: 1.5px !important; /* Creates a clean framed badge appearance */
+  overflow: hidden !important; /* Guarantees image bounds are clipped to rounded corners */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark .logo-container-docs > span:first-child {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Logo Wordmark Text */
+.logo-container-docs > span:last-child {
+  color: var(--foreground) !important; /* Theme-aware text color */
+  font-family: "Clash Display", sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  transition: color 0.3s ease;
+}

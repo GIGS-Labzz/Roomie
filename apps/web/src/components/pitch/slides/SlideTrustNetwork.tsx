@@ -36,7 +36,7 @@ const badgesList: BadgeDetail[] = [
     desc: "Consistently settles split NEPA bills and house fees on time.",
     issuance: "Pays split items within 48h for at least 5 consecutive ledger bills.",
     icon: ShieldCheck,
-    color: "text-indigo-400 border-indigo-400 bg-indigo-400/10 shadow-[0_0_15px_#818cf8]",
+    color: "text-brand-300 border-brand-300 bg-brand-500/10 shadow-[0_0_15px_#b4cc90]",
   },
   {
     code: "HOUSING_VERIFIED",
@@ -119,32 +119,32 @@ export default function SlideTrustNetwork() {
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 160">
             {/* Connection Lines */}
             {/* 1st Degree connections: user to roommate 1 & 2 */}
-            <line x1="150" y1="80" x2="80" y2="40" stroke={networkDegree >= 1 ? "#8AAF6E" : "#1e293b"} strokeWidth={networkDegree >= 1 ? "2.5" : "1"} className="transition-all duration-300" />
-            <line x1="150" y1="80" x2="80" y2="120" stroke={networkDegree >= 1 ? "#8AAF6E" : "#1e293b"} strokeWidth={networkDegree >= 1 ? "2.5" : "1"} className="transition-all duration-300" />
+            <line x1="150" y1="80" x2="80" y2="40" stroke={networkDegree >= 1 ? "#8AAF6E" : "#2C3A23"} strokeWidth={networkDegree >= 1 ? "2.5" : "1"} className="transition-all duration-300" />
+            <line x1="150" y1="80" x2="80" y2="120" stroke={networkDegree >= 1 ? "#8AAF6E" : "#2C3A23"} strokeWidth={networkDegree >= 1 ? "2.5" : "1"} className="transition-all duration-300" />
 
             {/* 2nd Degree connections: roommate 1 to sub-node A & B */}
-            <line x1="80" y1="40" x2="30" y2="25" stroke={networkDegree >= 2 ? "#eeba76" : "#1e293b"} strokeWidth={networkDegree >= 2 ? "2" : "1"} className="transition-all duration-300" />
-            <line x1="80" y1="40" x2="30" y2="60" stroke={networkDegree >= 2 ? "#eeba76" : "#1e293b"} strokeWidth={networkDegree >= 2 ? "2" : "1"} className="transition-all duration-300" />
+            <line x1="80" y1="40" x2="30" y2="25" stroke={networkDegree >= 2 ? "#eeba76" : "#2C3A23"} strokeWidth={networkDegree >= 2 ? "2" : "1"} className="transition-all duration-300" />
+            <line x1="80" y1="40" x2="30" y2="60" stroke={networkDegree >= 2 ? "#eeba76" : "#2C3A23"} strokeWidth={networkDegree >= 2 ? "2" : "1"} className="transition-all duration-300" />
 
             {/* 3rd Degree connections: subnode A to leaf-nodes */}
-            <line x1="30" y1="25" x2="210" y2="30" stroke={networkDegree >= 3 ? "#818cf8" : "#1e293b"} strokeWidth={networkDegree >= 3 ? "1.5" : "1"} className="transition-all duration-300" />
-            <line x1="30" y1="60" x2="270" y2="80" stroke={networkDegree >= 3 ? "#818cf8" : "#1e293b"} strokeWidth={networkDegree >= 3 ? "1.5" : "1"} className="transition-all duration-300" />
+            <line x1="30" y1="25" x2="210" y2="30" stroke={networkDegree >= 3 ? "#b4cc90" : "#2C3A23"} strokeWidth={networkDegree >= 3 ? "1.5" : "1"} className="transition-all duration-300" />
+            <line x1="30" y1="60" x2="270" y2="80" stroke={networkDegree >= 3 ? "#b4cc90" : "#2C3A23"} strokeWidth={networkDegree >= 3 ? "1.5" : "1"} className="transition-all duration-300" />
 
             {/* Center Node: You */}
             <circle cx="150" cy="80" r="14" fill="#020617" stroke="#ffffff" strokeWidth="2.5" />
             <text x="150" y="84" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">You</text>
 
             {/* 1st Degree Nodes: Roommate matches */}
-            <circle cx="80" cy="40" r="10" fill="#020617" stroke={networkDegree >= 1 ? "#8AAF6E" : "#1e293b"} strokeWidth="2" className="transition-all duration-300" />
-            <circle cx="80" cy="120" r="10" fill="#020617" stroke={networkDegree >= 1 ? "#8AAF6E" : "#1e293b"} strokeWidth="2" className="transition-all duration-300" />
+            <circle cx="80" cy="40" r="10" fill="#020617" stroke={networkDegree >= 1 ? "#8AAF6E" : "#2C3A23"} strokeWidth="2" className="transition-all duration-300" />
+            <circle cx="80" cy="120" r="10" fill="#020617" stroke={networkDegree >= 1 ? "#8AAF6E" : "#2C3A23"} strokeWidth="2" className="transition-all duration-300" />
 
             {/* 2nd Degree Nodes */}
-            <circle cx="30" cy="25" r="8" fill="#020617" stroke={networkDegree >= 2 ? "#eeba76" : "#1e293b"} strokeWidth="1.5" className="transition-all duration-300" />
-            <circle cx="30" cy="60" r="8" fill="#020617" stroke={networkDegree >= 2 ? "#eeba76" : "#1e293b"} strokeWidth="1.5" className="transition-all duration-300" />
+            <circle cx="30" cy="25" r="8" fill="#020617" stroke={networkDegree >= 2 ? "#eeba76" : "#2C3A23"} strokeWidth="1.5" className="transition-all duration-300" />
+            <circle cx="30" cy="60" r="8" fill="#020617" stroke={networkDegree >= 2 ? "#eeba76" : "#2C3A23"} strokeWidth="1.5" className="transition-all duration-300" />
 
             {/* 3rd Degree Node */}
-            <circle cx="210" cy="30" r="7" fill="#020617" stroke={networkDegree >= 3 ? "#818cf8" : "#1e293b"} strokeWidth="1" className="transition-all duration-300" />
-            <circle cx="270" cy="80" r="7" fill="#020617" stroke={networkDegree >= 3 ? "#818cf8" : "#1e293b"} strokeWidth="1" className="transition-all duration-300" />
+            <circle cx="210" cy="30" r="7" fill="#020617" stroke={networkDegree >= 3 ? "#b4cc90" : "#2C3A23"} strokeWidth="1" className="transition-all duration-300" />
+            <circle cx="270" cy="80" r="7" fill="#020617" stroke={networkDegree >= 3 ? "#b4cc90" : "#2C3A23"} strokeWidth="1" className="transition-all duration-300" />
           </svg>
         </div>
 

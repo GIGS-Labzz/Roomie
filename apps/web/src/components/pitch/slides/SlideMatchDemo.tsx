@@ -65,7 +65,7 @@ export default function SlideMatchDemo() {
             <div className="flex justify-between text-xs font-mono text-slate-400 mb-2">
               <span className="flex items-center gap-1"><Sun className="w-3.5 h-3.5 text-amber-400" /> Early Bird</span>
               <span className="text-white font-bold">Sleep Schedule</span>
-              <span className="flex items-center gap-1"><Moon className="w-3.5 h-3.5 text-indigo-400" /> Night Owl</span>
+              <span className="flex items-center gap-1"><Moon className="w-3.5 h-3.5 text-brand-300" /> Night Owl</span>
             </div>
             <input
               type="range"
