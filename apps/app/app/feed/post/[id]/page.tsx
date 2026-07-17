@@ -24,15 +24,22 @@ function CommentItem({ comment }: { comment: PostComment }) {
   else if (m >= 60 && m < 1440) timeStr = `${Math.floor(m / 60)}h`;
   else if (m >= 1440) timeStr = `${Math.floor(m / 1440)}d`;
 
+  const author = comment.author || {
+    id: comment.user_id,
+    display_name: "Anonymous User",
+    username: null,
+    avatar_url: null,
+  };
+
   return (
     <div className="flex gap-3 p-4 bg-white rounded-2xl border border-slate-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition-all">
-      <Link href={getProfileHref(comment.author)} className="flex-shrink-0">
-        <Avatar src={comment.author.avatar_url} name={comment.author.display_name} size="sm" />
+      <Link href={getProfileHref(author)} className="flex-shrink-0">
+        <Avatar src={author.avatar_url} name={author.display_name} size="sm" />
       </Link>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <Link href={getProfileHref(comment.author)} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors">
-            {comment.author.display_name}
+          <Link href={getProfileHref(author)} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors">
+            {author.display_name}
           </Link>
           <span className="text-xs text-slate-300">·</span>
           <span className="text-xs text-slate-400">{timeStr}</span>

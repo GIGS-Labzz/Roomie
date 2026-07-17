@@ -31,7 +31,13 @@ export function ReplyComposerModal({
   currentUserName,
   onSuccess,
 }: ReplyComposerModalProps) {
-  const parentUsername = parentPost.author.username || "user";
+  const parentAuthor = parentPost.author || {
+    id: parentPost.user_id,
+    display_name: "Anonymous User",
+    username: null,
+    avatar_url: null,
+  };
+  const parentUsername = parentAuthor.username || "user";
   const [content, setContent] = useState(`@${parentUsername} `);
   const [city, setCity] = useState("");
   const [showLocation, setShowLocation] = useState(false);
@@ -185,11 +191,11 @@ export function ReplyComposerModal({
             {/* Thread line */}
             <div className="absolute left-[21px] top-9 bottom-0 w-0.5 bg-slate-100" />
             <div className="flex-shrink-0">
-              <Avatar src={parentPost.author.avatar_url} name={parentPost.author.display_name} size="sm" />
+              <Avatar src={parentAuthor.avatar_url} name={parentAuthor.display_name} size="sm" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-slate-800 text-sm">{parentPost.author.display_name}</span>
+                <span className="font-semibold text-slate-800 text-sm">{parentAuthor.display_name}</span>
                 {parentPost.city && (
                   <span className="text-xs text-slate-400 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />

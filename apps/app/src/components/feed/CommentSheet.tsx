@@ -44,7 +44,7 @@ export function CommentSheet({
     const supabase = createClient();
     getComments(supabase, postId).then((data) => {
       data.forEach((c) => {
-        if (c.author.username) {
+        if (c.author?.username) {
           registerUsernameId(c.author.username, c.author.id);
         }
       });
@@ -62,7 +62,7 @@ export function CommentSheet({
     const comment = await addComment(supabase, postId, user.id, text.trim());
     setIsSending(false);
     if (comment) {
-      if (comment.author.username) {
+      if (comment.author?.username) {
         registerUsernameId(comment.author.username, comment.author.id);
       }
       setComments((prev) => [...prev, comment]);
@@ -148,15 +148,15 @@ export function CommentSheet({
               <div key={c.id} className="flex gap-3">
                 <div className="flex-shrink-0">
                   <Avatar
-                    src={c.author.avatar_url}
-                    name={c.author.display_name}
+                    src={c.author?.avatar_url || null}
+                    name={c.author?.display_name || "User"}
                     size="sm"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className="font-semibold text-sm text-slate-900">
-                      {c.author.display_name}
+                      {c.author?.display_name || "User"}
                     </span>
                     <span className="text-xs text-slate-400">{timeAgo(c.created_at)}</span>
                   </div>

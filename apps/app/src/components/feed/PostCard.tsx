@@ -49,9 +49,19 @@ const REACTIONS = [
 ];
 
 export function PostCard({ post, currentUser, currentUserName, currentUserAvatar }: PostCardProps) {
+  const author = post.author || {
+    id: post.user_id,
+    display_name: "Anonymous User",
+    username: null,
+    avatar_url: null,
+    university: null,
+    city: null,
+    student_verified: false,
+  };
+
   // Register authors in the mention cache
-  if (post.author.username) {
-    registerUsernameId(post.author.username, post.author.id);
+  if (author.username) {
+    registerUsernameId(author.username, author.id);
   }
   if (post.parent_post?.author?.username) {
     registerUsernameId(post.parent_post.author.username, post.parent_post.author.id);
@@ -86,7 +96,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
   
   const budget = formatBudget(post.budget_min, post.budget_max);
   const isOwnPost = currentUser?.id === post.user_id;
-  const authorHref = getProfileHref(post.author);
+  const authorHref = getProfileHref(author);
 
   const handleReact = async (type: string) => {
     if (!currentUser) return;
@@ -126,7 +136,7 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Roomie post by ${post.author.display_name}`,
+          title: `Roomie post by ${author.display_name}`,
           text: post.content,
           url: postUrl,
         });
@@ -179,8 +189,8 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
           <div className="flex items-start gap-3 min-w-0">
             <Link href={authorHref} className="flex-shrink-0">
               <Avatar
-                src={post.author.avatar_url}
-                name={post.author.display_name}
+                src={author.avatar_url}
+                name={author.display_name}
                 size="md"
                 className="ring-2 ring-sage-surface"
               />
@@ -189,13 +199,13 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Link href={authorHref}>
                   <span className="font-display font-semibold text-slate-900 text-sm leading-tight hover:text-brand-600 transition-colors">
-                    {post.author.display_name}
+                    {author.display_name}
                   </span>
                 </Link>
-                {post.author.username && (
-                  <span className="text-xs text-slate-400">@{post.author.username}</span>
+                {author.username && (
+                  <span className="text-xs text-slate-400">@{author.username}</span>
                 )}
-                {post.author.student_verified && (
+                {author.student_verified && (
                   <span
                     className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-brand-500 flex-shrink-0"
                     title="Student ID verified by Roomie"
@@ -207,18 +217,18 @@ export function PostCard({ post, currentUser, currentUserName, currentUserAvatar
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                {post.author.university && (
+                {author.university && (
                   <span className="text-xs text-slate-400 truncate max-w-[160px]">
-                    {post.author.university}
+                    {author.university}
                   </span>
                 )}
-                {post.author.university && (post.author.city || post.city) && (
+                {author.university && (author.city || post.city) && (
                   <span className="text-xs text-slate-300">·</span>
                 )}
-                {(post.city || post.author.city) && (
+                {(post.city || author.city) && (
                   <span className="text-xs text-slate-400 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{post.city ?? post.author.city}</span>
+                    <span>{post.city ?? author.city}</span>
                   </span>
                 )}
               </div>
