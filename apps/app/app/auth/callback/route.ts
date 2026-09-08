@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { getOnboardingRoute } from "@/lib/onboardingRoute";
 import type { Database } from "@repo/db/types";
 
 export async function GET(request: NextRequest) {
@@ -32,33 +33,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/signin?error=oauth_failed`);
   }
 
-  // Profile is auto-created by DB trigger on_auth_user_created
-  // Check onboarding state — redirect to appropriate step
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.redirect(`${origin}/auth/signin`);
   }
 
-  const { data: profileData } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profileData } = await (supabase as any)
     .from("profiles")
-    .select("onboarding_complete, onboarding_step")
+    .select("onboarding_complete, onboarding_step, user_type")
     .eq("id", user.id)
     .single();
 
-  const profile = profileData as { onboarding_complete: boolean | null; onboarding_step: number | null } | null;
+  const profile = profileData as {
+    onboarding_complete: boolean | null;
+    onboarding_step: number | null;
+    user_type: string | null;
+  } | null;
 
   if (!profile || !profile.onboarding_complete) {
     const step = profile?.onboarding_step ?? 0;
-    const stepRoutes: Record<number, string> = {
-      0: "/onboarding/welcome",
-      1: "/onboarding/basics",
-      2: "/onboarding/university",
-      3: "/onboarding/vibe",
-      4: "/onboarding/budget",
-      5: "/onboarding/verify",
-    };
-    return NextResponse.redirect(`${origin}${stepRoutes[step] ?? "/onboarding/welcome"}`);
+    const route = getOnboardingRoute(step, profile?.user_type);
+    return NextResponse.redirect(`${origin}${route}`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

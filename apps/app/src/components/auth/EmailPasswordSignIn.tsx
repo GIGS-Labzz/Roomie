@@ -35,21 +35,14 @@ export function EmailPasswordSignIn() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile } = await (supabase as any)
       .from("profiles")
-      .select("onboarding_complete, onboarding_step")
+      .select("onboarding_complete, onboarding_step, user_type")
       .eq("id", data.user.id)
-      .single() as { data: { onboarding_complete: boolean | null; onboarding_step: number | null } | null };
+      .single() as { data: { onboarding_complete: boolean | null; onboarding_step: number | null; user_type: string | null } | null };
 
     if (!profile?.onboarding_complete) {
       const step = profile?.onboarding_step ?? 0;
-      const stepRoutes: Record<number, string> = {
-        0: "/onboarding/welcome",
-        1: "/onboarding/basics",
-        2: "/onboarding/university",
-        3: "/onboarding/vibe",
-        4: "/onboarding/budget",
-        5: "/onboarding/verify",
-      };
-      router.push(stepRoutes[step] ?? "/onboarding/welcome");
+      const { getOnboardingRoute } = await import("@/lib/onboardingRoute");
+      router.push(getOnboardingRoute(step, profile?.user_type));
     } else {
       router.push("/feed");
     }

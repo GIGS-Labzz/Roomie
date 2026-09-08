@@ -42,14 +42,14 @@ export default function VibePage() {
       sleep_schedule: form.sleep_schedule as "early_bird" | "night_owl" | "flexible",
       cleanliness: form.cleanliness as "very_tidy" | "tidy" | "relaxed" | "messy",
       noise_pref: form.noise_pref as "very_quiet" | "quiet" | "moderate" | "lively",
-      onboarding_step: 4,
+      onboarding_step: 9,
     }).eq("id", user.id);
     router.push("/onboarding/budget");
   };
 
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 py-10">
-      <OnboardingProgress currentStep={3} />
+      <OnboardingProgress currentStep={8} totalSteps={9} />
 
       <h2 className="text-2xl font-display font-semibold text-slate-900 mt-8 mb-6">
         Your vibe

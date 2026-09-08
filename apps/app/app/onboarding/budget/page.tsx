@@ -35,14 +35,14 @@ export default function BudgetPage() {
       max_budget: maxBudget,
       move_in_date: moveInDate || null,
       roommate_gender_pref: (genderPref as "male" | "female" | null) || null,
-      onboarding_step: 5,
+      onboarding_step: 10,
     }).eq("id", user.id);
-    router.push("/onboarding/verify");
+    router.push("/onboarding/success");
   };
 
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-6 py-10">
-      <OnboardingProgress currentStep={4} />
+      <OnboardingProgress currentStep={9} totalSteps={9} />
 
       <h2 className="text-2xl font-display font-semibold text-slate-900 mt-8 mb-6">
         Budget & timeline

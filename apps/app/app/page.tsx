@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getOnboardingRoute } from "@/lib/onboardingRoute";
 import type { Database } from "@repo/db/types";
+
+export { getOnboardingRoute };
 
 export default async function RootPage() {
   const cookieStore = await cookies();
@@ -22,24 +25,22 @@ export default async function RootPage() {
 
   if (!user) redirect("/auth/signin");
 
-  const { data: profileData } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profileData } = await (supabase as any)
     .from("profiles")
-    .select("onboarding_complete, onboarding_step")
+    .select("onboarding_complete, onboarding_step, user_type")
     .eq("id", user.id)
     .single();
 
-  const profile = profileData as { onboarding_complete: boolean | null; onboarding_step: number | null } | null;
+  const profile = profileData as {
+    onboarding_complete: boolean | null;
+    onboarding_step: number | null;
+    user_type: string | null;
+  } | null;
 
   if (!profile?.onboarding_complete) {
-    const stepRoutes: Record<number, string> = {
-      0: "/onboarding/welcome",
-      1: "/onboarding/basics",
-      2: "/onboarding/university",
-      3: "/onboarding/vibe",
-      4: "/onboarding/budget",
-      5: "/onboarding/verify",
-    };
-    redirect(stepRoutes[profile?.onboarding_step ?? 0] ?? "/onboarding/welcome");
+    const step = profile?.onboarding_step ?? 0;
+    redirect(getOnboardingRoute(step, profile?.user_type));
   }
 
   redirect("/feed");
