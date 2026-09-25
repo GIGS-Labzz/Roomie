@@ -11,6 +11,7 @@ interface LogoProps {
   showWordmark?: boolean;
   href?: string;
   className?: string;
+  markClassName?: string;
 }
 
 const sizes = {
@@ -20,17 +21,16 @@ const sizes = {
   lg: { wrap: "w-12 h-12 rounded-2xl", icon: "w-7 h-7",     text: "text-3xl"  },
 };
 
-function LogoMark({ size = "md" }: { size?: LogoSize }) {
+function LogoMark({ size = "md", className = "" }: { size?: LogoSize; className?: string }) {
   const s = sizes[size];
   return (
     <span
-      className={`${s.wrap} bg-brand-500 flex items-center justify-center flex-shrink-0 overflow-hidden`}
-      style={{ boxShadow: "0 4px 14px rgba(138,175,110,0.32)" }}
+      className={`${s.wrap} ${className} flex items-center justify-center flex-shrink-0 overflow-hidden`}
     >
       <img
         src="/logo.jpg"
         alt="Roomie"
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain mix-blend-multiply"
       />
     </span>
   );
@@ -42,13 +42,14 @@ export function Logo({
   showWordmark = true,
   href,
   className = "",
+  markClassName = "",
 }: LogoProps) {
   const s = sizes[size];
   const textColor = variant === "light" ? "text-white" : "text-slate-900";
 
   const content = (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={size} />
+      <LogoMark size={size} className={markClassName} />
       {showWordmark && (
         <span
           className={`font-display font-semibold ${s.text} tracking-tight ${textColor} leading-none`}
@@ -61,7 +62,11 @@ export function Logo({
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex hover:opacity-90 transition-opacity">
+      <Link
+        href={href}
+        aria-label={showWordmark ? undefined : "Roomie home"}
+        className="inline-flex rounded-full hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+      >
         {content}
       </Link>
     );
