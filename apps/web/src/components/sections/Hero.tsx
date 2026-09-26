@@ -16,7 +16,7 @@ export function Hero() {
     >
 
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 pb-8 text-center">
-        <span className="block font-bricolage text-2xl font-medium text-[#1A1A1A] sm:text-3xl md:text-4xl">The Solution to</span>
+        <span className="block font-bricolage text-2xl font-medium text-[#1A1A1A] sm:text-3xl md:text-4xl">The <span className="text-red-500 text-3xl sm:text-4xl md:text-5xl" style={{ fontFamily: "'Dancing Script', cursive" }}>Trusted</span> Solution to</span>
           <span className="font-bricolage text-[#E07A5F] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl">Shared Housing.</span>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#1A1A1A]/80 sm:text-xl">
           built for Nigerian students and young professionals.
