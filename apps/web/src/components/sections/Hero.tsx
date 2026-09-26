@@ -31,7 +31,7 @@ export function Hero() {
             }
             onDone={() =>
               window.open(
-                "https://youtube.com/shorts/AaGZ56Qh6lA?si=i_39DkdDFZ6w0NXG",
+                "https://youtu.be/cjbqy4a8j00?si=uYfJCYWav2tZrE3n",
                 "_blank"
               )
             }
