@@ -167,7 +167,7 @@ export function RoomieAuth() {
                   onClick={handleStartAuth}
                   className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-2xl transition-all shadow-[0_4px_14px_rgba(138,175,110,0.3)] active:scale-[0.98]"
                 >
-                  <img src="/logo.jpg" alt="" className="w-5 h-5 rounded-md object-cover" />
+                  <img src="/logo.png" alt="" className="w-5 h-5 rounded-md object-cover" />
                   <span>Continue with Roomie</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>

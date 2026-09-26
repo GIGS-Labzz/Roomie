@@ -33,7 +33,7 @@ function Logo() {
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shrink-0 overflow-hidden">
-        <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
+        <img src="/logo.png" alt="Roomie" className="w-full h-full object-cover" />
       </div>
       <div>
         <div className="font-display font-bold text-slate-900 text-sm leading-none">Roomie</div>

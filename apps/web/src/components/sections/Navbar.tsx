@@ -41,13 +41,13 @@ export function Navbar() {
         aria-label="Primary navigation"
         className="mx-auto flex w-full max-w-max items-center justify-between rounded-full bg-black p-1.5 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] md:w-fit md:justify-center md:bg-transparent md:p-0 md:shadow-none"
       >
-        <Logo
+        {/* <Logo
           href="/"
-          size="sm"
+          size="lg"
           showWordmark={false}
-          className="relative z-20 -mr-1 rounded-full bg-black p-4"
+          className="relative z-20 rounded-full bg-[#F4F4F0] mr-3"
           markClassName="rounded-full bg-[#f4f4f0] p-1"
-        />
+        /> */}
 
         <div className="relative z-10 hidden items-center rounded-full bg-black px-4 py-2 before:pointer-events-none before:absolute before:inset-1.5 before:rounded-full before:border before:border-white/30 md:flex">
           {navLinks.map((link, index) => (
@@ -67,7 +67,7 @@ export function Navbar() {
           onClick={openWaitlist}
           className="relative z-10 -ml-1 hidden min-h-14 items-center justify-center rounded-full bg-black px-4 before:pointer-events-none before:absolute before:inset-1.5 before:rounded-full before:border before:border-white/30 md:inline-flex"
         >
-          <span className="relative z-10 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-black">
+          <span className="relative z-10 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-colors ">
             Get the app
           </span>
         </button>

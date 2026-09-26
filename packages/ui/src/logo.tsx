@@ -28,9 +28,9 @@ function LogoMark({ size = "md", className = "" }: { size?: LogoSize; className?
       className={`${s.wrap} ${className} flex items-center justify-center flex-shrink-0 overflow-hidden`}
     >
       <img
-        src="/logo.jpg"
+        src="/logo.png"
         alt="Roomie"
-        className="w-full h-full object-contain mix-blend-multiply"
+        className="w-full h-full object-contain"
       />
     </span>
   );
