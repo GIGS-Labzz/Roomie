@@ -18,3 +18,9 @@ body {
 .font-display {
   font-family: "Clash Display", sans-serif;
 }
+
+.font-bricolage {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-optical-sizing: auto;
+  font-variation-settings: "wdth" 100;
+}

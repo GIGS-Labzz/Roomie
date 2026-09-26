@@ -34,12 +34,12 @@ const steps = [
   },
 ];
 
-export function HowItWorks() {
+export function Intro() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section id="how-it-works" ref={ref} className="py-24 px-6 bg-white">
+    <section id="how-it-works" ref={ref} className="py-24 px-6 bg-black">
       <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}

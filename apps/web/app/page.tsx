@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/sections/Navbar";
 import { Hero } from "@/components/sections/Hero";
-import { HowItWorks } from "@/components/sections/HowItWorks";
+import { Intro } from "@/components/sections/Intro";
 import { WhyRoomie } from "@/components/sections/WhyRoomie";
 import { RoomieAuth } from "@/components/sections/RoomieAuth";
 import { Pricing } from "@/components/sections/Pricing";
@@ -14,13 +14,17 @@ export default function HomePage() {
       <Navbar />
       <main className="overflow-x-hidden scroll-smooth">
         <Hero />
-        <HowItWorks />
-        <WhyRoomie />
-        <RoomieAuth />
-        <Pricing />
-        <ForProviders />
-        <AppPreview />
-        <Footer />
+        {/* Spacer to account for the fixed hero */}
+        <div className="h-[100svh]" />
+        <div className="relative z-10">
+          <Intro />
+          <WhyRoomie />
+          <RoomieAuth />
+          <Pricing />
+          <ForProviders />
+          <AppPreview />
+          <Footer />
+        </div>
       </main>
     </>
   );
