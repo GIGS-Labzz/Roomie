@@ -2,7 +2,7 @@ import Paragraph from "../externals/Paragraph";
 import Word from "../externals/Word";
 import Cards from "../externals/Cards";
 
-const paragraph = "Roomie is a platform that connects students and young professionals with compatible roommates. It is a platform that helps people find roommates that they can live with comfortably."
+const paragraph = "Every year, thousands of Nigerian students move in with someone they barely know — and regret it within weeks. Bad roommates drain your money, your peace, and your grades. Roomie makes sure that never happens to you."
 
 
 export function Intro() {

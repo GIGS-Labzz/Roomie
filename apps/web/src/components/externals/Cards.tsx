@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import TextType from "./Texttype"
+import { useWaitlist } from "@/context/waitlist"
 
 interface RoommateProfile {
     id: number
@@ -11,6 +12,9 @@ interface RoommateProfile {
     religion: string
     location: string
     budget: string
+    verified: boolean
+    online: boolean
+    matchPercent: number
 }
 
 const profiles: RoommateProfile[] = [
@@ -21,7 +25,10 @@ const profiles: RoommateProfile[] = [
         role: "Student",
         religion: "Christian",
         location: "Lekki, Lagos",
-        budget: "₦250k/mo"
+        budget: "₦250k/mo",
+        verified: true,
+        online: true,
+        matchPercent: 94,
     },
     {
         id: 2,
@@ -30,7 +37,10 @@ const profiles: RoommateProfile[] = [
         role: "Student",
         religion: "Muslim",
         location: "Wuse, Abuja",
-        budget: "₦180k/mo"
+        budget: "₦180k/mo",
+        verified: true,
+        online: false,
+        matchPercent: 87,
     },
     {
         id: 3,
@@ -39,7 +49,10 @@ const profiles: RoommateProfile[] = [
         role: "Corper",
         religion: "Christian",
         location: "Ikeja, Lagos",
-        budget: "₦150k/mo"
+        budget: "₦150k/mo",
+        verified: true,
+        online: true,
+        matchPercent: 91,
     },
     {
         id: 4,
@@ -48,7 +61,10 @@ const profiles: RoommateProfile[] = [
         role: "Professional",
         religion: "Christian",
         location: "VI, Lagos",
-        budget: "₦350k/mo"
+        budget: "₦350k/mo",
+        verified: true,
+        online: false,
+        matchPercent: 78,
     },
     {
         id: 5,
@@ -57,7 +73,10 @@ const profiles: RoommateProfile[] = [
         role: "Student",
         religion: "Christian",
         location: "Bodija, Ibadan",
-        budget: "₦120k/mo"
+        budget: "₦120k/mo",
+        verified: false,
+        online: true,
+        matchPercent: 85,
     },
     {
         id: 6,
@@ -66,8 +85,19 @@ const profiles: RoommateProfile[] = [
         role: "Corper",
         religion: "Muslim",
         location: "GRA, Port Harcourt",
-        budget: "₦200k/mo"
+        budget: "₦200k/mo",
+        verified: true,
+        online: true,
+        matchPercent: 92,
     },
+]
+
+const testimonials = [
+    { text: "My mum was so relieved I found a verified roommate through Roomie", name: "Tunde", school: "UNILAG" },
+    { text: "Moved in 3 days after matching. Best decision ever.", name: "Amina", school: "Abuja" },
+    { text: "No more horror stories. Roomie just works.", name: "Chidi", school: "OAU" },
+    { text: "I was scared of sharing with a stranger. Roomie made it safe.", name: "Folake", school: "LASU" },
+    { text: "Found someone who matches my budget AND my vibe. Unreal.", name: "Emeka", school: "UI" },
 ]
 
 // Predefined tilt angles for each visible card position
@@ -136,13 +166,45 @@ function ProfileCard({ profile, tilt, blur, scale, offsetX, zIndex, scrollSpread
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e] via-transparent to-transparent" />
 
+                    {/* Verified badge — top-right of image */}
+                    {profile.verified && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/90 backdrop-blur-sm shadow-lg">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                            <span className="text-white text-[10px] font-bold tracking-wide uppercase">Verified</span>
+                        </div>
+                    )}
+
+                    {/* Compatibility tag — top-left of image */}
+                    <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <span className="text-white/90 text-[10px] font-bold">{profile.matchPercent}% match</span>
+                    </div>
+
                     {/* Name overlay on image */}
                     <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white font-bold text-lg tracking-tight leading-tight">
-                            {profile.name}
-                        </h3>
-                        <div className={`inline-flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-semibold tracking-wide uppercase ${getRoleBadgeColor(profile.role)}`}>
-                            {profile.role}
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-white font-bold text-lg tracking-tight leading-tight">
+                                {profile.name}
+                            </h3>
+                            {/* Online indicator dot */}
+                            {profile.online && (
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-semibold tracking-wide uppercase ${getRoleBadgeColor(profile.role)}`}>
+                                {profile.role}
+                            </div>
+                            {profile.online && (
+                                <span className="text-emerald-400/80 text-[10px] font-medium">Active now</span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -183,6 +245,7 @@ function ProfileCard({ profile, tilt, blur, scale, offsetX, zIndex, scrollSpread
 }
 
 export default function Cards() {
+    const { openWaitlist } = useWaitlist()
     const [activeIndex, setActiveIndex] = useState(0)
     const intervalRef = useRef<NodeJS.Timeout | null>(null)
     const isPaused = useRef(false)
@@ -255,26 +318,25 @@ export default function Cards() {
             onMouseLeave={handleMouseLeave}
         >
             <motion.div
-                className="flex items-center justify-center px-6 sm:px-12 md:px-24 mb-12 sm:mb-16"
+                className="flex flex-col items-center justify-center px-6 sm:px-12 md:px-24 mb-12 sm:mb-16"
                 style={{ opacity: scrollOpacity, y: scrollY }}
             >
                 <h2
                     className="text-white text-2xl sm:text-3xl md:text-4xl text-center font-medium max-w-4xl"
                     style={{ fontFamily: "'Poppins', sans-serif", lineHeight: 1.75 }}
                 >
-                    A better{" "}
+                    Stop gambling on{" "}
                     <TextType
-                        text={["Home", "Off-Campus Experience", "Crib"]}
+                        text={["strangers", "random flatmates", "bad roommates"]}
                         as="span"
                         typingSpeed={75}
                         pauseDuration={1500}
                         deletingSpeed={50}
                         cursorBlinkDuration={0.5}
                     />
-                    , starts with the {" "}
                     <br />
                     <span className="relative inline-block font-bricolage font-bold text-3xl sm:text-4xl md:text-7xl text-red-500">
-                        Right Person
+                        Find Your Person
                         <svg
                             className="absolute -bottom-1 left-0 w-full"
                             viewBox="0 0 200 12"
@@ -301,6 +363,9 @@ export default function Cards() {
                         </svg>
                     </span>
                 </h2>
+                <p className="text-white/50 text-sm sm:text-base mt-4 max-w-xl text-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    Verified roommates who actually match your lifestyle, budget, and vibe.
+                </p>
             </motion.div>
 
             {/* Cards carousel with scroll-driven animation */}
@@ -330,7 +395,67 @@ export default function Cards() {
                 </AnimatePresence>
             </motion.div>
 
+            {/* CTA Block — Social proof + action */}
+            <motion.div
+                className="relative z-30 flex flex-col items-center justify-center mt-8 sm:mt-12 px-6"
+                style={{ opacity: scrollOpacity }}
+            >
+                {/* Social proof counter */}
+                <div className="flex items-center gap-2 mb-5">
+                    <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+                    </span>
+                    <span className="text-white/60 text-sm font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <span className="text-white font-bold">127</span> people joined this week
+                    </span>
+                </div>
 
+                {/* CTA button */}
+                <button
+                    onClick={openWaitlist}
+                    className="group relative inline-flex items-center gap-3 px-10 py-4 bg-[#E07A5F] hover:bg-[#d4694f] text-white font-bold text-base sm:text-lg rounded-2xl transition-all duration-200 shadow-lg shadow-[#E07A5F]/25 hover:shadow-xl hover:shadow-[#E07A5F]/30 hover:translate-y-[-2px] active:translate-y-0"
+                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                    Find Your Roommate — It&apos;s Free
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                    </svg>
+                </button>
+
+                {/* Risk remover */}
+                <p className="text-white/40 text-xs mt-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    No payment until you&apos;re both ready. No subscriptions. Ever.
+                </p>
+            </motion.div>
+
+            {/* Testimonial strip */}
+            <motion.div
+                className="relative z-30 mt-12 sm:mt-16 overflow-hidden"
+                style={{ opacity: scrollOpacity }}
+            >
+                <div className="flex animate-marquee gap-8 w-max">
+                    {[...testimonials, ...testimonials].map((t, i) => (
+                        <div
+                            key={i}
+                            className="flex-shrink-0 flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm max-w-sm"
+                        >
+                            <div className="flex-shrink-0 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+                                <span className="text-white/70 text-sm font-bold">{t.name[0]}</span>
+                            </div>
+                            <div>
+                                <p className="text-white/70 text-sm leading-snug" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                    &ldquo;{t.text}&rdquo;
+                                </p>
+                                <p className="text-white/30 text-[11px] mt-1 font-medium">
+                                    — {t.name}, {t.school}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
 
             {/* Subtle edge gradient overlays */}
             <div className="pointer-events-none absolute inset-y-0 left-0 w-32 sm:w-48 bg-gradient-to-r from-[#24685f] to-transparent z-20" />
