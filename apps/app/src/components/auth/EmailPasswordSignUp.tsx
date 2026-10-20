@@ -65,7 +65,7 @@ export function EmailPasswordSignUp() {
     }
 
     if (data.session) {
-      router.push("/onboarding/welcome");
+      router.push("/feed");
     } else {
       setSuccess(true);
       setLoading(false);

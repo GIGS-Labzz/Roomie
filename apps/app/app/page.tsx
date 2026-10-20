@@ -22,25 +22,6 @@ export default async function RootPage() {
 
   if (!user) redirect("/auth/signin");
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("onboarding_complete, onboarding_step")
-    .eq("id", user.id)
-    .single();
-
-  const profile = profileData as { onboarding_complete: boolean | null; onboarding_step: number | null } | null;
-
-  if (!profile?.onboarding_complete) {
-    const stepRoutes: Record<number, string> = {
-      0: "/onboarding/welcome",
-      1: "/onboarding/basics",
-      2: "/onboarding/university",
-      3: "/onboarding/vibe",
-      4: "/onboarding/budget",
-      5: "/onboarding/verify",
-    };
-    redirect(stepRoutes[profile?.onboarding_step ?? 0] ?? "/onboarding/welcome");
-  }
-
   redirect("/feed");
 }
+

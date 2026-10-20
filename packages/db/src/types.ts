@@ -915,6 +915,22 @@ export type Database = {
             | null
           verified_at: string | null
           year_of_study: number | null
+          user_type: "student" | "nysc_corper" | "young_professional" | null
+          state_of_origin: string | null
+          lga_of_origin: string | null
+          religion: string | null
+          age_range: string | null
+          nin_hash: string | null
+          nin_verified: boolean | null
+          nin_verified_at: string | null
+          nin_vendor_ref: string | null
+          face_verified: boolean | null
+          face_verified_at: string | null
+          face_vendor_ref: string | null
+          face_match_score: number | null
+          identity_verified: boolean | null
+          identity_verified_at: string | null
+          is_legacy_user: boolean | null
         }
         Insert: {
           age?: number | null
@@ -963,6 +979,22 @@ export type Database = {
             | null
           verified_at?: string | null
           year_of_study?: number | null
+          user_type?: "student" | "nysc_corper" | "young_professional" | null
+          state_of_origin?: string | null
+          lga_of_origin?: string | null
+          religion?: string | null
+          age_range?: string | null
+          nin_hash?: string | null
+          nin_verified?: boolean | null
+          nin_verified_at?: string | null
+          nin_vendor_ref?: string | null
+          face_verified?: boolean | null
+          face_verified_at?: string | null
+          face_vendor_ref?: string | null
+          face_match_score?: number | null
+          identity_verified?: boolean | null
+          identity_verified_at?: string | null
+          is_legacy_user?: boolean | null
         }
         Update: {
           age?: number | null
@@ -1011,8 +1043,227 @@ export type Database = {
             | null
           verified_at?: string | null
           year_of_study?: number | null
+          user_type?: "student" | "nysc_corper" | "young_professional" | null
+          state_of_origin?: string | null
+          lga_of_origin?: string | null
+          religion?: string | null
+          age_range?: string | null
+          nin_hash?: string | null
+          nin_verified?: boolean | null
+          nin_verified_at?: string | null
+          nin_vendor_ref?: string | null
+          face_verified?: boolean | null
+          face_verified_at?: string | null
+          face_vendor_ref?: string | null
+          face_match_score?: number | null
+          identity_verified?: boolean | null
+          identity_verified_at?: string | null
+          is_legacy_user?: boolean | null
         }
         Relationships: []
+      }
+      verification_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          session_type: "nin_lookup" | "face_match" | "liveness" | "document_upload"
+          vendor: string
+          vendor_ref: string | null
+          status: "pending" | "passed" | "failed" | "error" | "manual_review"
+          payload: Json | null
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          session_type: "nin_lookup" | "face_match" | "liveness" | "document_upload"
+          vendor?: string
+          vendor_ref?: string | null
+          status?: "pending" | "passed" | "failed" | "error" | "manual_review"
+          payload?: Json | null
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          session_type?: "nin_lookup" | "face_match" | "liveness" | "document_upload"
+          vendor?: string
+          vendor_ref?: string | null
+          status?: "pending" | "passed" | "failed" | "error" | "manual_review"
+          payload?: Json | null
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      student_verifications: {
+        Row: {
+          id: string
+          user_id: string
+          study_status: "undergraduate" | "postgraduate" | "diploma" | "hnd" | "other" | null
+          institution_name: string | null
+          institution_state: string | null
+          reg_number: string | null
+          reg_number_format_matched: boolean | null
+          document_type: "id_card" | "admission_letter" | "student_record" | "other" | null
+          document_url: string | null
+          document_status: "pending" | "approved" | "rejected" | null
+          submitted_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          study_status?: "undergraduate" | "postgraduate" | "diploma" | "hnd" | "other" | null
+          institution_name?: string | null
+          institution_state?: string | null
+          reg_number?: string | null
+          reg_number_format_matched?: boolean | null
+          document_type?: "id_card" | "admission_letter" | "student_record" | "other" | null
+          document_url?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          study_status?: "undergraduate" | "postgraduate" | "diploma" | "hnd" | "other" | null
+          institution_name?: string | null
+          institution_state?: string | null
+          reg_number?: string | null
+          reg_number_format_matched?: boolean | null
+          document_type?: "id_card" | "admission_letter" | "student_record" | "other" | null
+          document_url?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_verifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      nysc_verifications: {
+        Row: {
+          id: string
+          user_id: string
+          call_up_number: string | null
+          batch_year: string | null
+          state_of_posting: string | null
+          cds_group: string | null
+          cds_location: string | null
+          nysc_id_url: string | null
+          call_up_letter_url: string | null
+          document_status: "pending" | "approved" | "rejected" | null
+          submitted_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          call_up_number?: string | null
+          batch_year?: string | null
+          state_of_posting?: string | null
+          cds_group?: string | null
+          cds_location?: string | null
+          nysc_id_url?: string | null
+          call_up_letter_url?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          call_up_number?: string | null
+          batch_year?: string | null
+          state_of_posting?: string | null
+          cds_group?: string | null
+          cds_location?: string | null
+          nysc_id_url?: string | null
+          call_up_letter_url?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nysc_verifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      professional_verifications: {
+        Row: {
+          id: string
+          user_id: string
+          occupation: string | null
+          employer_name: string | null
+          employment_type: "employed" | "freelancer" | "contractor" | "other" | null
+          utility_bill_url: string | null
+          proof_of_occupation_url: string | null
+          proof_type: "employer_letter" | "payslip" | "freelance_receipt" | "linkedin_url" | "other" | null
+          proof_note: string | null
+          document_status: "pending" | "approved" | "rejected" | null
+          submitted_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          occupation?: string | null
+          employer_name?: string | null
+          employment_type?: "employed" | "freelancer" | "contractor" | "other" | null
+          utility_bill_url?: string | null
+          proof_of_occupation_url?: string | null
+          proof_type?: "employer_letter" | "payslip" | "freelance_receipt" | "linkedin_url" | "other" | null
+          proof_note?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          occupation?: string | null
+          employer_name?: string | null
+          employment_type?: "employed" | "freelancer" | "contractor" | "other" | null
+          utility_bill_url?: string | null
+          proof_of_occupation_url?: string | null
+          proof_type?: "employer_letter" | "payslip" | "freelance_receipt" | "linkedin_url" | "other" | null
+          proof_note?: string | null
+          document_status?: "pending" | "approved" | "rejected" | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_verifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       push_subscriptions: {
         Row: {

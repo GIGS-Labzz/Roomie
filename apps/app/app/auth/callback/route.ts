@@ -6,7 +6,7 @@ import type { Database } from "@repo/db/types";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/discover";
+  const next = searchParams.get("next") ?? "/feed";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/signin?error=missing_code`);
@@ -32,33 +32,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/signin?error=oauth_failed`);
   }
 
-  // Profile is auto-created by DB trigger on_auth_user_created
-  // Check onboarding state — redirect to appropriate step
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.redirect(`${origin}/auth/signin`);
-  }
-
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("onboarding_complete, onboarding_step")
-    .eq("id", user.id)
-    .single();
-
-  const profile = profileData as { onboarding_complete: boolean | null; onboarding_step: number | null } | null;
-
-  if (!profile || !profile.onboarding_complete) {
-    const step = profile?.onboarding_step ?? 0;
-    const stepRoutes: Record<number, string> = {
-      0: "/onboarding/welcome",
-      1: "/onboarding/basics",
-      2: "/onboarding/university",
-      3: "/onboarding/vibe",
-      4: "/onboarding/budget",
-      5: "/onboarding/verify",
-    };
-    return NextResponse.redirect(`${origin}${stepRoutes[step] ?? "/onboarding/welcome"}`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

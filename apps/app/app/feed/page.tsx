@@ -180,7 +180,7 @@ export default function FeedPage() {
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <img src="/logo.jpg" alt="Roomie" className="w-full h-full object-cover" />
+                <img src="/logo.png" alt="Roomie" className="w-full h-full object-cover" />
               </div>
               <span className="font-display font-bold text-slate-900 text-lg leading-none">Roomie</span>
             </div>
