@@ -1,110 +1,102 @@
 # Roomie
 
-> Roomie is a modern monorepo for a roommate discovery and management platform. It includes a production-ready Next.js app, an admin interface, a web client, shared UI components, and database/package utilities — designed for discoverability, onboarding, and matching roommates based on preferences and compatibility.
+> Roomie is a modern monorepo for a roommate discovery and management platform built for the Nigerian market. It includes a Next.js consumer app, an admin dashboard, a marketing website, a NestJS API, shared UI components, and database utilities — designed for discoverability, trust, and matching roommates based on compatibility.
 
-## Key Features
-- Fast, SEO-friendly frontend built with Next.js (multiple apps in the monorepo)
-- Admin dashboard for management and moderation
-- Onboarding flows with profile verification and preference capture
-- Discover & compatibility matching between profiles
-- Reusable UI components in `packages/ui`
-- Database helpers and queries in `packages/db`
-- Supabase config and SQL migrations for local dev
+---
 
-## Repository layout (high level)
-- `apps/` — Next.js applications (app, admin, web)
-- `packages/` — shared packages (ui, db, config, types, etc.)
-- `supabase/` — Supabase config, migrations, seed data
-- `implementationRoomie.md` — project implementation notes
+## 🚦 Current State of the Project
 
-For details see the actual folder contents in the repo.
+| Area | Status | Notes |
+|---|---|---|
+| **Consumer App** (`apps/app`) | 🟢 Active Development | Core features live — feed, discover, chat, connections, splits, housing, profile, notifications, settings, privacy/terms. Identity verification (KYC) flow in progress. |
+| **Admin Dashboard** (`apps/admin`) | 🟢 Active Development | Login, registration, dashboard, pending reviews, super-admin panel. |
+| **Marketing Website** (`apps/web`) | 🟡 Under Construction | Displays an "Under Construction" landing page with an email notification form. 
+| **API** (`apps/api`) | 🟢 Active Development | NestJS backend with Prisma ORM. Handles server-side business logic. |
+| **Shared Packages** | 🟢 Stable | `packages/ui` (component library), `packages/db` (Supabase queries & types), `packages/config`, `packages/animations`, `packages/eslint-config`, `packages/typescript-config`. |
+| **Database** | 🟢 40 Migrations Applied | Supabase (Postgres + Auth).
 
-## Tech stack
-- Next.js (App Router)
-- TypeScript
-- Tailwind CSS
-- Supabase (Postgres + auth) and SQL migrations
-- Monorepo toolchain (node package manager of choice: pnpm/yarn/npm)
+
+## Repository Layout
+```
+apps/
+  app/       → Next.js consumer app (App Router)
+  admin/     → Next.js admin dashboard
+  web/       → Next.js marketing website (currently under construction)
+  api/       → NestJS API server (Prisma ORM)
+packages/
+  ui/        → Shared React component library
+  db/        → Supabase queries, types, and helpers
+  config/    → Shared configuration
+  animations/→ Shared animation assets
+  eslint-config/       → Shared ESLint configuration
+  typescript-config/   → Shared TypeScript configuration
+supabase/
+  migrations/  → 40 SQL migration files (0001–0040)
+```
+
+## Tech Stack
+- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS, Framer Motion
+- **Backend API:** NestJS, Prisma ORM
+- **Database & Auth:** Supabase (Postgres + Auth)
+- **Monorepo Tooling:** Turborepo
+- **Identity Verification:** Dojah (NIN + Face Liveness)
 
 ## Prerequisites
 - Node.js 18+ (or later LTS)
-- A package manager: `pnpm` recommended, `npm` or `yarn` will work
-- Supabase CLI (optional) if you want to run a local Supabase instance
+- A package manager: `npm` (used in lockfile), `pnpm` or `yarn` also work
+- Supabase CLI (optional) for running a local Supabase instance
 
-## Quickstart (local development)
-1. Install dependencies at the repo root:
+## Quickstart (Local Development)
 
-```bash
-pnpm install
-# or
-npm install
-```
+1. **Install dependencies** at the repo root:
+   ```bash
+   npm install
+   ```
 
-2. Create environment files for each app you plan to run (example: `apps/app/.env.local`, `apps/web/.env.local`, `apps/admin/.env.local`) and add any required variables (Supabase URL/KEY, NEXTAUTH settings, etc.).
+2. **Create environment files** for each app (`apps/app/.env.local`, `apps/web/.env.local`, `apps/admin/.env.local`, `apps/api/.env`) and add required variables (Supabase URL/KEY, Dojah credentials, etc.). See `.env.example` for reference.
 
-3. Run the development servers (from repo root or inside an app folder):
+3. **Run development servers** (from repo root):
+   ```bash
+   # All apps
+   npm run dev
 
-```bash
-pnpm dev
-# or
-npm run dev
-```
+   # Individual apps
+   npm run dev:web    # Marketing website only
+   npm run dev:app    # Consumer app only
+   npm run dev:admin  # Admin dashboard only
+   ```
 
-4. If using Supabase locally, apply migrations and seed data:
-
-```bash
-supabase db reset # or use your workflow to apply migrations in supabase/migrations
-```
-
-Notes
-- This repository is a monorepo with multiple apps; run the specific app's dev server from its folder if needed.
+4. **Apply database migrations** (if using Supabase locally):
+   ```bash
+   supabase db reset
+   ```
 
 ## Build & Production
-Build the apps (run from repo root or inside the specific app):
 
 ```bash
-pnpm build
-# or
-npm run build
-```
-
-Then start the production server for the target app:
-
-```bash
-pnpm start
-# or
-npm start
-```
-
-## Testing
-- Check each app/package for tests. Run the monorepo test command if available:
-
-```bash
-pnpm test
-# or
-npm run test
+npm run build   # Build all apps
+npm start       # Start production server
 ```
 
 ## Environment & Secrets
 - Store secrets in `.env.local` files per Next.js best practices. Do not commit secrets to version control.
-- Typical environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXTAUTH_URL`, OAuth client IDs/secrets.
+- Typical variables: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXTAUTH_URL`, `DOJAH_APP_ID`, `DOJAH_SECRET_KEY`, OAuth client IDs/secrets.
 
 ## Database & Migrations
-- Supabase configuration and SQL migration files are under `supabase/`.
-- Use your preferred workflow or the Supabase CLI to run migrations and seed the database.
+- Supabase configuration and 40 SQL migration files live under `supabase/migrations/`.
+- Use the Supabase CLI or your preferred workflow to run migrations and seed the database.
 
 ## Contributing
 - Please open issues or PRs for bugs, feature requests, or documentation fixes.
 - Follow the code style already present in the repository and run lint/formatting where applicable.
 
-## Where to look next
+## Where to Look Next
 - App entry points: `apps/*/app/` (layouts, pages, routes)
 - Shared UI: `packages/ui/src`
 - Database queries/types: `packages/db/src`
+- API modules: `apps/api/src`
 - Supabase migrations: `supabase/migrations`
 
-## Contact
-If you want help adapting the README for a specific deployment (Vercel, AWS, Dockerized Supabase, etc.), tell me which platform and I’ll add platform-specific steps.
-
 ---
-Generated and added to the project root. If you want the file renamed to `READMME.md` exactly, or expanded with CI/deployment steps, say which CI or host to target.
+
+*Last updated: October 2026*
