@@ -13,7 +13,6 @@ const PUBLIC_ROUTES = [
 
 // Routes that strictly require auth (redirect to signin if not authed)
 const PROTECTED_ROUTES = [
-  "/onboarding",
   "/connect",
   "/chat",
   "/splits",
@@ -25,6 +24,11 @@ const PROTECTED_ROUTES = [
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Redirect legacy onboarding routes directly to feed
+  if (pathname.startsWith("/onboarding")) {
+    return NextResponse.redirect(new URL("/feed", request.url));
+  }
 
   // Always allow public routes through
   if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {

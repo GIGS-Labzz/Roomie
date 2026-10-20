@@ -171,7 +171,7 @@ export default function SuperHome() {
       setData({
         totalStudents:    profiles.length,
         verifiedStudents: profiles.filter((p) => p.verification_status === "VERIFIED").length,
-        pendingStudents:  profiles.filter((p) => p.onboarding_complete === true && ["PENDING", "UNVERIFIED"].includes(p.verification_status)).length,
+        pendingStudents:  profiles.filter((p) => ["PENDING", "UNVERIFIED"].includes(p.verification_status)).length,
         totalProviders:   platforms.length,
         activeProviders:  platforms.filter((p) => p.status === "ACTIVE").length,
         pendingProviders: platforms.filter((p) => p.status === "PENDING_REVIEW").length,

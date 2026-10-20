@@ -111,7 +111,7 @@ export class DojahClient {
       return {
         success: true,
         sessionId: mockSessionId,
-        url: `/onboarding/face?mock_session=${mockSessionId}&status=simulated`,
+        url: `/verify/identity?mock_session=${mockSessionId}&status=simulated`,
       };
     }
 

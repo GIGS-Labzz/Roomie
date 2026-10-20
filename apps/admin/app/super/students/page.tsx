@@ -101,7 +101,6 @@ export default function StudentsPage() {
     let query = (supabase as any)
       .from("profiles")
       .select("id, display_name, username, university, faculty, course, year_of_study, verification_status, student_verified, city, avatar_url, created_at, is_active, is_barred")
-      .eq("onboarding_complete", true)  // exclude housing providers / admin accounts
       .order("created_at", { ascending: false })
       .limit(100);
 

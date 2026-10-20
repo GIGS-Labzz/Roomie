@@ -10,7 +10,7 @@ import { createClient } from "@repo/db/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Database } from "@repo/db/types";
 import Link from "next/link";
-import { ALL_UNIVERSITIES, NIGERIAN_STATES } from "../onboarding/university/data";
+import { ALL_UNIVERSITIES, NIGERIAN_STATES } from "@/lib/universityData";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 

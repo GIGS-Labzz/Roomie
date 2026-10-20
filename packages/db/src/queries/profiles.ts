@@ -79,7 +79,6 @@ export async function getDiscoveryFeed(
        last_seen_at, onboarding_complete, created_at, birthday, birthday_public`
     )
     .eq("is_active", true)
-    .eq("onboarding_complete", true)
     .order("last_seen_at", { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 

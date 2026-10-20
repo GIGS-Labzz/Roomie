@@ -1,34 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import sandyLoadingAnimation from "@repo/animations/sandy-loading";
-import { Logo } from "@repo/ui/logo";
-
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
+import { Infinity } from "lucide-react";
 
 export default function Loading() {
   return (
-    <div
-      className="fixed inset-0 flex flex-col items-center justify-center z-50"
-      style={{ background: "#EDE8C8" }}
-    >
-      {/* Logo */}
-      <div className="mb-6">
-        <Logo size="md" />
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-[#080c14] text-slate-200">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute w-24 h-24 rounded-full bg-brand-500/20 blur-xl animate-pulse" />
+        <Infinity className="w-12 h-12 text-brand-400 animate-pulse animate-float" />
       </div>
-
-      <div className="w-52 h-52">
-        <Lottie
-          animationData={sandyLoadingAnimation}
-          loop
-          autoplay
-          style={{ width: "100%", height: "100%" }}
-        />
-      </div>
-
-      {/* Loading label */}
-      <p className="mt-6 text-brand-600 text-sm font-medium tracking-wide animate-pulse">
-        Finding your perfect match…
+      <p className="mt-4 text-xs font-medium tracking-widest text-slate-400 uppercase">
+        Loading...
       </p>
     </div>
   );
